@@ -1,5 +1,5 @@
 import XCTest
-@testable import evm_swift
+@testable import Interpreter
 
 final class evm_swiftTests: XCTestCase {
     func testExample() throws {

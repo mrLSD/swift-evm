@@ -9,6 +9,8 @@ public protocol BigUInt: CustomStringConvertible, Equatable {
     static var ZERO: Self { get }
     /// Number bytes of `BigUInt`
     static var numberBytes: UInt8 { get }
+    /// Number base - count of `UInt64` (base) values. It's always: `numberBytes/8`
+    static var numberBase: UInt8 { get }
 
     /// Is value zero
     var isZero: Bool { get }
@@ -38,11 +40,25 @@ public protocol BigUInt: CustomStringConvertible, Equatable {
 
 public extension BigUInt {
     init(from value: UInt64) {
-        self.init(from: [value, 0, 0, 0])
+        var data = [UInt64](repeating: 0, count: Int(Self.numberBase))
+        data[0] = value
+        self = Self(from: data)
+    }
+
+    static var MAX: Self {
+        Self(from: [UInt64](repeating: UInt64.max, count: Int(numberBytes / 8)))
+    }
+
+    static var ZERO: Self {
+        Self(from: [UInt64](repeating: 0, count: Int(numberBytes / 8)))
+    }
+
+    static var numberBase: UInt8 {
+        self.numberBytes / 8
     }
 
     var isZero: Bool {
-        for i in 0 ..< Int(Self.numberBytes) {
+        for i in 0 ..< Int(Self.numberBase) {
             if self.BYTES[i] != 0 {
                 return false
             }
@@ -53,7 +69,7 @@ public extension BigUInt {
     static func fromLittleEndian(from val: [UInt8]) -> Self {
         precondition(val.count <= numberBytes, "BigUInt must be initialized with at least \(numberBytes) bytes.")
 
-        var data = [UInt64](repeating: 0, count: Int(Self.numberBytes / 8))
+        var data = [UInt64](repeating: 0, count: Int(Self.numberBase))
         for (index, byte) in val.enumerated() {
             let blockIndex = index / 8
             let bytePosition = index % 8
@@ -66,7 +82,7 @@ public extension BigUInt {
     static func fromBigEndian(from val: [UInt8]) -> Self {
         precondition(val.count <= numberBytes, "BigUInt must be initialized with at most \(numberBytes) bytes.")
 
-        var data = [UInt64](repeating: 0, count: Int(Self.numberBytes / 8))
+        var data = [UInt64](repeating: 0, count: Int(Self.numberBase))
         for (index, byte) in val.reversed().enumerated() {
             let blockIndex = index / 8
             let bytePosition = index % 8
@@ -113,7 +129,7 @@ public extension BigUInt {
             if let byte = UInt8(byteString, radix: 16) {
                 byteArray.append(byte)
             } else {
-                assertionFailure("Invalid hex string byte for U256.")
+                assertionFailure("Invalid hex string byte for BigUInt.")
             }
             index = nextIndex
         }
@@ -125,7 +141,7 @@ public extension BigUInt {
 /// Implementation of `CustomStringConvertible`
 public extension BigUInt {
     var description: String {
-        self.BYTES.map { String(format: "%02x", $0).uppercased() }.joined()
+        self.BYTES.map { String(format: "%016lx", $0).uppercased() }.joined()
     }
 }
 
