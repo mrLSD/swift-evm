@@ -136,7 +136,7 @@ final class BigUintSpec: QuickSpec {
                 it("correct transformed from String") {
                     expect(TestUint128.fromString(hex: "00000000000000000000000000000000")).to(equal(val))
                 }
-                //=====
+
                 it("correct transformed to Little Endian array") {
                     expect(val.toLittleEndian).to(equal([UInt8](repeating: 0, count: 16)))
                 }

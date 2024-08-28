@@ -6,6 +6,7 @@ public struct U256: BigUInt {
     public static let numberBytes: UInt8 = 32
     public static let MAX: Self = getMax
     public static let ZERO: Self = getZero
+
     public var BYTES: [UInt64] { self.bytes }
 
     public init(from value: [UInt64]) {
