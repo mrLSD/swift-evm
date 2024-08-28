@@ -15,6 +15,7 @@ let package = Package(
             targets: ["PrimitiveTypes"]),
     ],
     dependencies: [
+        .package(url: "https://github.com/Quick/Quick.git", from: "7.0.0"),
         .package(url: "https://github.com/Quick/Nimble.git", from: "13.0.0"),
     ],
     targets: [
@@ -30,5 +31,5 @@ let package = Package(
             dependencies: ["Interpreter"]),
         .testTarget(
             name: "PrimitiveTypesTests",
-            dependencies: ["PrimitiveTypes", "Nimble"]),
+            dependencies: ["PrimitiveTypes", "Quick", "Nimble"]),
     ])

@@ -19,7 +19,7 @@ public protocol BigUInt: CustomStringConvertible, Equatable {
     init(from value: UInt64)
 
     /// Init from array of `[UInt64]`.
-    /// Ir suppose to be little endian array of values.
+    /// It suppose to be little endian array of values.
     init(from value: [UInt64])
 
     /// Create `BitUInt` from `little-endian` array
@@ -45,18 +45,21 @@ public extension BigUInt {
         self = Self(from: data)
     }
 
-    static var MAX: Self {
-        Self(from: [UInt64](repeating: UInt64.max, count: Int(numberBytes / 8)))
+    /// Calculate Max value
+    static var getMax: Self {
+        Self(from: [UInt64](repeating: UInt64.max, count: Int(numberBase)))
     }
 
-    static var ZERO: Self {
-        Self(from: [UInt64](repeating: 0, count: Int(numberBytes / 8)))
+    /// Calculate Zero valued
+    static var getZero: Self {
+        Self(from: [UInt64](repeating: 0, count: Int(numberBase)))
     }
 
     static var numberBase: UInt8 {
         self.numberBytes / 8
     }
 
+    /// Calculate is value zero
     var isZero: Bool {
         for i in 0 ..< Int(Self.numberBase) {
             if self.BYTES[i] != 0 {
@@ -67,7 +70,7 @@ public extension BigUInt {
     }
 
     static func fromLittleEndian(from val: [UInt8]) -> Self {
-        precondition(val.count <= numberBytes, "BigUInt must be initialized with at least \(numberBytes) bytes.")
+        precondition(val.count <= numberBytes, "BigUInt must be initialized with not more than \(numberBytes) bytes.")
 
         var data = [UInt64](repeating: 0, count: Int(Self.numberBase))
         for (index, byte) in val.enumerated() {
@@ -80,7 +83,7 @@ public extension BigUInt {
     }
 
     static func fromBigEndian(from val: [UInt8]) -> Self {
-        precondition(val.count <= numberBytes, "BigUInt must be initialized with at most \(numberBytes) bytes.")
+        precondition(val.count <= numberBytes, "BigUInt must be initialized with not more than \(numberBytes) bytes.")
 
         var data = [UInt64](repeating: 0, count: Int(Self.numberBase))
         for (index, byte) in val.reversed().enumerated() {
@@ -119,7 +122,8 @@ public extension BigUInt {
     }
 
     static func fromString(hex value: String) -> Self {
-        precondition(value.count <= numberBytes * 2 && value.count % 2 == 0, "Invalid hex string for \(numberBytes) bytes.")
+        precondition(value.count <= numberBytes * 2, "Invalid hex string for \(numberBytes) bytes.")
+        precondition(value.count % 2 == 0, "Invalid hex string for `mod 2`")
 
         var byteArray: [UInt8] = []
         var index = value.startIndex
@@ -129,7 +133,7 @@ public extension BigUInt {
             if let byte = UInt8(byteString, radix: 16) {
                 byteArray.append(byte)
             } else {
-                assertionFailure("Invalid hex string byte for BigUInt.")
+                assertionFailure("Invalid hex string byte character: \(byteString)")
             }
             index = nextIndex
         }
