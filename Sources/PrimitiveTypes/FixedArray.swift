@@ -66,7 +66,7 @@ public extension FixedArray {
 /// Implementation of `CustomStringConvertible`
 public extension FixedArray {
     var description: String {
-        self.BYTES.map { String(format: "%016lx", $0).uppercased() }.joined()
+        self.BYTES.map { String(format: "%02lx", $0).uppercased() }.joined()
     }
 }
 

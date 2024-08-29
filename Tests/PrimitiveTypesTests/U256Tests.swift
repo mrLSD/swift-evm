@@ -135,6 +135,7 @@ final class U256Spec: QuickSpec {
                     expect(U256.fromBigEndian(from: val.toBigEndian)).to(equal(val))
                 }
             }
+
             context("when concrete U256 value") {
                 it("from Big-Endian") {
                     let val = U256.fromBigEndian(from: [
