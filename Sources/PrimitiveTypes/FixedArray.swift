@@ -41,6 +41,33 @@ public extension FixedArray {
         }
         return true
     }
+
+    static func fromString(hex value: String) -> Self {
+        precondition(value.count <= numberBytes * 2, "Invalid hex string for \(numberBytes) bytes.")
+        precondition(value.count % 2 == 0, "Invalid hex string for `mod 2`")
+
+        var byteArray: [UInt8] = []
+        var index = value.startIndex
+        while index < value.endIndex {
+            let nextIndex = value.index(index, offsetBy: 2)
+            let byteString = String(value[index ..< nextIndex])
+            if let byte = UInt8(byteString, radix: 16) {
+                byteArray.append(byte)
+            } else {
+                assertionFailure("Invalid hex string byte character: \(byteString)")
+            }
+            index = nextIndex
+        }
+
+        return Self(from: byteArray)
+    }
+}
+
+/// Implementation of `CustomStringConvertible`
+public extension FixedArray {
+    var description: String {
+        self.BYTES.map { String(format: "%016lx", $0).uppercased() }.joined()
+    }
 }
 
 /// Implementation of `Equatable`
