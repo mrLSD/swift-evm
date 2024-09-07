@@ -135,6 +135,28 @@ final class U256Spec: QuickSpec {
                     expect(U256.fromBigEndian(from: val.toBigEndian)).to(equal(val))
                 }
             }
+            context("when concrete U256 value") {
+                it("from Big-Endian") {
+                    let val = U256.fromBigEndian(from: [
+                        0xF, 1, 2, 3, 0xC1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                        0, 0xAC, 2,
+                    ])
+                    expect(0x0000_0000_0000_AC02).to(equal(val.BYTES[0]))
+                    expect(0).to(equal(val.BYTES[1]))
+                    expect(0).to(equal(val.BYTES[2]))
+                    expect(0x0F01_0203_C100_0000).to(equal(val.BYTES[3]))
+                }
+                it("from Little-Endian") {
+                    let val = U256.fromLittleEndian(from: [
+                        0xF, 1, 2, 3, 0xC1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                        0, 0xAC, 2,
+                    ])
+                    expect(0x0000_00C1_0302_010F).to(equal(val.BYTES[0]))
+                    expect(0).to(equal(val.BYTES[1]))
+                    expect(0).to(equal(val.BYTES[2]))
+                    expect(0x02AC_0000_0000_0000).to(equal(val.BYTES[3]))
+                }
+            }
         }
     }
 }
