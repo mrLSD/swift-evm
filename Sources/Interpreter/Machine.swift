@@ -72,7 +72,7 @@ public struct Machine {
                 break
             }
             // Get Opcode
-            guard let op = Opcode(rawValue: self.code[self.pc]) else {
+            guard let _op = Opcode(rawValue: self.code[self.pc]) else {
                 // TODO: return InvalidOpcode
                 self.machineStatus = .Exit(.Success(.Stop))
                 break
