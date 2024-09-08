@@ -1,7 +1,7 @@
 import Foundation
 
 /// EVM Opcodes
-enum Opcodes: UInt8, CustomStringConvertible {
+public enum Opcode: UInt8, CustomStringConvertible {
     //
     // Stop and Arithmetic
     //
@@ -228,7 +228,7 @@ enum Opcodes: UInt8, CustomStringConvertible {
     case SELFDESTRUCT = 0xff
 
     /// Represent attributes as String
-    var description: String {
+    public var description: String {
         String(describing: self)
     }
 }

@@ -1,7 +1,7 @@
 import XCTest
 @testable import Interpreter
 
-final class evm_swiftTests: XCTestCase {
+final class OpcodesTests: XCTestCase {
     func testExample() throws {
         // XCTest Documentation
         // https://developer.apple.com/documentation/xctest
