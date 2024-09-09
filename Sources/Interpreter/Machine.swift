@@ -1,22 +1,34 @@
-/// EVM core execution layer
+import PrimitiveTypes
+
+/// Interpreter handler used to pass Handler functions to Interpreter to
+/// extend funcionaloty for specific needs
+public protocol InterpreterHandler {
+    /// Run function before `Opcode` execution in evaluation stage in Machine
+    func beforeOpcodeExecution(machine: inout Machine, opcode: Opcode, address: H160) -> Machine.ExitError?
+}
+
+/// Machine represents EVM core execution layer
 public struct Machine {
     /// Program data
     private let data: [UInt8]
     /// Program code.
     private let code: [UInt8]
     /// Program counter.
-    private var pc: Int
+    private var pc: Int = 0
     /// Return value.
-    private let returnRange: Range<UInt64>
-
+    private var returnRange: Range<Int> = 0 ..< 0
     /// Code validity maps.
-    // private let   valids: Valids,
-    /// Memory.
-    // memory: Memory,
-    /// Stack.
-    // stack: Stack,
+    private let valids: [UInt8] = []
+    /// Machine Memory.
+    private var memory: Memory = .init(limit: 0)
+    /// Machine Stack
+    private var stack: [UInt8] = []
 
+    /// Current Machine status
     private(set) var machineStatus: MachineStatus = .NotStarted
+
+    /// Machine Interpreter handler. User to extend evaluation functinality
+    private let handler: InterpreterHandler
 
     public enum MachineStatus {
         case NotStarted
@@ -54,12 +66,18 @@ public struct Machine {
     typealias EvalFunction = () -> MachineStatus
 
     /// Instructions evaluation table. Used to evalueate specific opcodes.
-    /// It represent evaluation fuctions for each existed opcodes. Table initialized with 255 `nil` instructions and filled for each specific `EVM` opcode.
+    /// It represent evaluation fuтctions for each existed opcodes. Table initialized with 255 `nil` instructions and filled for each specific `EVM` opcode.
     /// For non-existed opcode the evaluation functions is `nil`.
     private let instructionsEvalTable: [EvalFunction?] = {
         let table = [EvalFunction?](repeating: nil, count: 255)
         return table
     }()
+
+    init(data: [UInt8], code: [UInt8], handler: InterpreterHandler) {
+        self.data = data
+        self.code = code
+        self.handler = handler
+    }
 
     /// Evaluation loop for `Machine` code.
     /// Return status of evaluation.
@@ -96,13 +114,18 @@ public struct Machine {
             // For any other status - set `machineStatus` to `evalStatus` and exit from eval loop
             default:
                 self.machineStatus = evalStatus
-                break
             }
         }
         return self.machineStatus
     }
 
+    /// Evaluate Machine step
     public mutating func step() -> MachineStatus {
         self.evalLoop()
+    }
+
+    /// Get `Return` value
+    func returnValue() -> [UInt8] {
+        self.memory.get(range: self.returnRange)
     }
 }
