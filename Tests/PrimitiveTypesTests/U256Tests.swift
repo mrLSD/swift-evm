@@ -157,6 +157,14 @@ final class U256Spec: QuickSpec {
                     expect(0).to(equal(val.BYTES[2]))
                     expect(0x02AC_0000_0000_0000).to(equal(val.BYTES[3]))
                 }
+
+                it("getUInt") {
+                    let val = U256.fromLittleEndian(from: [
+                        0xF, 1, 2, 3, 0xC1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                        0, 0xAC, 2,
+                    ])
+                    expect(0x0000_00C1_0302_010F).to(equal(val.getUInt))
+                }
             }
         }
     }

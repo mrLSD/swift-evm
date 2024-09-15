@@ -23,6 +23,7 @@ public struct Machine {
     private var memory: Memory = .init(limit: 0)
     /// Machine Stack
     private var stack: [UInt8] = []
+    private var gas: Gas
 
     /// Current Machine status
     private(set) var machineStatus: MachineStatus = .NotStarted
@@ -50,7 +51,7 @@ public struct Machine {
         case Return
     }
 
-    public enum ExitError {
+    public enum ExitError: Error {
         case StackUnderflow
         case StackOverflow
         case InvalidJump
@@ -77,6 +78,7 @@ public struct Machine {
         self.data = data
         self.code = code
         self.handler = handler
+        self.gas = Gas(limit: 0, remaining: 0, refunded: 0)
     }
 
     /// Evaluation loop for `Machine` code.
