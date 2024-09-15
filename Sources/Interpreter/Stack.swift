@@ -1,17 +1,23 @@
 import PrimitiveTypes
 
 /// EVM Machine Stack
-public struct Stack {
+struct Stack {
+    public static let STACK_LIMIT: Int = 1024
     /// Stack data
     private var data: [U256] = []
     /// Stack limit
-    public let limit: Int
-    /// Stacke length
-    public var length: Int { self.data.count }
+    let limit: Int
+    /// Stack length
+    var length: Int { self.data.count }
 
     /// Init Machine Stack with specific data limit
     init(limit: Int) {
         self.limit = limit
+    }
+
+    /// Init Machine Stack with default  stack limit
+    init() {
+        self.limit = Self.STACK_LIMIT
     }
 
     /// Push `U256` value to the Stack. Return error if it's reach limit.

@@ -1,5 +1,3 @@
-import Foundation
-
 /// EVM Opcodes
 public enum Opcode: UInt8, CustomStringConvertible {
     //

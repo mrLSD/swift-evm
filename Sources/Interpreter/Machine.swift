@@ -22,8 +22,9 @@ public struct Machine {
     /// Machine Memory.
     private var memory: Memory = .init(limit: 0)
     /// Machine Stack
-    private var stack: [UInt8] = []
-    private var gas: Gas
+    private var stack: Stack = .init(limit: 1024)
+    /// Machine Gasometr
+    private(set) var gas: Gas
 
     /// Current Machine status
     private(set) var machineStatus: MachineStatus = .NotStarted
@@ -78,7 +79,7 @@ public struct Machine {
         self.data = data
         self.code = code
         self.handler = handler
-        self.gas = Gas(limit: 0, remaining: 0, refunded: 0)
+        self.gas = Gas(limit: 0)
     }
 
     /// Evaluation loop for `Machine` code.
