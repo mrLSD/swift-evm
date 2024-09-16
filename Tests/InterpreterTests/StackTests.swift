@@ -13,6 +13,12 @@ final class StackSpec: QuickSpec {
                     expect(stack.limit).to(equal(1024))
                     expect(stack.length).to(equal(0))
                 }
+
+                it("should initialize with the default limit") {
+                    let stack = Stack()
+                    expect(stack.limit).to(equal(Stack.STACK_LIMIT))
+                    expect(stack.length).to(equal(0))
+                }
             }
 
             context("push operation") {
