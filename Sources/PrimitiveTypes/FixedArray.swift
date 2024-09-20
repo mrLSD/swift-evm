@@ -1,7 +1,5 @@
-import Foundation
-
 /// Fixed array represent numbers based on fixed  bytes (`UInt8`) array
-public protocol FixedArray: CustomStringConvertible, Equatable {
+public protocol FixedArray: CustomStringConvertible, Equatable, Sendable {
     /// Fixed array bytes
     var BYTES: [UInt8] { get }
     /// Max value

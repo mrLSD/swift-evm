@@ -77,7 +77,7 @@ final class StackSpec: QuickSpec {
 
                 it("should return a StackUnderflow error when popping from an empty stack") {
                     var stack = Stack(limit: 1)
-                    let result = stack.pop()
+                    let result = stack.popH256()
                     expect(result).to(beFailure { error in
                         expect(error).to(matchError(Machine.ExitError.StackUnderflow))
                     })

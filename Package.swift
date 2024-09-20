@@ -1,4 +1,4 @@
-// swift-tools-version: 5.10
+// swift-tools-version: 6.0
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 
 import PackageDescription
@@ -28,7 +28,7 @@ let package = Package(
             name: "PrimitiveTypes"),
         .testTarget(
             name: "InterpreterTests",
-            dependencies: ["Interpreter"]),
+            dependencies: ["Interpreter", "PrimitiveTypes", "Quick", "Nimble"]),
         .testTarget(
             name: "PrimitiveTypesTests",
             dependencies: ["PrimitiveTypes", "Quick", "Nimble"]),
