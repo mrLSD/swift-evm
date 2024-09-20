@@ -30,7 +30,7 @@ jobs:
       env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}      
       with:
-      directory: coverage/l
+        directory: coverage/
         files: coverage/lcov.info
         flags: swift
         name: codecov-umbrella
