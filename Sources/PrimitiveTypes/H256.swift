@@ -1,5 +1,3 @@
-import Foundation
-
 public struct H256: FixedArray {
     private var bytes: [UInt8]
 

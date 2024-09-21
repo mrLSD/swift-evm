@@ -28,7 +28,7 @@ let package = Package(
             name: "PrimitiveTypes"),
         .testTarget(
             name: "InterpreterTests",
-            dependencies: ["Interpreter"]),
+            dependencies: ["Interpreter", "PrimitiveTypes", "Quick", "Nimble"]),
         .testTarget(
             name: "PrimitiveTypesTests",
             dependencies: ["PrimitiveTypes", "Quick", "Nimble"]),

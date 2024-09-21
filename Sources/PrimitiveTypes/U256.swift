@@ -1,5 +1,3 @@
-import Foundation
-
 public struct U256: BigUInt {
     private let bytes: [UInt64]
 

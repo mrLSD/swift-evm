@@ -11,11 +11,28 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
     - uses: actions/checkout@v4
     - uses: swift-actions/setup-swift@v2
+#    - uses: SwiftyLab/setup-swift@latest
     - name: Build
       run: swift build
     - name: Run tests
-      run: swift test
+      run: swift test  --enable-code-coverage
+
+    - name: Generate Coverage Report
+      run: |
+        mkdir -p coverage
+        xcrun llvm-cov export -format="lcov"  .build/debug/evm-swiftPackageTests.xctest/Contents/MacOS/evm-swiftPackageTests -instr-profile=.build/debug/codecov/default.profdata > coverage/lcov.info
+        ls -la coverage/lcov.info
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}      
+      with:
+        files: coverage/lcov.info
+        flags: swift
+        name: codecov-umbrella
+        fail_ci_if_error: true
