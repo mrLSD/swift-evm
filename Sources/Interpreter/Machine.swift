@@ -4,7 +4,8 @@ import PrimitiveTypes
 /// extend funcionaloty for specific needs
 public protocol InterpreterHandler {
     /// Run function before `Opcode` execution in evaluation stage in Machine
-    func beforeOpcodeExecution(machine: inout Machine, opcode: Opcode, address: H160) -> Machine.ExitError?
+    func beforeOpcodeExecution(machine: inout Machine, opcode: Opcode, address: H160) -> Machine
+        .ExitError?
 }
 
 /// Machine represents EVM core execution layer
@@ -16,7 +17,7 @@ public struct Machine {
     /// Program counter.
     private var pc: Int = 0
     /// Return value.
-    private var returnRange: Range<Int> = 0 ..< 0
+    private var returnRange: Range<Int> = 0..<0
     /// Code validity maps.
     private let valids: [UInt8] = []
     /// Machine Memory.
@@ -92,6 +93,7 @@ public struct Machine {
                 self.machineStatus = .Exit(.Success(.Stop))
                 break
             }
+
             // Get Opcode
             guard let _op = Opcode(rawValue: self.code[self.pc]) else {
                 // TODO: return InvalidOpcode
