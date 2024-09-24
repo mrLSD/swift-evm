@@ -1,10 +1,9 @@
-
 @testable import Interpreter
 import Nimble
 import PrimitiveTypes
 import Quick
 
-final class StackSpec: QuickSpec {
+final class InterpreterStackSpec: QuickSpec {
     override class func spec() {
         describe("Stack type") {
             context("initialization") {

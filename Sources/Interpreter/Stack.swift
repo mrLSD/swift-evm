@@ -88,7 +88,7 @@ struct Stack {
     }
 
     /// Peeks a value at a given index from the top of the stack and converts it to `Int`.
-    /// If the value is larger than `Int.max`, `ExitError.outOfGas` is returned.
+    /// If the value is larger than `Int.max`, `ExitError.outOfGas` is returned (`outOfGas` error possible only for 32-bit context like `wasm32`).
     ///
     /// - Parameter indexFromTop: The index from the top of the stack.
     /// - Returns: A `Result` containing the `Int` value if successful, or an `ExitError` if an error occurs.
@@ -96,6 +96,7 @@ struct Stack {
     func peekUInt(indexFromTop: Int) -> Result<UInt, Machine.ExitError> {
         switch self.peek(indexFromTop: indexFromTop) {
         case .success(let u256):
+            // This situation possible only for 32-bit context (for example wasm32)
             guard let intValue = u256.getUInt else {
                 return .failure(.OutOfGas)
             }
