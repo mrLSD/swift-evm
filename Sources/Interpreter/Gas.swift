@@ -39,9 +39,10 @@ public struct Gas {
     /// and the spent amount divided by a quotient that depends on whether the London rules apply.
     ///
     /// - Parameter isLondon: A Boolean indicating whether London hard fork.
-    mutating func setFinalRefunc(isLondon: Bool) {
+    mutating func setFinalRefund(isLondon: Bool) {
         let maxRefundQuotient: UInt64 = isLondon ? 5 : 2
-        self.refunded = Int64(min(UInt64(self.refunded), self.spent / maxRefundQuotient))
+        // Check UInt64 bounds to avoid overflow
+        self.refunded = self.refunded < 0 ? 0 : Int64(min(UInt64(self.refunded), self.spent / maxRefundQuotient))
     }
 
     /// Records the gas cost by subtracting the given cost from the remaining gas.
