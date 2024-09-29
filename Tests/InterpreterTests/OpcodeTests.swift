@@ -426,7 +426,7 @@ final class InterpreterOpcodeSpec: QuickSpec {
                     }
                 }
             }
-
+            x
             // Additional Test: Ensure all opcodes have unique rawValues
             context("uniqueness of rawValue") {
                 it("should have unique rawValue for each Opcode case") {
