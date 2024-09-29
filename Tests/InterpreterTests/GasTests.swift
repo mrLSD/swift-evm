@@ -231,10 +231,12 @@ final class InterpreterGasSpec: QuickSpec {
             context("spent property") {
                 it("calculates spent correctly after recording costs") {
                     var gas = Gas(limit: 1000)
-                    gas.recordCost(cost: 200)
-                    let success = gas.recordCost(cost: 300)
+                    let success1 = gas.recordCost(cost: 200)
+                    expect(success1).to(beTrue())
 
-                    expect(success).to(beTrue())
+                    let success2 = gas.recordCost(cost: 300)
+                    expect(success2).to(beTrue())
+
                     expect(gas.spent).to(equal(500))
                 }
 

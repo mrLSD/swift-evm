@@ -1,7 +1,7 @@
 import PrimitiveTypes
 
 /// Interpreter handler used to pass Handler functions to Interpreter to
-/// extend funcionaloty for specific needs
+/// extend functionality for specific needs
 public protocol InterpreterHandler {
     /// Run function before `Opcode` execution in evaluation stage in Machine
     func beforeOpcodeExecution(machine: inout Machine, opcode: Opcode, address: H160) -> Machine
@@ -17,18 +17,18 @@ public struct Machine {
     /// Program counter.
     private var pc: Int = 0
     /// Return value.
-    private var returnRange: Range<Int> = 0..<0
+    private var returnRange: Range<Int> = 0 ..< 0
     /// Code validity maps.
     private let valids: [UInt8] = []
     /// Machine Memory.
     private var memory: Memory = .init(limit: 0)
     /// Machine Stack
-    private var stack: Stack = .init(limit: 1024)
+    var stack: Stack = .init()
     /// Machine Gasometr
     private(set) var gas: Gas
 
     /// Current Machine status
-    private(set) var machineStatus: MachineStatus = .NotStarted
+    var machineStatus: MachineStatus = .NotStarted
 
     /// Machine Interpreter handler. User to extend evaluation functinality
     private let handler: InterpreterHandler
@@ -44,7 +44,7 @@ public struct Machine {
     public enum ExitReason {
         case Success(ExitSuccess)
         case Revert
-        case Error
+        case Error(ExitError)
         case Fatal
     }
 
@@ -66,13 +66,14 @@ public struct Machine {
 
     /// Closure type of Evaluation function.
     /// This function returns `MachineStatus` as result of evaluation
-    typealias EvalFunction = () -> MachineStatus
+    typealias EvalFunction = (_ m: inout Self) -> ()
 
     /// Instructions evaluation table. Used to evalueate specific opcodes.
     /// It represent evaluation fuтctions for each existed opcodes. Table initialized with 255 `nil` instructions and filled for each specific `EVM` opcode.
     /// For non-existed opcode the evaluation functions is `nil`.
     private let instructionsEvalTable: [EvalFunction?] = {
-        let table = [EvalFunction?](repeating: nil, count: 255)
+        var table = [EvalFunction?](repeating: nil, count: 255)
+        table[Int(Opcode.ADD.rawValue)] = ArithmeticInstructions.add
         return table
     }()
 
@@ -95,21 +96,21 @@ public struct Machine {
             }
 
             // Get Opcode
-            guard let _op = Opcode(rawValue: self.code[self.pc]) else {
+            guard let op = Opcode(rawValue: self.code[self.pc]) else {
                 // TODO: return InvalidOpcode
                 self.machineStatus = .Exit(.Success(.Stop))
                 break
             }
             // Get evaluation function for opcode
-            guard let evalFunc = self.instructionsEvalTable[self.pc] else {
+            guard let evalFunc = self.instructionsEvalTable[Int(op.rawValue)] else {
                 // TODO: return InvalidOpcode
                 self.machineStatus = .Exit(.Success(.Stop))
                 break
             }
             // Run evaluation function for Opcode and return status
-            let evalStatus = evalFunc()
+            evalFunc(&self)
             // Fetch eval status
-            switch evalFunc() {
+            switch self.machineStatus {
             // For `Continue` - just increase `pc` by bytes
             case .Continue(let bytes):
                 self.pc += bytes
@@ -117,8 +118,7 @@ public struct Machine {
             case .Jump(let position):
                 self.pc = position
             // For any other status - set `machineStatus` to `evalStatus` and exit from eval loop
-            default:
-                self.machineStatus = evalStatus
+            default: {}()
             }
         }
         return self.machineStatus

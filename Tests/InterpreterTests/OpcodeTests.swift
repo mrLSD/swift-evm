@@ -1,8 +1,8 @@
-
-@testable import Interpreter
 import Nimble
 import PrimitiveTypes
 import Quick
+
+@testable import Interpreter
 
 final class InterpreterOpcodeSpec: QuickSpec {
     override class func spec() {
@@ -204,12 +204,14 @@ final class InterpreterOpcodeSpec: QuickSpec {
                         .EXTSTATICCALL: 0xfb,
                         .REVERT: 0xfd,
                         .INVALID: 0xfe,
-                        .SELFDESTRUCT: 0xff
+                        .SELFDESTRUCT: 0xff,
                     ]
 
                     for (opcode, rawValue) in opcodeRawValues {
-                        // TODO:
-                        // expect(opcode.rawValue).to(equal(rawValue), description: "Opcode \(opcode) should have rawValue \(String(format: "0x%02X", rawValue))")
+                        expect(opcode.rawValue).to(
+                            equal(rawValue),
+                            description:
+                            "Opcode \(opcode) should have rawValue \(String(format: "0x%02X", rawValue))")
                     }
                 }
             }
@@ -412,12 +414,14 @@ final class InterpreterOpcodeSpec: QuickSpec {
                         .EXTSTATICCALL: "EXTSTATICCALL",
                         .REVERT: "REVERT",
                         .INVALID: "INVALID",
-                        .SELFDESTRUCT: "SELFDESTRUCT"
+                        .SELFDESTRUCT: "SELFDESTRUCT",
                     ]
 
                     for (opcode, description) in opcodeDescriptions {
-                        // TODO:
-                        // expect(opcode.description).to(equal(description), description: "Opcode \(opcode) should have description \"\(description)\"")
+                        expect(opcode.name).to(
+                            equal(description),
+                            description:
+                            "Opcode \(opcode) should have description \"\(description)\"")
                     }
                 }
             }
@@ -427,8 +431,9 @@ final class InterpreterOpcodeSpec: QuickSpec {
                 it("should have unique rawValue for each Opcode case") {
                     let allRawValues = Opcode.allCases.map(\.rawValue)
                     let uniqueRawValues = Set(allRawValues)
-                    // TODO:
-                    // expect(uniqueRawValues.count).to(equal(allRawValues.count), description: "All Opcode rawValues should be unique")
+                    expect(uniqueRawValues.count).to(
+                        equal(allRawValues.count),
+                        description: "All Opcode rawValues should be unique")
                 }
             }
         }
@@ -449,7 +454,9 @@ extension Opcode: CaseIterable {
             .SHA3,
 
             // Environment Information
-            .ADDRESS, .BALANCE, .ORIGIN, .CALLER, .CALLVALUE, .CALLDATALOAD, .CALLDATASIZE, .CALLDATACOPY, .CODESIZE, .CODECOPY, .GASPRICE, .EXTCODESIZE, .EXTCODECOPY, .RETURNDATASIZE, .RETURNDATACOPY, .EXTCODEHASH,
+            .ADDRESS, .BALANCE, .ORIGIN, .CALLER, .CALLVALUE, .CALLDATALOAD, .CALLDATASIZE,
+            .CALLDATACOPY, .CODESIZE, .CODECOPY, .GASPRICE, .EXTCODESIZE, .EXTCODECOPY,
+            .RETURNDATASIZE, .RETURNDATACOPY, .EXTCODEHASH,
 
             // Block Information
             .BLOCKHASH, .COINBASE, .TIMESTAMP, .NUMBER, .PREVRANDAO, .GASLIMIT,
@@ -458,16 +465,22 @@ extension Opcode: CaseIterable {
             .CHAINID, .SELFBALANCE, .BASEFEE, .BLOBHASH, .BLOBBASEFEE,
 
             // Stack, Memory, Storage and Flow Operations
-            .POP, .MLOAD, .MSTORE, .MSTORE8, .SLOAD, .SSTORE, .JUMP, .JUMPI, .PC, .MSIZE, .GAS, .JUMPDEST, .TLOAD, .TSTORE, .MCOPY,
+            .POP, .MLOAD, .MSTORE, .MSTORE8, .SLOAD, .SSTORE, .JUMP, .JUMPI, .PC, .MSIZE, .GAS,
+            .JUMPDEST, .TLOAD, .TSTORE, .MCOPY,
 
             // Push Operations
-            .PUSH0, .PUSH1, .PUSH2, .PUSH3, .PUSH4, .PUSH5, .PUSH6, .PUSH7, .PUSH8, .PUSH9, .PUSH10, .PUSH11, .PUSH12, .PUSH13, .PUSH14, .PUSH15, .PUSH16, .PUSH17, .PUSH18, .PUSH19, .PUSH20, .PUSH21, .PUSH22, .PUSH23, .PUSH24, .PUSH25, .PUSH26, .PUSH27, .PUSH28, .PUSH29, .PUSH30, .PUSH31, .PUSH32,
+            .PUSH0, .PUSH1, .PUSH2, .PUSH3, .PUSH4, .PUSH5, .PUSH6, .PUSH7, .PUSH8, .PUSH9, .PUSH10,
+            .PUSH11, .PUSH12, .PUSH13, .PUSH14, .PUSH15, .PUSH16, .PUSH17, .PUSH18, .PUSH19,
+            .PUSH20, .PUSH21, .PUSH22, .PUSH23, .PUSH24, .PUSH25, .PUSH26, .PUSH27, .PUSH28,
+            .PUSH29, .PUSH30, .PUSH31, .PUSH32,
 
             // Duplicate Operations
-            .DUP1, .DUP2, .DUP3, .DUP4, .DUP5, .DUP6, .DUP7, .DUP8, .DUP9, .DUP10, .DUP11, .DUP12, .DUP13, .DUP14, .DUP15, .DUP16,
+            .DUP1, .DUP2, .DUP3, .DUP4, .DUP5, .DUP6, .DUP7, .DUP8, .DUP9, .DUP10, .DUP11, .DUP12,
+            .DUP13, .DUP14, .DUP15, .DUP16,
 
             // Exchange Operations
-            .SWAP1, .SWAP2, .SWAP3, .SWAP4, .SWAP5, .SWAP6, .SWAP7, .SWAP8, .SWAP9, .SWAP10, .SWAP11, .SWAP12, .SWAP13, .SWAP14, .SWAP15, .SWAP16,
+            .SWAP1, .SWAP2, .SWAP3, .SWAP4, .SWAP5, .SWAP6, .SWAP7, .SWAP8, .SWAP9, .SWAP10,
+            .SWAP11, .SWAP12, .SWAP13, .SWAP14, .SWAP15, .SWAP16,
 
             // Logging
             .LOG0, .LOG1, .LOG2, .LOG3, .LOG4,
@@ -476,10 +489,12 @@ extension Opcode: CaseIterable {
             .DATALOAD, .DATALOADN, .DATASIZE, .DATACOPY,
 
             // EOFv1 instructions
-            .RJUMP, .RJUMPI, .RJUMPV, .CALLF, .RETF, .JUMPF, .DUPN, .SWAPN, .EXCHANGE, .EOFCREATE, .RETURNCONTRACT,
+            .RJUMP, .RJUMPI, .RJUMPV, .CALLF, .RETF, .JUMPF, .DUPN, .SWAPN, .EXCHANGE, .EOFCREATE,
+            .RETURNCONTRACT,
 
             // System
-            .CREATE, .CALL, .CALLCODE, .RETURN, .DELEGATECALL, .CREATE2, .RETURNDATALOAD, .EXTCALL, .EXTDELEGATECALL, .STATICCALL, .EXTSTATICCALL, .REVERT, .INVALID, .SELFDESTRUCT
+            .CREATE, .CALL, .CALLCODE, .RETURN, .DELEGATECALL, .CREATE2, .RETURNDATALOAD, .EXTCALL,
+            .EXTDELEGATECALL, .STATICCALL, .EXTSTATICCALL, .REVERT, .INVALID, .SELFDESTRUCT,
         ]
     }
 }
