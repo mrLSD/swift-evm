@@ -3,7 +3,7 @@ import Quick
 
 @testable import PrimitiveTypes
 
-final class ArithmeticMulSpec: QuickSpec {
+final class ArithmeticMacSpec: QuickSpec {
     override class func spec() {
         describe("mac operation") {
             context("no carry") {

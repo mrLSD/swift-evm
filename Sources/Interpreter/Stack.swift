@@ -23,7 +23,7 @@ struct Stack {
     /// Push `U256` value to the Stack. Return error if it's reach limit.
     ///
     /// - Parameter value: `U256` value that will be pushed to Stacl
-    /// - Returns: A `Result` containing the `VOid` value if successful, or an `ExitError.StackOverflow` if an error occurs.
+    /// - Returns: A `Result` containing the `Void` value if successful, or an `ExitError.StackOverflow` if an error occurs.
     @inline(__always)
     mutating func push(value: U256) -> Result<Void, Machine.ExitError> {
         // Check stack overflow
