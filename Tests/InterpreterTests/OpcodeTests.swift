@@ -211,8 +211,7 @@ final class InterpreterOpcodeSpec: QuickSpec {
                         expect(opcode.rawValue).to(
                             equal(rawValue),
                             description:
-                                "Opcode \(opcode) should have rawValue \(String(format: "0x%02X", rawValue))"
-                        )
+                            "Opcode \(opcode) should have rawValue \(String(format: "0x%02X", rawValue))")
                     }
                 }
             }
@@ -422,11 +421,11 @@ final class InterpreterOpcodeSpec: QuickSpec {
                         expect(opcode.name).to(
                             equal(description),
                             description:
-                                "Opcode \(opcode) should have description \"\(description)\"")
+                            "Opcode \(opcode) should have description \"\(description)\"")
                     }
                 }
             }
-            x
+
             // Additional Test: Ensure all opcodes have unique rawValues
             context("uniqueness of rawValue") {
                 it("should have unique rawValue for each Opcode case") {
