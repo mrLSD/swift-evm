@@ -8,3 +8,5 @@ coverage:
     project:
       default:
         enabled: false
+  exclude:
+    - "Tests/**"

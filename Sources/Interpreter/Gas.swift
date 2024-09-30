@@ -60,3 +60,9 @@ public struct Gas {
         return success
     }
 }
+
+/// Gas constants for record gas cost calculation
+enum GasConstant {
+    static let VERYLOW: UInt64 = 3
+    static let LOW: UInt64 = 3
+}
