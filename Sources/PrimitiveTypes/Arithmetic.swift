@@ -111,6 +111,65 @@ public extension BigUInt {
         return productHigh &+ (carry1 ? 1 : 0) &+ (carry2 ? 1 : 0)
     }
 
+    /// Performs an optimized long division of a fixed-bit unsigned integer by another fixed-bit unsigned integer with same length.
+    ///
+    /// This function divides a fixed-bit numerator by a fixed-bit divisor, both represented as arrays of four `UInt64` values
+    /// (little-endian order), and returns the quotient and remainder as arrays of `UInt64`.
+    ///
+    /// - Parameters:
+    ///   - self: An array of four `UInt64` values representing the fixed-bit numerator (dividend),
+    ///   - divisor: An array of four `UInt64` values representing the fixed-bit divisor, with same length to `self`.
+    ///
+    /// - Returns: A tuple containing:
+    ///   - `quotient`: An array of four `UInt64` values representing the fixed-bit quotient of the `division`.
+    ///   - `remainder`: An array of four `UInt64` values representing the fixed-bit `remainder` after the division.
+    ///
+    /// - Precondition:
+    ///   - The `divisor` must not be zero.
+    ///   - Both `self` and `divisor` arrays must have exactly same length of elements.
+    ///
+    /// - Note:
+    ///   - The function operates on little-endian representations of the numbers. Ensure that the least significant word is at index `0`
+    ///     and the most significant word is at index `Count-1`.
+    ///
+    /// - Complexity: O(1), since it operates on fixed-size arrays.
+    @inline(__always)
+    func divRem(divisor: Self) -> (Self, Self) {
+        var quotient = [UInt64](repeating: 0, count: Int(Self.numberBase))
+        var remainder = self.BYTES
+
+        for i in (0 ..< Int(Self.numberBase)).reversed() {
+            // Prepare dividend
+            let high = remainder[i]
+            let low = i > 0 ? remainder[i - 1] : 0
+            // dividend is U128
+            let dividend = U128(from: [low, high])
+
+            // Convert divisor to U128
+            var div = U128(from: Array(divisor.BYTES.prefix(2)))
+
+            // Check if division is possible
+            if dividend < div {
+                quotient[i] = 0
+                continue
+            }
+
+            // Perform division
+            var dividendCopy = dividend
+            let (q, r) = dividendCopy.divRem(divisor: div)
+            // Store U64 division result
+            quotient[i] = q.BYTES[0]
+
+            // Update remainder
+            remainder[i] = r.BYTES[1] // High word reminder
+            if i > 0 {
+                remainder[i - 1] = r.BYTES[0] // Low word reminder
+            }
+        }
+
+        return (Self(from: quotient), Self(from: remainder))
+    }
+
     /// Adds two values of the same type together and returns the result.
     ///
     /// - Parameters:
@@ -118,7 +177,7 @@ public extension BigUInt {
     ///   - rhs: The right-hand side value to be added.
     ///
     /// - Returns: The sum of the two values.
-    internal static func + (lhs: Self, rhs: Self) -> Self {
+    static func + (lhs: Self, rhs: Self) -> Self {
         let (result, _) = lhs.overflowAdd(rhs)
         return result
     }
@@ -130,8 +189,30 @@ public extension BigUInt {
     ///   - rhs: The value to subtract.
     ///
     /// - Returns: The result of subtracting `rhs` from `lhs`.
-    internal static func - (lhs: Self, rhs: Self) -> Self {
+    static func - (lhs: Self, rhs: Self) -> Self {
         let (result, _) = lhs.overflowSub(rhs)
+        return result
+    }
+
+    /// Multiply two values of the same type.
+    ///
+    ///   - lhs: The left-hand side value to be multiplied.
+    ///   - rhs: The right-hand side value to be multiplied.
+    ///
+    /// - Returns: The multiply of the two values.
+    static func * (lhs: Self, rhs: Self) -> Self {
+        let (result, _) = lhs.overflowMul(rhs)
+        return result
+    }
+
+    /// Division of two values of the same type.
+    ///
+    ///   - lhs: The left-hand side value to be div.
+    ///   - rhs: The right-hand side value to be div.
+    ///
+    /// - Returns: The division of the two values.
+    static func / (lhs: Self, rhs: Self) -> Self {
+        let (result, _) = lhs.divRem(divisor: rhs)
         return result
     }
 }
