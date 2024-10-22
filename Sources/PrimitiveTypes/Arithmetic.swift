@@ -111,6 +111,46 @@ public extension BigUInt {
         return productHigh &+ (carry1 ? 1 : 0) &+ (carry2 ? 1 : 0)
     }
 
+    @inline(__always)
+    func shiftLeft(_ shift: Int) -> Self {
+        var result = [UInt64](repeating: 0, count: Int(Self.numberBase))
+        let wordShift = shift / 64
+        let bitShift = shift % 64
+
+        // Shift
+        for i in wordShift ..< Int(Self.numberBase) {
+            result[i] = self.BYTES[i - wordShift] << bitShift
+        }
+
+        // Carry
+        if bitShift > 0 {
+            for i in wordShift + 1 ..< Int(Self.numberBase) {
+                result[i] += self.BYTES[i - 1 - wordShift] >> (64 - bitShift)
+            }
+        }
+        return Self(from: result)
+    }
+
+    @inline(__always)
+    func shiftRight(_ shift: Int) -> Self {
+        var result = [UInt64](repeating: 0, count: Int(Self.numberBase))
+        let wordShift = shift / 64
+        let bitShift = shift % 64
+
+        // Shift
+        for i in wordShift ..< Int(Self.numberBase) {
+            result[i - wordShift] = self.BYTES[i] >> bitShift
+        }
+
+        // Carry
+        if bitShift > 0 {
+            for i in wordShift + 1 ..< Int(Self.numberBase) {
+                result[i - wordShift - 1] += self.BYTES[i] << (64 - bitShift)
+            }
+        }
+        return Self(from: result)
+    }
+
     /// Adds two values of the same type together and returns the result.
     ///
     /// - Parameters:
@@ -118,7 +158,7 @@ public extension BigUInt {
     ///   - rhs: The right-hand side value to be added.
     ///
     /// - Returns: The sum of the two values.
-    internal static func + (lhs: Self, rhs: Self) -> Self {
+    static func + (lhs: Self, rhs: Self) -> Self {
         let (result, _) = lhs.overflowAdd(rhs)
         return result
     }
@@ -130,8 +170,16 @@ public extension BigUInt {
     ///   - rhs: The value to subtract.
     ///
     /// - Returns: The result of subtracting `rhs` from `lhs`.
-    internal static func - (lhs: Self, rhs: Self) -> Self {
+    static func - (lhs: Self, rhs: Self) -> Self {
         let (result, _) = lhs.overflowSub(rhs)
         return result
+    }
+
+    static func << (lhs: Self, shift: Int) -> Self {
+        lhs.shiftLeft(shift)
+    }
+
+    static func >> (lhs: Self, shift: Int) -> Self {
+        lhs.shiftRight(shift)
     }
 }
