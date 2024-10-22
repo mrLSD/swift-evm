@@ -166,6 +166,132 @@ final class U256Spec: QuickSpec {
                     expect(0x0000_00C1_0302_010F).to(equal(val.getUInt))
                 }
             }
+
+            context("when compare numbers") {
+                it("==") {
+                    let val1 = U256(from: [1, 2, 3, 4])
+                    let val2 = U256(from: [1, 2, 3, 4])
+                    expect(val1 == val2).to(beTrue())
+                }
+
+                it("!=") {
+                    let val1 = U256(from: [1, 2, 3, 4])
+                    let val2 = U256(from: [1, 2, 3, 5])
+                    expect(val1 != val2).to(beTrue())
+
+                    let val3 = U256(from: [1, 2, 3, 4])
+                    let val4 = U256(from: [1, 2, 3, 4])
+                    expect(val3 != val4).to(beFalse())
+                }
+
+                it("<") {
+                    let val1 = U256(from: [1, 2, 3, 4])
+                    let val2 = U256(from: [1, 2, 3, 5])
+                    expect(val1 < val2).to(beTrue())
+
+                    let val3 = U256(from: [1, 2, 3, 5])
+                    let val4 = U256(from: [1, 2, 3, 4])
+                    expect(val3 < val4).to(beFalse())
+
+                    let val5 = U256(from: [1, 2, 3, 4])
+                    let val6 = U256(from: [1, 2, 3, 4])
+                    expect(val5 < val6).to(beFalse())
+                }
+
+                it(">") {
+                    let val1 = U256(from: [1, 2, 3, 5])
+                    let val2 = U256(from: [1, 2, 3, 4])
+                    expect(val1 > val2).to(beTrue())
+
+                    let val3 = U256(from: [1, 2, 3, 4])
+                    let val4 = U256(from: [1, 2, 3, 5])
+                    expect(val3 > val4).to(beFalse())
+
+                    let val5 = U256(from: [1, 2, 3, 4])
+                    let val6 = U256(from: [1, 2, 3, 4])
+                    expect(val5 > val6).to(beFalse())
+                }
+
+                it("<, > combinations") {
+                    let lower = U256(from: [0, 0, 0, 1])
+                    let higher = U256(from: [0, 0, 0, 2])
+                    let equal = U256(from: [0, 0, 0, 1])
+
+                    expect(lower < higher).to(beTrue())
+                    expect(higher > lower).to(beTrue())
+                    expect(lower < equal).to(beFalse())
+                    expect(equal > higher).to(beFalse())
+                }
+
+                it("edge cases") {
+                    let zero = U256.ZERO
+                    let max = U256.MAX
+                    let one = U256(from: UInt64(1))
+                    let nearMax = U256(from: [UInt64.max, UInt64.max, UInt64.max, UInt64.max - 1])
+
+                    // Zero comparisons
+                    expect(zero < one).to(beTrue())
+                    expect(one > zero).to(beTrue())
+                    expect(zero < max).to(beTrue())
+                    expect(max > zero).to(beTrue())
+
+                    // Near max comparisons
+                    expect(nearMax < max).to(beTrue())
+                    expect(max > nearMax).to(beTrue())
+                    expect(nearMax > one).to(beTrue())
+                    expect(one < nearMax).to(beTrue())
+
+                    // Equal to MAX
+                    let anotherMax = U256.MAX
+                    expect(max == anotherMax).to(beTrue())
+                    expect(max > anotherMax).to(beFalse())
+                    expect(max < anotherMax).to(beFalse())
+                }
+
+                it("<=") {
+                    let val1 = U256(from: [1, 2, 3, 4])
+                    let val2 = U256(from: [1, 2, 3, 5])
+                    let val3 = U256(from: [1, 2, 3, 4])
+                    let val4 = U256(from: [0, 0, 0, 0])
+                    let val5 = U256(from: [UInt64.max, UInt64.max, UInt64.max, UInt64.max])
+
+                    // Basic comparisons
+                    expect(val1 <= val2).to(beTrue())
+                    expect(val2 <= val1).to(beFalse())
+                    expect(val1 <= val3).to(beTrue())
+
+                    // Comparing with ZERO
+                    expect(val4 <= val1).to(beTrue())
+                    expect(val4 <= val4).to(beTrue())
+
+                    // Comparing with MAX
+                    expect(val5 <= val5).to(beTrue())
+                    expect(val1 <= val5).to(beTrue())
+                    expect(val5 <= val1).to(beFalse())
+                }
+
+                it(">=") {
+                    let val1 = U256(from: [1, 2, 3, 5])
+                    let val2 = U256(from: [1, 2, 3, 4])
+                    let val3 = U256(from: [1, 2, 3, 5])
+                    let val4 = U256(from: [0, 0, 0, 0])
+                    let val5 = U256(from: [UInt64.max, UInt64.max, UInt64.max, UInt64.max])
+
+                    // Basic comparisons
+                    expect(val1 >= val2).to(beTrue())
+                    expect(val2 >= val1).to(beFalse())
+                    expect(val1 >= val3).to(beTrue())
+
+                    // Comparing with ZERO
+                    expect(val1 >= val4).to(beTrue())
+                    expect(val4 >= val4).to(beTrue())
+
+                    // Comparing with MAX
+                    expect(val5 >= val5).to(beTrue())
+                    expect(val5 >= val1).to(beTrue())
+                    expect(val1 >= val5).to(beFalse())
+                }
+            }
         }
     }
 }

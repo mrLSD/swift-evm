@@ -26,7 +26,7 @@ final class InstructionMulSpec: QuickSpec {
                     expect(value).to(equal(U256(from: 6)))
                 })
                 expect(m.stack.length).to(equal(0))
-                expect(m.gas.remaining).to(equal(7))
+                expect(m.gas.remaining).to(equal(GasConstant.LOW))
             }
 
             it("Nul `a*b`, when `b` not in the stack") {
@@ -37,7 +37,7 @@ final class InstructionMulSpec: QuickSpec {
 
                 expect(m.machineStatus).to(equal(.Exit(.Error(.StackUnderflow))))
                 expect(m.stack.length).to(equal(0))
-                expect(m.gas.remaining).to(equal(7))
+                expect(m.gas.remaining).to(equal(GasConstant.LOW))
             }
 
             it("Mul max values") {
@@ -53,7 +53,7 @@ final class InstructionMulSpec: QuickSpec {
                     expect(value).to(equal(U256(from: [4, 4, 5, 6])))
                 })
                 expect(m.stack.length).to(equal(0))
-                expect(m.gas.remaining).to(equal(7))
+                expect(m.gas.remaining).to(equal(GasConstant.LOW))
             }
 
             it("Mul with OutOfGas result") {

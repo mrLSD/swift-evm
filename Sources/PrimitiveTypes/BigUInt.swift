@@ -205,8 +205,18 @@ public extension BigUInt {
         return false
     }
 
+    /// Operator `>`: Compare two `BigUInt` values
+    static func > (lhs: Self, rhs: Self) -> Bool {
+        rhs < lhs
+    }
+
     /// Operator `<=`: Compare two `BigUInt` values for less than or equal
     static func <= (lhs: Self, rhs: Self) -> Bool {
-        lhs < rhs || lhs == rhs
+        !(lhs > rhs)
+    }
+
+    /// Operator `>=`: Compare two `BigUInt` values for less than or equal
+    static func >= (lhs: Self, rhs: Self) -> Bool {
+        !(lhs < rhs)
     }
 }

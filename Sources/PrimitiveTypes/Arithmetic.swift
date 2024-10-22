@@ -138,6 +138,7 @@ public extension BigUInt {
         var quotient = [UInt64](repeating: 0, count: Int(Self.numberBase))
         var remainder = self.BYTES
 
+        print("INIT: \(remainder) / \(divisor.BYTES) | \(Self.numberBase)")
         for i in (0 ..< Int(Self.numberBase)).reversed() {
             // Prepare dividend
             let high = remainder[i]
@@ -145,8 +146,9 @@ public extension BigUInt {
             // dividend is U128
             let dividend = U128(from: [low, high])
 
+            print("divisor[\(i)] \(divisor.BYTES)")
             // Convert divisor to U128
-            var div = U128(from: Array(divisor.BYTES.prefix(2)))
+            let div = U128(from: Array(divisor.BYTES[0 ..< 2]))
 
             // Check if division is possible
             if dividend < div {
@@ -155,8 +157,7 @@ public extension BigUInt {
             }
 
             // Perform division
-            var dividendCopy = dividend
-            let (q, r) = dividendCopy.divRem(divisor: div)
+            let (q, r) = dividend.divRem(divisor: div)
             // Store U64 division result
             quotient[i] = q.BYTES[0]
 
