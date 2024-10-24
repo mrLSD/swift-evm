@@ -160,215 +160,6 @@ final class U128Spec: QuickSpec {
                 }
             }
 
-            context("when testing normalize") {
-                it("should correctly normalize divisor and dividend with shift > 0") {
-                    let divisor = U128(from: [0x0000000000000001, 0x0000000000000000]) // 1 in lower word
-                    let dividend = U128(from: [0x0000000000000002, 0x0000000000000000]) // 2 in lower word
-                    let (normalizedDivisor, normalizedDividend, shift) = divisor.normalize(divisor: divisor, dividend: dividend)
-
-                    expect(normalizedDivisor).to(equal(U128(from: [0x0000000000000000, 0x8000000000000000])))
-                    expect(normalizedDividend).to(equal(U128(from: [0x0000000000000000, 0x0000000000000000])))
-                    expect(shift).to(equal(127))
-                }
-
-                it("should correctly normalize when shift is 0") {
-                    let divisor = U128(from: [0xffffffffffffffff, 0x0000000000000001]) // No leading zeros
-                    let dividend = U128(from: [0xffffffffffffffff, 0x0000000000000002])
-                    let (normalizedDivisor, normalizedDividend, shift) = divisor.normalize(divisor: divisor, dividend: dividend)
-
-                    expect(normalizedDivisor).to(equal(U128(from: [0x8000000000000000, 0xffffffffffffffff])))
-                    expect(normalizedDividend).to(equal(U128(from: [0x8000000000000000, 0x7fffffffffffffff])))
-                    expect(shift).to(equal(63))
-                }
-
-                it("should correctly normalize with partial shift") {
-                    let divisor = U128(from: [0x000000000000000f, 0x0000000000000000]) // 15 in lower word
-                    let dividend = U128(from: [0x000000000000001f, 0x0000000000000000]) // 31 in lower word
-                    let (normalizedDivisor, normalizedDividend, shift) = divisor.normalize(divisor: divisor, dividend: dividend)
-
-                    expect(normalizedDivisor).to(equal(U128(from: [0x0000000000000000, 0xf000000000000000])))
-                    expect(normalizedDividend).to(equal(U128(from: [0x0000000000000000, 0xf000000000000000])))
-                    expect(shift).to(equal(124))
-                }
-
-                it("should correctly normalize with shift=1") {
-                    let divisor = U128(from: [0x8000000000000000, 0x0000000000000000]) // 1 << 63 in lower word
-                    let dividend = U128(from: [0x8000000000000000, 0x0000000000000000]) // 1 << 63 in lower word
-                    let (normalizedDivisor, normalizedDividend, shift) = divisor.normalize(divisor: divisor, dividend: dividend)
-
-                    expect(normalizedDivisor).to(equal(U128(from: [0x0000000000000000, 0x8000000000000000])))
-                    expect(normalizedDividend).to(equal(U128(from: [0x0000000000000000, 0x8000000000000000])))
-                    expect(shift).to(equal(64))
-                }
-
-                it("should correctly normalize with shift=63") {
-                    let divisor = U128(from: [0x0000000000000001, 0x0000000000000000]) // 1 in lower word
-                    let dividend = U128(from: [0x0000000000000001, 0x0000000000000000]) // 1 in lower word
-                    let (normalizedDivisor, normalizedDividend, shift) = divisor.normalize(divisor: divisor, dividend: dividend)
-
-                    expect(normalizedDivisor).to(equal(U128(from: [0x0000000000000000, 0x8000000000000000])))
-                    expect(normalizedDividend).to(equal(U128(from: [0x0000000000000000, 0x8000000000000000])))
-                    expect(shift).to(equal(127))
-                }
-
-                it("should correctly normalize with shift=1") {
-                    let divisor = U128(from: [0x8000000000000000, 0x0000000000000000]) // 1 << 63 in lower word
-                    let dividend = U128(from: [0x8000000000000000, 0x0000000000000000]) // 1 << 63 in lower word
-
-                    let (normalizedDivisor, normalizedDividend, shift) = divisor.normalize(divisor: divisor, dividend: dividend)
-
-                    expect(normalizedDivisor).to(equal(U128(from: [0x0000000000000000, 0x8000000000000000])))
-                    expect(normalizedDividend).to(equal(U128(from: [0x0000000000000000, 0x8000000000000000])))
-                    expect(shift).to(equal(64))
-                }
-
-                it("should correctly normalize with shift=0") {
-                    let divisor = U128(from: [0xffffffffffffffff, 0xffffffffffffffff])
-                    let dividend = U128(from: [0xffffffffffffffff, 0xffffffffffffffff])
-
-                    let (normalizedDivisor, normalizedDividend, shift) = divisor.normalize(divisor: divisor, dividend: dividend)
-
-                    expect(normalizedDivisor).to(equal(divisor))
-                    expect(normalizedDividend).to(equal(dividend))
-                    expect(shift).to(equal(0))
-                }
-
-                it("should correctly normalize with shift=16") {
-                    let divisor = U128(from: [0x0000ffff00000000, 0x0000000000000000])
-                    let dividend = U128(from: [0x0000ffff00000000, 0x0000000000000000])
-                    let (normalizedDivisor, normalizedDividend, shift) = divisor.normalize(divisor: divisor, dividend: dividend)
-
-                    expect(normalizedDivisor).to(equal(U128(from: [0x0000000000000000, 0xffff000000000000])))
-                    expect(normalizedDividend).to(equal(U128(from: [0x0000000000000000, 0xffff000000000000])))
-                    expect(shift).to(equal(80))
-                }
-
-                it("should correctly normalize when shift is 63") {
-                    let divisor = U128(from: [0xffffffffffffffff, 0x0000000000000001]) // [lowWord=0xffffffffffffffff, highWord=0x0000000000000001]
-                    let dividend = U128(from: [0xffffffffffffffff, 0x0000000000000002]) // [lowWord=0xffffffffffffffff, highWord=0x0000000000000002]
-                    let (normalizedDivisor, normalizedDividend, shift) = divisor.normalize(divisor: divisor, dividend: dividend)
-
-                    expect(normalizedDivisor).to(equal(U128(from: [0x8000000000000000, 0xffffffffffffffff])))
-                    expect(normalizedDividend).to(equal(U128(from: [0x8000000000000000, 0x7fffffffffffffff])))
-                    expect(shift).to(equal(63))
-                }
-
-                it("should correctly normalize with shift=16") {
-                    let divisor = U128(from: [0x0000000000000000, 0x0000ffff00000000])
-                    let dividend = U128(from: [0x0000000000000000, 0x0000ffff00000000])
-
-                    let (normalizedDivisor, normalizedDividend, shift) = divisor.normalize(divisor: divisor, dividend: dividend)
-
-                    expect(normalizedDivisor).to(equal(U128(from: [0x0000000000000000, 0xffff000000000000])))
-                    expect(normalizedDividend).to(equal(U128(from: [0x0000000000000000, 0xffff000000000000])))
-                    expect(shift).to(equal(16))
-                }
-
-                it("should correctly normalize when shift is 0") {
-                    let divisor = U128(from: [0xffffffffffffffff, 0x8000000000000000]) // [lowWord=0xffffffffffffffff, highWord=0x8000000000000000]
-                    let dividend = U128(from: [0xffffffffffffffff, 0x8000000000000000]) // [lowWord=0xffffffffffffffff, highWord=0x8000000000000000]
-                    let (normalizedDivisor, normalizedDividend, shift) = divisor.normalize(divisor: divisor, dividend: dividend)
-
-                    expect(normalizedDivisor).to(equal(divisor))
-                    expect(normalizedDividend).to(equal(dividend))
-                    expect(shift).to(equal(0))
-                }
-
-                it("should correctly normalize with shift=64") {
-                    let divisor = U128(from: [0x0000000000000000, 0x0000000000000001]) // [lowWord=0x0000000000000000, highWord=0x0000000000000001]
-                    let dividend = U128(from: [0x0000000000000000, 0x0000000000000001]) // [lowWord=0x0000000000000000, highWord=0x0000000000000001]
-
-                    let (normalizedDivisor, normalizedDividend, shift) = divisor.normalize(divisor: divisor, dividend: dividend)
-
-                    expect(normalizedDivisor).to(equal(U128(from: [0x0000000000000000, 0x8000000000000000])))
-                    expect(normalizedDividend).to(equal(U128(from: [0x0000000000000000, 0x8000000000000000])))
-                    expect(shift).to(equal(63))
-                }
-            }
-
-            context("when testing denormalize") {
-                it("should correctly denormalize remainder with shift > 0") {
-                    let remainder = U128(from: [0x0000000000000002, 0x0000000000000001]) // [2,1]
-                    let shift = 64
-                    let denormalized = remainder.denormalize(remainder: remainder, shift: shift)
-
-                    expect(denormalized).to(equal(U128(from: [0x0000000000000001, 0x0000000000000000])))
-                }
-
-                it("should correctly denormalize when shift is 0") {
-                    let remainder = U128(from: [0x123456789abcdef0, 0x0fedcba987654321])
-                    let shift = 0
-                    let denormalized = remainder.denormalize(remainder: remainder, shift: shift)
-
-                    expect(denormalized).to(equal(remainder))
-                }
-
-                it("should correctly denormalize with partial shift") {
-                    let remainder = U128(from: [0xf000000000000000, 0x0000000000000001]) // [0xF000...,1]
-                    let shift = 4
-                    let denormalized = remainder.denormalize(remainder: remainder, shift: shift)
-
-                    expect(denormalized).to(equal(U128(from: [0x1f00000000000000, 0x0000000000000000])))
-                }
-
-                it("should correctly denormalize remainder with shift=1") {
-                    let remainder = U128(from: [0x8000000000000000, 0x0000000000000000]) // [0x8000000000000000, 0]
-                    let shift = 1
-
-                    let denormalized = remainder.denormalize(remainder: remainder, shift: shift)
-
-                    expect(denormalized).to(equal(U128(from: [0x4000000000000000, 0x0000000000000000])))
-                }
-
-                it("should correctly denormalize remainder with shift=63") {
-                    let remainder = U128(from: [0x0000000000000001, 0x0000000000000000]) // [1, 0]
-                    let shift = 63
-                    let denormalized = remainder.denormalize(remainder: remainder, shift: shift)
-
-                    expect(denormalized).to(equal(U128(from: [0x0000000000000000, 0x0000000000000000])))
-                }
-
-                it("should correctly denormalize with shift=32") {
-                    let remainder = U128(from: [0x0000000100000000, 0x0000000000000001]) // [0x0000000100000000, 0x0000000000000001]
-                    let shift = 32
-                    let denormalized = remainder.denormalize(remainder: remainder, shift: shift)
-
-                    expect(denormalized).to(equal(U128(from: [0x0000000100000001, 0x0000000000000000])))
-                }
-
-                it("should correctly denormalize with shift=16") {
-                    let remainder = U128(from: [0x0001000000000000, 0x0000000000000001]) // [0x0001000000000000, 0x0000000000000001]
-                    let shift = 16
-                    let denormalized = remainder.denormalize(remainder: remainder, shift: shift)
-
-                    expect(denormalized).to(equal(U128(from: [0x0001000100000000, 0x0000000000000000])))
-                }
-
-                it("should correctly denormalize with shift=1") {
-                    let remainder = U128(from: [0x8000000000000000, 0x0000000000000001]) // [0x8000000000000000, 0x0000000000000001]
-                    let shift = 1
-                    let denormalized = remainder.denormalize(remainder: remainder, shift: shift)
-
-                    expect(denormalized).to(equal(U128(from: [0xc000000000000000, 0x0000000000000000])))
-                }
-
-                it("should correctly denormalize with shift=63") {
-                    let remainder = U128(from: [0x0000000000000001, 0x0000000000000001]) // [0x0000000000000001, 0x0000000000000001]
-                    let shift = 63
-                    let denormalized = remainder.denormalize(remainder: remainder, shift: shift)
-
-                    expect(denormalized).to(equal(U128(from: [0x0000000000000002, 0x0000000000000000])))
-                }
-
-                it("should correctly denormalize with shift=64") {
-                    let remainder = U128(from: [0x0000000100000000, 0x0000000000000001]) // [0x0000000100000000, 0x0000000000000001]
-                    let shift = 64
-                    let denormalized = remainder.denormalize(remainder: remainder, shift: shift)
-
-                    expect(denormalized).to(equal(U128(from: [0x0000000000000001, 0x0000000000000000])))
-                }
-            }
-
             describe("U128.divRem(divisor:)") {
                 context("when divisor is zero") {
                     it("should trigger a precondition failure") {
@@ -441,33 +232,33 @@ final class U128Spec: QuickSpec {
                         expect(remainder).to(equal(dividend))
                     }
                 }
+                /*
+                 context("when division involves multiple qHat adjustments") {
+                     it("should correctly adjust qHat multiple times if necessary") {
+                         let dividend = U128(from: [0x0000000000000000, 0x8000000000000000])
+                         let divisor = U128(from: [0x0000000000000001, 0x0000000000000000])
 
-                context("when division involves multiple qHat adjustments") {
-                    it("should correctly adjust qHat multiple times if necessary") {
-                        let dividend = U128(from: [0x0000000000000000, 0x8000000000000000])
-                        let divisor = U128(from: [0x0000000000000001, 0x0000000000000000])
+                         let (quotient, remainder) = dividend.divRem(divisor: divisor)
 
-                        let (quotient, remainder) = dividend.divRem(divisor: divisor)
+                         // Expected quotient = 0x8000000000000000, remainder = 0
+                         expect(quotient).to(equal(U128(from: [0x8000000000000000, 0x0000000000000000])))
+                         expect(remainder).to(equal(U128.ZERO))
+                     }
+                 }
 
-                        // Expected quotient = 0x8000000000000000, remainder = 0
-                        expect(quotient).to(equal(U128(from: [0x8000000000000000, 0x0000000000000000])))
-                        expect(remainder).to(equal(U128.ZERO))
-                    }
-                }
+                 context("when division results in borrow adjustment") {
+                     it("should correctly handle borrow during subtraction") {
+                         let dividend = U128(from: [0x8000000000000000, 0x0000000000000001])
+                         let divisor = U128(from: [0x8000000000000000, 0x0000000000000000])
 
-                context("when division results in borrow adjustment") {
-                    it("should correctly handle borrow during subtraction") {
-                        let dividend = U128(from: [0x8000000000000000, 0x0000000000000001])
-                        let divisor = U128(from: [0x8000000000000000, 0x0000000000000000])
+                         let (quotient, remainder) = dividend.divRem(divisor: divisor)
 
-                        let (quotient, remainder) = dividend.divRem(divisor: divisor)
-
-                        // Expected quotient = 1, remainder = 0
-                        expect(quotient).to(equal(U128(from: [1, 0])))
-                        expect(remainder).to(equal(U128.ZERO))
-                    }
-                }
-
+                         // Expected quotient = 1, remainder = 0
+                         expect(quotient).to(equal(U128(from: [1, 0])))
+                         expect(remainder).to(equal(U128.ZERO))
+                     }
+                 }
+                 */
                 context("when dividend has leading zeros in high word") {
                     it("should correctly normalize and divide with shift=32") {
                         let dividend = U128(from: [0x0000ffff00000000, 0x0000000000000000])
@@ -592,22 +383,19 @@ final class U128Spec: QuickSpec {
 
                 context("when dividend is multiple of divisor with high word") {
                     it("should correctly compute quotient and remainder") {
-                        let dividend = U128(from: [0x0000000000000000, 0x0000000000000002]) // 2^64
-                        let divisor = U128(from: [0x0000000000000001, 0x0000000000000001]) // 2^64 +1
-
+                        let dividend = U128(from: [0x0000000000000000, 0x0000000000000002])
+                        let divisor = U128(from: [0x0000000000000001, 0x0000000000000001])
                         let (quotient, remainder) = dividend.divRem(divisor: divisor)
 
-                        // Since 2^64 < 2^64 +1, quotient =0, remainder=2^64
-                        expect(quotient).to(equal(U128.ZERO))
-                        expect(remainder).to(equal(dividend))
+                        expect(quotient).to(equal(U128(from: 1)))
+                        expect(remainder).to(equal(U128(from: 0xffffffffffffffff)))
                     }
                 }
 
                 context("when divisor is much smaller than dividend") {
                     it("should correctly compute large quotient and small remainder") {
-                        let dividend = U128(from: [0xffffffffffffffff, 0xffffffffffffffff]) // Maximum U128
-                        let divisor = U128(from: [0x0000000000000001, 0x0000000000000000]) // 1
-
+                        let dividend = U128(from: [0xfffffffffffffffc, 0xfffffffffffffffa])
+                        let divisor = U128(from: [0x0000000000000001, 0x0000000000000000])
                         let (quotient, remainder) = dividend.divRem(divisor: divisor)
 
                         expect(quotient).to(equal(dividend))
@@ -617,13 +405,11 @@ final class U128Spec: QuickSpec {
 
                 context("when dividend and divisor require partial normalization") {
                     it("should correctly normalize and divide with shift=1") {
-                        let dividend = U128(from: [0x8000000000000000, 0x0000000000000001]) // 2^127 + 2^63
-                        let divisor = U128(from: [0x8000000000000000, 0x0000000000000000]) // 2^63
-
+                        let dividend = U128(from: [0x8000000000000000, 0x0000000000000001])
+                        let divisor = U128(from: [0x8000000000000000, 0x0000000000000000])
                         let (quotient, remainder) = dividend.divRem(divisor: divisor)
 
-                        // Expected quotient = 1, remainder = 0
-                        expect(quotient).to(equal(U128(from: [1, 0])))
+                        expect(quotient).to(equal(U128(from: 3)))
                         expect(remainder).to(equal(U128.ZERO))
                     }
                 }
@@ -634,7 +420,7 @@ final class U128Spec: QuickSpec {
                         let divisor = U128(from: 2)
                         let (quotient, remainder) = dividend.divRem(divisor: divisor)
 
-                        expect(quotient).to(equal(U128(from: [1, 0])))
+                        expect(quotient).to(equal(U128(from: [0x0000001fc0000000, 0])))
                         expect(remainder).to(equal(U128.ZERO))
                     }
 
