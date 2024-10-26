@@ -166,9 +166,11 @@ final class U128Spec: QuickSpec {
                         let dividend = U128(from: [0x1234567890abcdef, 0x0fedcba098765432])
                         let divisor = U128.ZERO
 
-                        expect {
-                            _ = dividend.divRem(divisor: divisor)
-                        }.to(throwAssertion())
+                        expect(captureStandardError {
+                            expect {
+                                _ = dividend.divRem(divisor: divisor)
+                            }.to(throwAssertion())
+                        }).to(contain("Division by zero"))
                     }
                 }
 
