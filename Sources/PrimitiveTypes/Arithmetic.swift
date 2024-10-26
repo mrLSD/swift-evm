@@ -134,13 +134,13 @@ public extension BigUInt {
     }
 
     func divMod(_ rhs: Self) -> (quotient: Self, remainder: Self) {
+        precondition(!rhs.isZero, "Division by zero")
         if rhs == Self(from: 1) {
             return (self, Self.ZERO)
         }
 
         let lhsLeastNumber = self.leastNumber()
         let rhsLeastNumber = rhs.leastNumber()
-        precondition(lhsLeastNumber != 0, "Division by zero")
 
         // Early return in case we are dividing by a larger number than us
         if lhsLeastNumber < rhsLeastNumber {
