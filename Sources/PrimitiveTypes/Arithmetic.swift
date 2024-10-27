@@ -162,8 +162,8 @@ public extension BigUInt {
     ///   - a: The first slice to be mutated.
     ///   - b: The second slice to be added.
     /// - Returns: A boolean indicating whether there was an overflow.
-    private static func addSlice(a: inout [UInt64], range: Range<Int>, b: [UInt64]) -> Bool {
-        self.binopSlice(a: &a, range: range, b: b, binop: { x, y in x.addingReportingOverflow(y) })
+    private static func addSlice(a: inout [UInt64], from: Int, b: borrowing [UInt64], to: Int) -> Bool {
+        self.binopSlice(a: &a, from: from, b: b, to: to, binop: { x, y in x.addingReportingOverflow(y) })
     }
 
     /// Subtracts the second slice from the first slice.
@@ -171,21 +171,29 @@ public extension BigUInt {
     ///   - a: The first slice to be mutated.
     ///   - b: The second slice to be subtracted.
     /// - Returns: A boolean indicating whether there was a borrow.
-    private static func subSlice(a: inout [UInt64], range: Range<Int>, b: [UInt64]) -> Bool {
-        self.binopSlice(a: &a, range: range, b: b, binop: { x, y in x.subtractingReportingOverflow(y) })
+    private static func subSlice(a: inout [UInt64], from: Int, b: borrowing [UInt64], to: Int) -> Bool {
+        self.binopSlice(a: &a, from: from, b: b, to: to, binop: { x, y in x.subtractingReportingOverflow(y) })
     }
 
     /// Performs a binary operation on two slices of UInt64.
+    ///
+    /// It performs `zip` operation for to arrays.
+    /// Intersection of two ranges without going beyond each range for arrays.
+    ///
     /// - Parameters:
     ///   - a: The first slice to be mutated.
     ///   - b: The second slice.
     ///   - binop: A binary operation that takes two UInt64s and returns a tuple of (result, overflow).
     /// - Returns: A boolean indicating whether there was an overflow.
-    private static func binopSlice(a: inout [UInt64], range: Range<Int>, b: [UInt64], binop: (UInt64, UInt64) -> (UInt64, Bool)) -> Bool {
+    private static func binopSlice(a: inout [UInt64], from: Int, b: borrowing [UInt64], to: Int, binop: (UInt64, UInt64) -> (UInt64, Bool)) -> Bool {
         var carry = false
-        for i in range {
-            let (result, c) = Self.binopCarry(a[i], b[i], carry, binop)
-            a[i] = result
+        // Check correct range for zip operation.
+        let endIndex = min(a.count - from, b.count, to)
+        // Perform zip operation and calculations. The range.
+        // Intersection of two ranges without going beyond each range for arrays.
+        for i in 0 ..< endIndex {
+            let (result, c) = Self.binopCarry(a[from + i], b[i], carry, binop)
+            a[from + i] = result
             carry = c
         }
         return carry
@@ -349,7 +357,7 @@ public extension BigUInt {
             // subtract (q_hat * v) from u[j..]
             let q_hat_v = v.fullMulUInt64(by: q_hat)
             // u[j..] -= q_hat_v;
-            let c = Self.subSlice(a: &u, range: j ..< u.count, b: Array(q_hat_v[0 ..< n + 1]))
+            let c = Self.subSlice(a: &u, from: j, b: q_hat_v, to: n + 1)
 
             // D6.
             // Actually, q_hat == q_j + 1 and u[j..] has overflowed
@@ -357,7 +365,7 @@ public extension BigUInt {
             if c {
                 q_hat -= 1
                 // Add v to u[j..<j + n]
-                let c = Self.addSlice(a: &u, range: j ..< u.count, b: Array(v.BYTES[0 ..< n]))
+                let c = Self.addSlice(a: &u, from: j, b: v.BYTES, to: n)
                 u[j + n] = u[j + n] &+ (c ? 1 : 0)
             }
 
@@ -481,6 +489,11 @@ public extension BigUInt {
     /// - Returns: The division of the two values.
     static func / (lhs: Self, rhs: Self) -> Self {
         let (result, _) = lhs.divRem(divisor: rhs)
+        return result
+    }
+
+    static func % (lhs: Self, rhs: Self) -> Self {
+        let (_, result) = lhs.divRem(divisor: rhs)
         return result
     }
 

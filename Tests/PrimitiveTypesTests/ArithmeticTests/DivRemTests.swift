@@ -102,12 +102,13 @@ final class ArithmeticDivRemSpec: QuickSpec {
                 }
 
                 it("partial case 2") {
-//                    let a = U256(from: [UInt64.max/2, 1, UInt64.max/2, 0])
-//                    let b = U256(from: [2, UInt64.max/2, 0, 0])
-//                    let (quotient, remainder) = a.divRem(divisor: b)
-//
-//                    expect(quotient.BYTES).to(equal([UInt64.max, 0, 0, 0]))
-//                    expect(remainder.BYTES).to(equal([0x8000000000000001, 0x7ffffffffffffffe, 0, 0]))
+                    let a = U256(from: [UInt64.max/2, 1, UInt64.max/2, 0])
+                    let b = U256(from: [2, UInt64.max/2, 0, 0])
+                    let quotient = a / b
+                    let remainder = a % b
+
+                   expect(quotient.BYTES).to(equal([UInt64.max, 0, 0, 0]))
+                  expect(remainder.BYTES).to(equal([0x8000000000000001, 0x7ffffffffffffffe, 0, 0]))
                 }
 
                 it("partial case 2") {
