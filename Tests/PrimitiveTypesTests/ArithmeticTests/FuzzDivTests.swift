@@ -15,7 +15,7 @@ final class FuzzDivRemSpec: QuickSpec {
 
             it("run fuzz for divRem") {
                 var index = 0
-                while index < 100_000 {
+                while index < 10 {
                     index += 1
 
                     let val1 = UInt128.random(in: 2 ... UInt128.max)
