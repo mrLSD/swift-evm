@@ -63,6 +63,7 @@ public struct Gas {
 
 /// Gas constants for record gas cost calculation
 enum GasConstant {
+    static let BASE: UInt64 = 2
     static let VERYLOW: UInt64 = 3
-    static let LOW: UInt64 = 3
+    static let LOW: UInt64 = 5
 }

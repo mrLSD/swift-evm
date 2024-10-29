@@ -12,4 +12,3 @@ public struct U128: BigUInt {
         self.bytes = value
     }
 }
-
