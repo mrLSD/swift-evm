@@ -12,18 +12,10 @@ final class FuzzDivRemSpec: QuickSpec {
                 let low = UInt64(value & 0xFFFFFFFFFFFFFFFF)
                 return (high, low)
             }
-            func combineUInt64(_ high: UInt64, _ low: UInt64) -> UInt128 {
-                (UInt128(high) << 64) | UInt128(low)
-            }
 
             it("run fuzz for divRem") {
-                let x = UInt128(UInt128(100) << 64)
-                // let hi1 = UInt64.random(in: 0 ... UInt64.max)
-                // let lo1 = UInt64.random(in: 0 ... UInt64.max)
-                // let val1 = combineUInt64(hi1, lo1)
-                /*
-                 var index = 0
-                 while index < 10 {
+                /* var index = 0
+                 while index < 100_000 {
                      index += 1
 
                      let val1 = UInt128.random(in: 2 ... UInt128.max)
@@ -40,8 +32,7 @@ final class FuzzDivRemSpec: QuickSpec {
                      let (rem_hi, rem_lo) = splitUInt128(rem_val)
                      expect(quotient.BYTES).to(equal([div_lo, div_hi]))
                      expect(remainder.BYTES).to(equal([rem_lo, rem_hi]))
-                 }
-                     */
+                 } */
             }
         }
     }
