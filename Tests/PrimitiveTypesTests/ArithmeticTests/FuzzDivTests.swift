@@ -17,9 +17,10 @@ final class FuzzDivRemSpec: QuickSpec {
             }
 
             it("run fuzz for divRem") {
-                let hi1 = UInt64.random(in: 0 ... UInt64.max)
-                let lo1 = UInt64.random(in: 0 ... UInt64.max)
-                let val1 = combineUInt64(hi1, lo1)
+                let x: UInt128 = 1
+                // let hi1 = UInt64.random(in: 0 ... UInt64.max)
+                // let lo1 = UInt64.random(in: 0 ... UInt64.max)
+                // let val1 = combineUInt64(hi1, lo1)
                 /*
                  var index = 0
                  while index < 10 {
