@@ -66,4 +66,5 @@ enum GasConstant {
     static let BASE: UInt64 = 2
     static let VERYLOW: UInt64 = 3
     static let LOW: UInt64 = 5
+    static let MID: UInt64 = 8
 }

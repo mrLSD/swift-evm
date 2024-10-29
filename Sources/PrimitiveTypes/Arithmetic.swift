@@ -111,12 +111,6 @@ public extension BigUInt {
         return productHigh &+ (carry1 ? 1 : 0) &+ (carry2 ? 1 : 0)
     }
 
-    borrowing func toHalfWordArray() -> [UInt32] {
-        self.BYTES.flatMap { number in
-            [UInt32(number & 0xFFFFFFFF), UInt32((number >> 32) & 0xFFFFFFFF)]
-        }
-    }
-
     /// Returns the least number of bits needed to represent the number
     private func leastNumber() -> Int {
         let count = self.BYTES.count
@@ -162,7 +156,7 @@ public extension BigUInt {
     ///   - a: The first slice to be mutated.
     ///   - b: The second slice to be added.
     /// - Returns: A boolean indicating whether there was an overflow.
-    private static func addSlice(a: inout [UInt64], from: Int, b: borrowing [UInt64], to: Int) -> Bool {
+    static func addSlice(a: inout [UInt64], from: Int, b: borrowing [UInt64], to: Int) -> Bool {
         self.binopSlice(a: &a, from: from, b: b, to: to, binop: { x, y in x.addingReportingOverflow(y) })
     }
 
@@ -171,7 +165,7 @@ public extension BigUInt {
     ///   - a: The first slice to be mutated.
     ///   - b: The second slice to be subtracted.
     /// - Returns: A boolean indicating whether there was a borrow.
-    private static func subSlice(a: inout [UInt64], from: Int, b: borrowing [UInt64], to: Int) -> Bool {
+    static func subSlice(a: inout [UInt64], from: Int, b: borrowing [UInt64], to: Int) -> Bool {
         self.binopSlice(a: &a, from: from, b: b, to: to, binop: { x, y in x.subtractingReportingOverflow(y) })
     }
 
@@ -205,6 +199,24 @@ public extension BigUInt {
         return (res2, overflow1 || overflow2)
     }
 
+    static func divModWord64(hi: UInt64, lo: UInt64, y: UInt64) -> (quotient: UInt64, remainder: UInt64) {
+        var quotient: UInt64 = 0
+        var remainder: UInt64 = hi
+
+        // Iterate over each bit of the lower 64 bits, from highest to lowest
+        for i in (0 ..< 64).reversed() {
+            // Shift remainder left by 1 and add the current bit of lo
+            remainder = (remainder << 1) | ((lo >> i) & 1)
+
+            // If the remainder is greater than or equal to y, subtract y and set the corresponding bit in quotient
+            if remainder >= y {
+                remainder -= y
+                quotient |= (1 << i)
+            }
+        }
+        return (quotient, remainder)
+    }
+
     /// Returns the quotient and remainder of dividing a 128-bit number (hi << 64 + lo) by a 64-bit y.
     /// Assumes that `hi < y`.
     static func divModWord(hi: UInt64, lo: UInt64, y: UInt64) -> (quotient: UInt64, remainder: UInt64) {
@@ -217,23 +229,7 @@ public extension BigUInt {
             let quotient = UInt64(x / y128)
             let remainder = UInt64(x % y128)
             return (quotient, remainder)
-        } else {
-            var quotient: UInt64 = 0
-            var remainder: UInt64 = hi
-
-            // Iterate over each bit of the lower 64 bits, from highest to lowest
-            for i in (0 ..< 64).reversed() {
-                // Shift remainder left by 1 and add the current bit of lo
-                remainder = (remainder << 1) | ((lo >> i) & 1)
-
-                // If the remainder is greater than or equal to y, subtract y and set the corresponding bit in quotient
-                if remainder >= y {
-                    remainder -= y
-                    quotient |= (1 << i)
-                }
-            }
-            return (quotient, remainder)
-        }
+        } else { return self.divModWord64(hi: hi, lo: lo, y: y) }
     }
 
     /// Multiply UInt64 with carry
@@ -362,9 +358,10 @@ public extension BigUInt {
             // D6.
             // Actually, q_hat == q_j + 1 and u[j..] has overflowed
             // Highly unlikely ~ (1 / 2^63)
+            //
+            // Add v to u[j..<j + n]
             if c {
                 q_hat -= 1
-                // Add v to u[j..<j + n]
                 let c = Self.addSlice(a: &u, from: j, b: v.BYTES, to: n)
                 u[j + n] = u[j + n] &+ (c ? 1 : 0)
             }

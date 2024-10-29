@@ -19,7 +19,7 @@ jobs:
     - name: Build
       run: swift build
     - name: Run tests
-      run: swift test  --enable-code-coverage
+      run: swift test --verbose --enable-code-coverage
 
     - name: Generate Coverage Report
       run: |
