@@ -77,6 +77,8 @@ public struct Machine {
         table[Opcode.ADD.index] = ArithmeticInstructions.add
         table[Opcode.SUB.index] = ArithmeticInstructions.sub
         table[Opcode.MUL.index] = ArithmeticInstructions.mul
+        table[Opcode.DIV.index] = ArithmeticInstructions.div
+        table[Opcode.MOD.index] = ArithmeticInstructions.rem
         return table
     }()
 
