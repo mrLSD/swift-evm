@@ -17,7 +17,7 @@ final class FuzzDivRemSpec: QuickSpec {
             }
 
             it("run fuzz for divRem") {
-                let x = UInt128(100)
+                let x = (UInt128(100) << 64)
                 // let hi1 = UInt64.random(in: 0 ... UInt64.max)
                 // let lo1 = UInt64.random(in: 0 ... UInt64.max)
                 // let val1 = combineUInt64(hi1, lo1)
