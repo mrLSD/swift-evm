@@ -12,9 +12,14 @@ final class FuzzDivRemSpec: QuickSpec {
                 let low = UInt64(value & 0xFFFFFFFFFFFFFFFF)
                 return (high, low)
             }
+            func combineUInt64(_ high: UInt64, _ low: UInt64) -> UInt128 {
+                (UInt128(high) << 64) | UInt128(low)
+            }
 
             it("run fuzz for divRem") {
-                let val1 = UInt64.random(in: 2 ... UInt64.max)
+                let hi1 = UInt64.random(in: 0 ... UInt64.max)
+                let lo1 = UInt64.random(in: 0 ... UInt64.max)
+                let val1 = combineUInt64(hi1, lo1)
                 /*
                  var index = 0
                  while index < 10 {
