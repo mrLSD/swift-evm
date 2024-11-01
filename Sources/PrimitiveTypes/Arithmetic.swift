@@ -160,6 +160,15 @@ public extension BigUInt {
         self.binopSlice(a: &a, from: from, b: b, to: to, binop: { x, y in x.addingReportingOverflow(y) })
     }
 
+    /// Add v to u[j..<j + n]
+    static func carryAddSlice(carry: Bool, q_hat: inout UInt64, a: inout [UInt64], from: Int, b: borrowing [UInt64], to: Int) {
+        if carry {
+            q_hat -= 1
+            let c = Self.addSlice(a: &a, from: from, b: b, to: to)
+            a[from + to] = a[from + to] &+ (c ? 1 : 0)
+        }
+    }
+
     /// Subtracts the second slice from the first slice.
     /// - Parameters:
     ///   - a: The first slice to be mutated.
@@ -334,9 +343,7 @@ public extension BigUInt {
                     let (new_r_hat, overflow) = r_hat.addingReportingOverflow(v_n_1)
                     r_hat = new_r_hat
                     // if r_hat overflowed, we're done
-                    if overflow {
-                        break
-                    }
+                    if overflow { break }
                 }
                 q_hat = temp_q_hat
             } else {
@@ -360,11 +367,7 @@ public extension BigUInt {
             // Highly unlikely ~ (1 / 2^63)
             //
             // Add v to u[j..<j + n]
-            if c {
-                q_hat -= 1
-                let c = Self.addSlice(a: &u, from: j, b: v.BYTES, to: n)
-                u[j + n] = u[j + n] &+ (c ? 1 : 0)
-            }
+            Self.carryAddSlice(carry: c, q_hat: &q_hat, a: &u, from: j, b: v.BYTES, to: n)
 
             // D5.
             q[j] = q_hat
@@ -401,46 +404,6 @@ public extension BigUInt {
     @inline(__always)
     func divRem(divisor: Self) -> (quotient: Self, remainder: Self) {
         self.divMod(divisor)
-    }
-
-    @inline(__always)
-    func shiftLeft(_ shift: Int) -> Self {
-        var result = [UInt64](repeating: 0, count: Int(Self.numberBase))
-        let wordShift = shift / 64
-        let bitShift = shift % 64
-
-        // Shift
-        for i in wordShift ..< Int(Self.numberBase) {
-            result[i] = self.BYTES[i - wordShift] << bitShift
-        }
-
-        // Carry
-        if bitShift > 0 {
-            for i in wordShift + 1 ..< Int(Self.numberBase) {
-                result[i] += self.BYTES[i - 1 - wordShift] >> (64 - bitShift)
-            }
-        }
-        return Self(from: result)
-    }
-
-    @inline(__always)
-    func shiftRight(_ shift: Int) -> Self {
-        var result = [UInt64](repeating: 0, count: Int(Self.numberBase))
-        let wordShift = shift / 64
-        let bitShift = shift % 64
-
-        // Shift
-        for i in wordShift ..< Int(Self.numberBase) {
-            result[i - wordShift] = self.BYTES[i] >> bitShift
-        }
-
-        // Carry
-        if bitShift > 0 {
-            for i in wordShift + 1 ..< Int(Self.numberBase) {
-                result[i - wordShift - 1] += self.BYTES[i] << (64 - bitShift)
-            }
-        }
-        return Self(from: result)
     }
 
     /// Adds two values of the same type together and returns the result.
@@ -492,13 +455,5 @@ public extension BigUInt {
     static func % (lhs: Self, rhs: Self) -> Self {
         let (_, result) = lhs.divRem(divisor: rhs)
         return result
-    }
-
-    static func << (lhs: Self, shift: Int) -> Self {
-        lhs.shiftLeft(shift)
-    }
-
-    static func >> (lhs: Self, shift: Int) -> Self {
-        lhs.shiftRight(shift)
     }
 }

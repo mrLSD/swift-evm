@@ -97,9 +97,7 @@ struct Stack {
         switch self.peek(indexFromTop: indexFromTop) {
         case .success(let u256):
             // This situation possible only for 32-bit context (for example wasm32)
-            guard let intValue = u256.getUInt else {
-                return .failure(.OutOfGas)
-            }
+            guard let intValue = u256.getUInt else { return .failure(.OutOfGas) }
             return .success(intValue)
         case .failure(let error):
             return .failure(error)
