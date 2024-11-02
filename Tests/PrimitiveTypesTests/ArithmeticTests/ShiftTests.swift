@@ -91,9 +91,10 @@ final class ArithmeticShiftSpec: QuickSpec {
             }
 
             it("should correctly shift right by 1 bit without carry") {
-                let value = U128(from: [0x0000000000000002, 0x0000000000000000]) // 2
+                let value = U128(from: [0x0000000000000002, 0x0000000000000000])
                 let shifted = value.shiftRight(1) // 1
                 let expected = U128(from: [0x0000000000000001, 0x0000000000000000])
+
                 expect(shifted).to(equal(expected))
             }
 
@@ -143,6 +144,7 @@ final class ArithmeticShiftSpec: QuickSpec {
                 let value = U128(from: [0xfffffffa00000000, 0x00000000cfffffff])
                 let shifted = value.shiftRight(20)
                 let expected = U128(from: [0xffffffffffffa000, 0x0000000000000cff])
+
                 expect(shifted).to(equal(expected))
             }
 
@@ -150,6 +152,7 @@ final class ArithmeticShiftSpec: QuickSpec {
                 let value = U128.ZERO
                 let shifted = value.shiftRight(10)
                 let expected = U128.ZERO
+
                 expect(shifted).to(equal(expected))
             }
 
@@ -157,6 +160,26 @@ final class ArithmeticShiftSpec: QuickSpec {
                 let value = U128.MAX // Max U128
                 let shifted = value >> 1
                 let expected = U128(from: [UInt64.max, UInt64.max >> 1])
+
+                expect(shifted).to(equal(expected))
+            }
+        }
+
+        describe("I256 shiftArithmeticRight") {
+            it("no shift") {
+                let value = I256(from: [1, 2, 3, 4])
+                let shift = 0
+                let shifted = value >> shift
+
+                expect(shifted).to(equal(value))
+            }
+
+            it("SingleBit Positive") {
+                let value = I256(from: [0x0000000000000002, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000])
+                let shift = 1
+                let shifted = value >> shift
+                let expected = I256(from: [0x0000000000000001, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000])
+
                 expect(shifted).to(equal(expected))
             }
         }

@@ -179,6 +179,19 @@ public extension BigUInt {
 
 /// Implementation of `Equatable`
 public extension BigUInt {
+    static func cmpLess(lhs: Self, rhs: Self) -> Bool {
+        // Reversed iteration
+        for i in stride(from: Int(self.numberBase) - 1, through: 0, by: -1) {
+            if lhs.BYTES[i] < rhs.BYTES[i] {
+                return true
+            } else if lhs.BYTES[i] > rhs.BYTES[i] {
+                return false
+            }
+        }
+        // If all blocks are equal
+        return false
+    }
+
     static func == (lhs: Self, rhs: Self) -> Bool {
         lhs.BYTES == rhs.BYTES
     }
@@ -193,16 +206,7 @@ public extension BigUInt {
     /// For arbitrary precision numbers, as for any number, the digit with the greatest weight
     /// (the most significant digit) is the most important when comparing.
     static func < (lhs: Self, rhs: Self) -> Bool {
-        // Reversed iteration
-        for i in stride(from: Int(self.numberBase) - 1, through: 0, by: -1) {
-            if lhs.BYTES[i] < rhs.BYTES[i] {
-                return true
-            } else if lhs.BYTES[i] > rhs.BYTES[i] {
-                return false
-            }
-        }
-        // If all blocks are equal
-        return false
+        self.cmpLess(lhs: lhs, rhs: rhs)
     }
 
     /// Operator `>`: Compare two `BigUInt` values

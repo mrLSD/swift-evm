@@ -311,6 +311,36 @@ final class ArithmeticDivRemSpec: QuickSpec {
                     expect(carry).to(equal(expectedCarry))
                 }
             }
+
+            context("carry addSlice") {
+                it("without carry") {
+                    var a: [UInt64] = [1, 2, 3, 4]
+                    let b: [UInt64] = [5, 6]
+                    let from = 1
+                    let to = 2
+                    var q_hat: UInt64 = 4
+
+                    let expectedA: [UInt64] = [0x1, 0x7, 0x9, 0x4]
+
+                    U256.carryAddSlice(carry: true, q_hat: &q_hat, a: &a, from: from, b: b, to: to)
+                    expect(a).to(equal(expectedA))
+                    expect(q_hat).to(equal(3))
+                }
+
+                it("with carry") {
+                    var a: [UInt64] = [0xffffffffffffffff, 0xffffffffffffffff, 0x0]
+                    let b: [UInt64] = [1, 1]
+                    let from = 0
+                    let to = 2
+                    var q_hat: UInt64 = 4
+
+                    let expectedA: [UInt64] = [0x0, 0x1, 0x1]
+
+                    U256.carryAddSlice(carry: true, q_hat: &q_hat, a: &a, from: from, b: b, to: to)
+                    expect(a).to(equal(expectedA))
+                    expect(q_hat).to(equal(3))
+                }
+            }
         }
     }
 }
