@@ -1,3 +1,5 @@
+ignore:
+- "Tests"
 coverage:
   status:
     patch:
@@ -8,5 +10,3 @@ coverage:
     project:
       default:
         enabled: false
-  exclude:
-    - "Tests/**"
