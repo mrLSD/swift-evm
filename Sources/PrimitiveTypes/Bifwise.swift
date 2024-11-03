@@ -7,7 +7,7 @@ public extension BigUInt {
         if shift == 0 {
             return self
         }
-        var result = [UInt64](repeating: 0, count: Int(Self.numberBase))
+        var result = [UInt64](repeating: 0, count: self.BYTES.count)
         let wordShift = shift / 64
         let bitShift = shift % 64
 

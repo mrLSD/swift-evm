@@ -43,6 +43,28 @@ public struct I256: BigUInt {
             return U256(from: self.BYTES)
         }
     }
+
+    /// Bitwise operations. Only shifting right, as for negative number it will be Shift Arithmetic Right (SAR).
+    func shiftRight(_ shift: Int) -> Self {
+        if self.isZero || shift >= 256 {
+            if self.signExtend {
+                // value is `< 0`, pushing `-1`
+                return Self(from: [1, 0, 0, 0], signExtend: true)
+            } else {
+                // value is 0 or `>= 1`, pushing 0
+                return Self.ZERO
+            }
+        } else {
+            // `Value < 0`
+            if self.signExtend {
+                let val = ((U256(from: self.BYTES) - U256(from: 1)) >> shift) + U256(from: 1)
+                return Self(from: val.BYTES, signExtend: true)
+            } else {
+                let val = self.toU256 >> shift
+                return Self(from: val.BYTES)
+            }
+        }
+    }
 }
 
 /// Implementation of `Equatable`
