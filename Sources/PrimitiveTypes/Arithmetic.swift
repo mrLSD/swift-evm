@@ -425,6 +425,7 @@ public extension BigUInt {
         return result
     }
 
+    /// Reminder of two values of the same type.
     static func % (lhs: Self, rhs: Self) -> Self {
         let (_, result) = lhs.divRem(divisor: rhs)
         return result

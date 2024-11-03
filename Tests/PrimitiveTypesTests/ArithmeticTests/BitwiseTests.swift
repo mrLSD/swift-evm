@@ -31,6 +31,15 @@ final class BitwiseSpec: QuickSpec {
 
                 expect(result).to(equal(expected))
             }
+
+            it("bitwise XOR with two U256 values") {
+                let a = U256(from: [1, 2, 3, 4])
+                let b = U256(from: [4, 3, 2, 1])
+                let result = a ^ b
+                let expected = U256(from: [5, 1, 1, 5])
+
+                expect(result).to(equal(expected))
+            }
         }
     }
 }
