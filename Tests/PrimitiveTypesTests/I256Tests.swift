@@ -431,6 +431,104 @@ final class I256Spec: QuickSpec {
                     expect(result.toU256).to(equal(expected))
                 }
             }
+
+            context("div operation") {
+                it("by zero") {
+                    let i256Value = I256(from: [0, 0, 0, 1], signExtend: false)
+                    let result = i256Value / I256.ZERO
+                    let expected = U256.ZERO
+
+                    expect(result.BYTES).to(equal(expected.BYTES))
+                }
+
+                it("by minValue") {
+                    let result = I256.minValue / I256(from: 1)
+                    let expected = I256.minValue
+
+                    expect(result.BYTES).to(equal(expected.BYTES))
+                }
+
+                it("by 1") {
+                    let i256Value = I256(from: [0, 0, 0, 1], signExtend: false)
+                    let result = i256Value / I256(from: 1)
+                    let expected = i256Value
+
+                    expect(result.BYTES).to(equal(expected.BYTES))
+                }
+
+                it("by -1") {
+                    let i256Value = I256(from: [0, 0, 0, 1], signExtend: false)
+                    let result = i256Value / I256(from: [1, 0, 0, 0], signExtend: true)
+                    let expected = i256Value
+
+                    expect(result.BYTES).to(equal(expected.BYTES))
+                    expect(result.signExtend).to(beTrue())
+                }
+
+                it("from zero") {
+                    let i256Value = I256.ZERO
+                    let result = i256Value / I256(from: [1, 0, 0, 0], signExtend: true)
+                    let expected = i256Value
+
+                    expect(result.BYTES).to(equal(expected.BYTES))
+                    expect(result.signExtend).to(beFalse())
+                }
+
+                it("-6 / -2") {
+                    let i256Value = I256(from: [6, 0, 0, 0], signExtend: true)
+                    let result = i256Value / I256(from: [2, 0, 0, 0], signExtend: true)
+                    let expected = I256(from: [3, 0, 0, 0], signExtend: true)
+
+                    expect(result.BYTES).to(equal(expected.BYTES))
+                    expect(result.signExtend).to(beFalse())
+                }
+            }
+
+            context("rem operation") {
+                it("from zero") {
+                    let i256Value = I256(from: [0, 0, 0, 1], signExtend: false)
+                    let result = I256.ZERO % i256Value
+                    let expected = U256.ZERO
+
+                    expect(result.BYTES).to(equal(expected.BYTES))
+                }
+
+                it("9 % 5") {
+                    let i256Value = I256(from: 9)
+                    let result = i256Value % I256(from: 5)
+                    let expected = I256(from: 4)
+
+                    expect(result.BYTES).to(equal(expected.BYTES))
+                    expect(result.signExtend).to(beFalse())
+                }
+
+                it("-9 % -5") {
+                    let i256Value = I256(from: [9, 0, 0, 0], signExtend: true)
+                    let result = i256Value % I256(from: [5, 0, 0, 0], signExtend: true)
+                    let expected = I256(from: 4)
+
+                    expect(result.BYTES).to(equal(expected.BYTES))
+                    expect(result.signExtend).to(beTrue())
+                }
+
+                it("-9 % 5") {
+                    let i256Value = I256(from: [9, 0, 0, 0], signExtend: true)
+                    let result = i256Value % I256(from: [5, 0, 0, 0], signExtend: false)
+                    let expected = I256(from: 4)
+
+                    expect(result.BYTES).to(equal(expected.BYTES))
+                    expect(result.signExtend).to(beTrue())
+                }
+
+                it("9 % -5") {
+                    let i256Value = I256(from: [9, 0, 0, 0], signExtend: false)
+                    let result = i256Value % I256(from: [5, 0, 0, 0], signExtend: true)
+                    let expected = I256(from: 4)
+
+                    expect(result.BYTES).to(equal(expected.BYTES))
+                    expect(result.signExtend).to(beFalse())
+                }
+            }
         }
     }
 }

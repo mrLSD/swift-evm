@@ -36,14 +36,7 @@ enum DivModUtils {
 
     static func divModWord(hi: UInt64, lo: UInt64, y: UInt64) -> (quotient: UInt64, remainder: UInt64) {
         if #available(macOS 15.0, *) {
-            // Construct the 128-bit number from hi and lo
-            let x = (UInt128(hi) << 64) + UInt128(lo)
-            let y128 = UInt128(y)
-
-            // Perform division and modulus using UInt128
-            let quotient = UInt64(x / y128)
-            let remainder = UInt64(x % y128)
-            return (quotient, remainder)
+            return self.divModWordU128(hi: hi, lo: lo, y: y)
         } else {
             return self.divModWord64(hi: hi, lo: lo, y: y)
         }
