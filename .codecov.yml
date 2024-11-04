@@ -1,5 +1,6 @@
 ignore:
 - "Tests"
+- "Sources/PrimitiveTypes/DivModUtils.swift"
 coverage:
   status:
     patch:

@@ -140,21 +140,21 @@ final class ArithmeticDivRemSpec: QuickSpec {
 
             context("divmodWord for non UInt128") {
                 it("100 / 2") {
-                    let (div, rem) = U256.divModWord64(hi: 0, lo: 100, y: 2)
+                    let (div, rem) = DivModUtils.divModWord64(hi: 0, lo: 100, y: 2)
 
                     expect(div).to(equal(50))
                     expect(rem).to(equal(0))
                 }
 
                 it("100 / 6") {
-                    let (div, rem) = U256.divModWord64(hi: 0, lo: 100, y: 6)
+                    let (div, rem) = DivModUtils.divModWord64(hi: 0, lo: 100, y: 6)
 
                     expect(div).to(equal(16))
                     expect(rem).to(equal(4))
                 }
 
                 it("hi 100 / 6") {
-                    let (div, rem) = U256.divModWord64(hi: 100, lo: 0, y: 6)
+                    let (div, rem) = DivModUtils.divModWord64(hi: 100, lo: 0, y: 6)
 
                     expect(div).to(equal(UInt64.max))
                     expect(rem).to(equal(6))
@@ -163,7 +163,7 @@ final class ArithmeticDivRemSpec: QuickSpec {
                 it("fuzz for lo 10000 elements") {
                     let a = UInt64.random(in: 1..<UInt64.max)
                     let b = UInt64.random(in: 1..<UInt64.max)
-                    let (div, rem) = U256.divModWord64(hi: 0, lo: a, y: b)
+                    let (div, rem) = DivModUtils.divModWord64(hi: 0, lo: a, y: b)
 
                     expect(div).to(equal(a/b))
                     expect(rem).to(equal(a % b))

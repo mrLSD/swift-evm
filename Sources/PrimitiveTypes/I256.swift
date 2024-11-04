@@ -10,7 +10,7 @@ public struct I256: BigUInt {
         0xffff_ffff_ffff_ffff,
         0x7fff_ffff_ffff_ffff,
     ])
-    public let signExtend: Bool
+    private(set) var signExtend: Bool
 
     public var BYTES: [UInt64] { self.bytes }
 
@@ -42,6 +42,71 @@ public struct I256: BigUInt {
         } else {
             return U256(from: self.BYTES)
         }
+    }
+
+    /// Bitwise operations. Only shifting right, as for negative number it will be Shift Arithmetic Right (SAR).
+    func shiftRight(_ shift: Int) -> Self {
+        if self.isZero || shift >= 256 {
+            if self.signExtend {
+                // value is `< 0`, pushing `-1`
+                return Self(from: [1, 0, 0, 0], signExtend: true)
+            } else {
+                // value is 0 or `>= 1`, pushing 0
+                return Self.ZERO
+            }
+        } else {
+            // `Value < 0`
+            if self.signExtend {
+                let val = ((U256(from: self.BYTES) - U256(from: 1)) >> shift) + U256(from: 1)
+                return Self(from: val.BYTES, signExtend: true)
+            } else {
+                let val = self.toU256 >> shift
+                return Self(from: val.BYTES)
+            }
+        }
+    }
+
+    /// Minimum value of I256.
+    public static let minValue: Self =
+        .init(from: ((U256.MAX & Self.SIGN_BIT_MASK) + U256(from: 1)).BYTES, signExtend: true)
+
+    /// `I256` division operation
+    func div(rhs: Self) -> Self {
+        if rhs.isZero {
+            return Self.ZERO
+        }
+
+        if self == Self.minValue, rhs == Self(from: 1) {
+            return Self.minValue
+        }
+
+        var d = self.divRem(divisor: rhs).quotient & I256(from: Self.SIGN_BIT_MASK.BYTES)
+        if d.isZero {
+            return Self.ZERO
+        }
+
+        switch (self.signExtend, rhs.signExtend) {
+        case (true, true):
+            return d
+        case (false, false):
+            return d
+        default:
+            // `positive / negative` or `negative / positive` division returns negative number.
+            // Return value with minus flag
+            d.signExtend = true
+            return d
+        }
+    }
+
+    /// `I256` reminder operation
+    func rem(rhs: Self) -> Self {
+        var r = self.divRem(divisor: rhs).remainder & I256(from: Self.SIGN_BIT_MASK.BYTES)
+        if r.isZero {
+            return Self.ZERO
+        }
+        // Set `signExtend` from initial value
+        r.signExtend = self.signExtend
+        return r
     }
 }
 
@@ -80,5 +145,17 @@ public extension I256 {
 public extension I256 {
     static func >> (lhs: Self, shift: Int) -> Self {
         lhs.shiftRight(shift)
+    }
+}
+
+public extension I256 {
+    /// Division of two values of the same type.
+    static func / (lhs: Self, rhs: Self) -> Self {
+        lhs.div(rhs: rhs)
+    }
+
+    /// Reminder of two values of the same type.
+    static func % (lhs: Self, rhs: Self) -> Self {
+        lhs.rem(rhs: rhs)
     }
 }

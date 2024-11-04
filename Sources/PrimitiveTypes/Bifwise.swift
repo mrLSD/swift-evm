@@ -7,7 +7,7 @@ public extension BigUInt {
         if shift == 0 {
             return self
         }
-        var result = [UInt64](repeating: 0, count: Int(Self.numberBase))
+        var result = [UInt64](repeating: 0, count: self.BYTES.count)
         let wordShift = shift / 64
         let bitShift = shift % 64
 
@@ -57,6 +57,7 @@ public extension BigUInt {
         lhs.shiftRight(shift)
     }
 
+    /// Logical NOT of two values of the same type.
     static prefix func ~ (lhs: Self) -> Self {
         var result = [UInt64](repeating: 0, count: lhs.BYTES.count)
         for i in 0 ..< lhs.BYTES.count {
@@ -65,6 +66,7 @@ public extension BigUInt {
         return Self(from: result)
     }
 
+    /// Logical AND of two values of the same type.
     static func & (lhs: Self, rhs: Self) -> Self {
         var result = [UInt64](repeating: 0, count: lhs.BYTES.count)
         for i in 0 ..< lhs.BYTES.count {
@@ -73,10 +75,20 @@ public extension BigUInt {
         return Self(from: result)
     }
 
+    /// Logical OR of two values of the same type.
     static func | (lhs: Self, rhs: Self) -> Self {
         var result = [UInt64](repeating: 0, count: lhs.BYTES.count)
         for i in 0 ..< lhs.BYTES.count {
             result[i] = lhs.BYTES[i] | rhs.BYTES[i]
+        }
+        return Self(from: result)
+    }
+
+    /// Logical XOR of two values of the same type.
+    static func ^ (lhs: Self, rhs: Self) -> Self {
+        var result = [UInt64](repeating: 0, count: lhs.BYTES.count)
+        for i in 0 ..< lhs.BYTES.count {
+            result[i] = lhs.BYTES[i] ^ rhs.BYTES[i]
         }
         return Self(from: result)
     }

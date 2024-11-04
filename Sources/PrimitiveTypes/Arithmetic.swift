@@ -5,10 +5,10 @@ public extension BigUInt {
     ///
     /// - Returns: A tuple containing the result of the addition and a boolean value indicating whether an overflow occurred.
     func overflowAdd(_ value: Self) -> (Self, Bool) {
-        var result = [UInt64](repeating: 0, count: Int(Self.numberBase))
+        var result = [UInt64](repeating: 0, count: self.BYTES.count)
         var carry = false
 
-        for i in 0 ..< Int(Self.numberBase) {
+        for i in 0 ..< self.BYTES.count {
             let sum = self.BYTES[i].addingReportingOverflow(value.BYTES[i])
             let total = sum.partialValue.addingReportingOverflow(carry ? 1 : 0)
 
@@ -25,10 +25,10 @@ public extension BigUInt {
     ///
     /// - Returns: A tuple containing the result of the subtraction operation and a boolean value indicating whether an overflow occurred.
     func overflowSub(_ value: Self) -> (Self, Bool) {
-        var result = [UInt64](repeating: 0, count: Int(Self.numberBase))
+        var result = [UInt64](repeating: 0, count: self.BYTES.count)
         var borrow = false
 
-        for i in 0 ..< Int(Self.numberBase) {
+        for i in 0 ..< self.BYTES.count {
             let sub = self.BYTES[i].subtractingReportingOverflow(value.BYTES[i])
             let total = sub.partialValue.subtractingReportingOverflow(borrow ? 1 : 0)
             result[i] = total.partialValue
@@ -51,18 +51,18 @@ public extension BigUInt {
     /// - Returns: A tuple containing the result of the operation and a boolean value indicating whether an overflow occurred.
     @inline(__always)
     func overflowMul(_ value: Self) -> (Self, Bool) {
-        var result = [UInt64](repeating: 0, count: Int(2 * Self.numberBase))
+        var result = [UInt64](repeating: 0, count: 2 * self.BYTES.count)
 
         // Matrix multiplication
-        for i in 0 ..< Int(Self.numberBase) {
+        for i in 0 ..< self.BYTES.count {
             var carry: UInt64 = 0
-            for j in 0 ..< Int(Self.numberBase) {
+            for j in 0 ..< self.BYTES.count {
                 carry = Self.mac(&result[i + j], self.BYTES[i], value.BYTES[j], carry)
             }
-            result[i + Int(Self.numberBase)] = carry
+            result[i + self.BYTES.count] = carry
         }
-        let isOverflow = result[Int(Self.numberBase) ..< 2 * Int(Self.numberBase)].contains { $0 != 0 }
-        let lowResult = Array(result[0 ..< Int(Self.numberBase)])
+        let isOverflow = result[self.BYTES.count ..< 2 * self.BYTES.count].contains { $0 != 0 }
+        let lowResult = Array(result[0 ..< self.BYTES.count])
         return (Self(from: lowResult), isOverflow)
     }
 
@@ -80,13 +80,13 @@ public extension BigUInt {
     /// - Returns: A tuple containing the result of the operation and a boolean value indicating whether an overflow occurred.
     @inline(__always)
     func mul(_ value: Self) -> Self {
-        var result = [UInt64](repeating: 0, count: Int(Self.numberBase))
+        var result = [UInt64](repeating: 0, count: self.BYTES.count)
 
         // Matrix multiplication
-        for i in 0 ..< Int(Self.numberBase) {
+        for i in 0 ..< self.BYTES.count {
             var carry: UInt64 = 0
             // Restrict multiplication operations to `Self.numberBase` and carry overflow status.
-            for j in 0 ... (Int(Self.numberBase) - 1 - i) {
+            for j in 0 ... (self.BYTES.count - 1 - i) {
                 carry = Self.mac(&result[i + j], self.BYTES[i], value.BYTES[j], carry)
             }
         }
@@ -208,37 +208,10 @@ public extension BigUInt {
         return (res2, overflow1 || overflow2)
     }
 
-    static func divModWord64(hi: UInt64, lo: UInt64, y: UInt64) -> (quotient: UInt64, remainder: UInt64) {
-        var quotient: UInt64 = 0
-        var remainder: UInt64 = hi
-
-        // Iterate over each bit of the lower 64 bits, from highest to lowest
-        for i in (0 ..< 64).reversed() {
-            // Shift remainder left by 1 and add the current bit of lo
-            remainder = (remainder << 1) | ((lo >> i) & 1)
-
-            // If the remainder is greater than or equal to y, subtract y and set the corresponding bit in quotient
-            if remainder >= y {
-                remainder -= y
-                quotient |= (1 << i)
-            }
-        }
-        return (quotient, remainder)
-    }
-
     /// Returns the quotient and remainder of dividing a 128-bit number (hi << 64 + lo) by a 64-bit y.
     /// Assumes that `hi < y`.
     static func divModWord(hi: UInt64, lo: UInt64, y: UInt64) -> (quotient: UInt64, remainder: UInt64) {
-        if #available(macOS 15.0, *) {
-            // Construct the 128-bit number from hi and lo
-            let x = (UInt128(hi) << 64) + UInt128(lo)
-            let y128 = UInt128(y)
-
-            // Perform division and modulus using UInt128
-            let quotient = UInt64(x / y128)
-            let remainder = UInt64(x % y128)
-            return (quotient, remainder)
-        } else { return self.divModWord64(hi: hi, lo: lo, y: y) }
+        DivModUtils.divModWord(hi: hi, lo: lo, y: y)
     }
 
     /// Multiply UInt64 with carry
@@ -306,14 +279,14 @@ public extension BigUInt {
         v = v << shift
 
         // u will store the remainder (shifted)
-        var u = [UInt64](repeating: 0, count: Int(Self.numberBase + 1))
+        var u = [UInt64](repeating: 0, count: self.BYTES.count + 1)
         let u_lo = self.BYTES[0] << shift
         let u_hi = self >> (64 - shift)
         u[0] = u_lo
         u.replaceSubrange(1 ..< u.count, with: u_hi.BYTES)
 
         // quotient
-        var q = [UInt64](repeating: 0, count: Int(Self.numberBase))
+        var q = [UInt64](repeating: 0, count: self.BYTES.count)
         let v_n_1 = v.BYTES[n - 1]
         let v_n_2 = v.BYTES[n - 2]
 
@@ -452,6 +425,7 @@ public extension BigUInt {
         return result
     }
 
+    /// Reminder of two values of the same type.
     static func % (lhs: Self, rhs: Self) -> Self {
         let (_, result) = lhs.divRem(divisor: rhs)
         return result
