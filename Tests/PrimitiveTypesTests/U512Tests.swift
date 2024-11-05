@@ -40,6 +40,15 @@ final class U512Spec: QuickSpec {
                     }
                 }
 
+                context("from U256") {
+                    it("too big String") {
+                        let a = U256(from: [1, 2, 3, 4])
+                        let b = U512(from: a)
+
+                        expect(b.BYTES).to(equal([1, 2, 3, 4, 0, 0, 0, 0]))
+                    }
+                }
+
                 context("wrong String for conversion") {
                     it("too big String") {
                         expect(captureStandardError {

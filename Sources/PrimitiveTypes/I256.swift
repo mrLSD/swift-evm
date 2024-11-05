@@ -26,7 +26,7 @@ public struct I256: BigUInt {
         self.signExtend = signExtend
     }
 
-    static func fromU256(_ val: U256) -> Self {
+    public static func fromU256(_ val: U256) -> Self {
         if (val & self.SIGN_BIT_MASK) == val {
             return I256(from: val.BYTES)
         } else {
@@ -35,7 +35,7 @@ public struct I256: BigUInt {
         }
     }
 
-    var toU256: U256 {
+    public var toU256: U256 {
         if self.signExtend {
             let n = ~self + Self(from: 1)
             return U256(from: n.BYTES)
