@@ -11,5 +11,8 @@ public struct U512: BigUInt {
         precondition(value.count == Self.numberBase, "U512 must be initialized with \(Self.numberBase) UInt64 values.")
         self.bytes = value
     }
-}
 
+    public init(from value: U256) {
+        self.bytes = [value.BYTES[0], value.BYTES[1], value.BYTES[2], value.BYTES[3], 0, 0, 0, 0]
+    }
+}

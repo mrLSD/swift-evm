@@ -79,6 +79,12 @@ public struct Machine {
         table[Opcode.MUL.index] = ArithmeticInstructions.mul
         table[Opcode.DIV.index] = ArithmeticInstructions.div
         table[Opcode.MOD.index] = ArithmeticInstructions.rem
+        table[Opcode.SDIV.index] = ArithmeticInstructions.sdiv
+        table[Opcode.SMOD.index] = ArithmeticInstructions.smod
+        table[Opcode.ADDMOD.index] = ArithmeticInstructions.addMod
+        table[Opcode.MULMOD.index] = ArithmeticInstructions.mulMod
+        table[Opcode.EXP.index] = ArithmeticInstructions.exp
+        table[Opcode.SIGNEXTEND.index] = ArithmeticInstructions.signextend
         return table
     }()
 

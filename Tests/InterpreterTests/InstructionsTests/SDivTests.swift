@@ -3,7 +3,7 @@ import Nimble
 import PrimitiveTypes
 import Quick
 
-final class InstructionRemSpec: QuickSpec {
+final class InstructionSDivSpec: QuickSpec {
     struct Handler: InterpreterHandler {
         func beforeOpcodeExecution(machine: inout Machine, opcode: Opcode, address: H160) -> Machine.ExitError? {
             nil
@@ -11,10 +11,10 @@ final class InstructionRemSpec: QuickSpec {
     }
 
     override class func spec() {
-        describe("Instruction Mod") {
+        describe("Instruction SDiv") {
             let handler = Handler()
-            it("5 % 2") {
-                var m = Machine(data: [], code: [Opcode.MOD.rawValue], gasLimit: 10, handler: handler)
+            it("5/2") {
+                var m = Machine(data: [], code: [Opcode.SDIV.rawValue], gasLimit: 10, handler: handler)
 
                 let _ = m.stack.push(value: U256(from: 2))
                 let _ = m.stack.push(value: U256(from: 5))
@@ -23,14 +23,46 @@ final class InstructionRemSpec: QuickSpec {
 
                 expect(m.machineStatus).to(equal(.Exit(.Success(.Stop))))
                 expect(result).to(beSuccess { value in
-                    expect(value).to(equal(U256(from: 1)))
+                    expect(value).to(equal(U256(from: 2)))
                 })
                 expect(m.stack.length).to(equal(0))
                 expect(m.gas.remaining).to(equal(GasConstant.LOW))
             }
 
-            it("`a % b`, when `b` not in the stack") {
-                var m = Machine(data: [], code: [Opcode.MOD.rawValue], gasLimit: 10, handler: handler)
+            it("5/-2") {
+                var m = Machine(data: [], code: [Opcode.SDIV.rawValue], gasLimit: 10, handler: handler)
+
+                let _ = m.stack.push(value: I256(from: [2, 0, 0, 0], signExtend: true).toU256)
+                let _ = m.stack.push(value: U256(from: 7))
+                m.evalLoop()
+                let result = m.stack.pop()
+
+                expect(m.machineStatus).to(equal(.Exit(.Success(.Stop))))
+                expect(result).to(beSuccess { value in
+                    expect(value).to(equal(I256(from: [3, 0, 0, 0], signExtend: true).toU256))
+                })
+                expect(m.stack.length).to(equal(0))
+                expect(m.gas.remaining).to(equal(GasConstant.LOW))
+            }
+
+            it("5/0") {
+                var m = Machine(data: [], code: [Opcode.SDIV.rawValue], gasLimit: 10, handler: handler)
+
+                let _ = m.stack.push(value: U256.ZERO)
+                let _ = m.stack.push(value: U256(from: 7))
+                m.evalLoop()
+                let result = m.stack.pop()
+
+                expect(m.machineStatus).to(equal(.Exit(.Success(.Stop))))
+                expect(result).to(beSuccess { value in
+                    expect(value).to(equal(U256.ZERO))
+                })
+                expect(m.stack.length).to(equal(0))
+                expect(m.gas.remaining).to(equal(GasConstant.LOW))
+            }
+
+            it("`a/b`, when `b` not in the stack") {
+                var m = Machine(data: [], code: [Opcode.SDIV.rawValue], gasLimit: 10, handler: handler)
 
                 let _ = m.stack.push(value: U256(from: 1))
                 m.evalLoop()
@@ -41,26 +73,10 @@ final class InstructionRemSpec: QuickSpec {
             }
 
             it("max values 1") {
-                var m = Machine(data: [], code: [Opcode.MOD.rawValue], gasLimit: 10, handler: handler)
+                var m = Machine(data: [], code: [Opcode.SDIV.rawValue], gasLimit: 10, handler: handler)
 
                 let _ = m.stack.push(value: U256(from: [UInt64.max-1, UInt64.max-1, UInt64.max-1, UInt64.max-1]))
                 let _ = m.stack.push(value: U256(from: [UInt64.max-1, 0, 0, 0]))
-                m.evalLoop()
-                let result = m.stack.pop()
-
-                expect(m.machineStatus).to(equal(.Exit(.Success(.Stop))))
-                expect(result).to(beSuccess { value in
-                    expect(value).to(equal(U256(from: [18446744073709551614, 0, 0, 0])))
-                })
-                expect(m.stack.length).to(equal(0))
-                expect(m.gas.remaining).to(equal(GasConstant.LOW))
-            }
-
-            it("max values 2") {
-                var m = Machine(data: [], code: [Opcode.MOD.rawValue], gasLimit: 10, handler: handler)
-
-                let _ = m.stack.push(value: U256(from: [UInt64.max-1, 0, 0, 0]))
-                let _ = m.stack.push(value: U256(from: [UInt64.max-1, UInt64.max-1, UInt64.max-1, UInt64.max-1]))
                 m.evalLoop()
                 let result = m.stack.pop()
 
@@ -73,7 +89,7 @@ final class InstructionRemSpec: QuickSpec {
             }
 
             it("by zero") {
-                var m = Machine(data: [], code: [Opcode.MOD.rawValue], gasLimit: 10, handler: handler)
+                var m = Machine(data: [], code: [Opcode.SDIV.rawValue], gasLimit: 10, handler: handler)
 
                 let _ = m.stack.push(value: U256.ZERO)
                 let _ = m.stack.push(value: U256(from: 5))
@@ -89,7 +105,7 @@ final class InstructionRemSpec: QuickSpec {
             }
 
             it("with OutOfGas result") {
-                var m = Machine(data: [], code: [Opcode.MOD.rawValue], gasLimit: 2, handler: handler)
+                var m = Machine(data: [], code: [Opcode.SDIV.rawValue], gasLimit: 2, handler: handler)
 
                 let _ = m.stack.push(value: U256(from: 5))
                 let _ = m.stack.push(value: U256(from: 2))

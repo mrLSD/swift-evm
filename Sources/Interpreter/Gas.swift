@@ -1,3 +1,5 @@
+import PrimitiveTypes
+
 /// Represents the state of gas during execution.
 public struct Gas {
     /// The initial gas limit. This is constant throughout execution.
@@ -67,4 +69,33 @@ enum GasConstant {
     static let VERYLOW: UInt64 = 3
     static let LOW: UInt64 = 5
     static let MID: UInt64 = 8
+    static let EXP: UInt64 = 10
+
+    // TODO: Add hard fork config
+    static func expCost(power val: U256) -> UInt64 {
+        if val.isZero {
+            return self.EXP
+        } else {
+            // EIP-160: EXP cost increase
+            // TODO: hard fork config
+            let gasByte = U256(from: 50)
+            // NOTE: overflow just impossible as max value: `gasByte * (256/8 + 1)`
+            let logMul = gasByte * U256(from: Self.log2floor(val) / 8 + 1)
+            let gas = U256(from: Self.EXP) + logMul
+            return gas.BYTES[0]
+        }
+    }
+
+    static func log2floor(_ val: U256) -> UInt64 {
+        var l: UInt64 = 256
+        for i in (0 ..< 4).reversed() {
+            if val.BYTES[i] == 0 {
+                l -= 64
+            } else {
+                l -= UInt64(val.BYTES[i].leadingZeroBitCount)
+                return l &- 1
+            }
+        }
+        return l
+    }
 }

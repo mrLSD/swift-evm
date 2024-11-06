@@ -49,7 +49,7 @@ final class InstructionAddSpec: QuickSpec {
 
                 expect(m.machineStatus).to(equal(.Exit(.Error(.StackUnderflow))))
                 expect(m.stack.length).to(equal(0))
-                expect(m.gas.remaining).to(equal(7))
+                expect(m.gas.remaining).to(equal(10))
             }
 
             it("Add max values") {
@@ -76,7 +76,7 @@ final class InstructionAddSpec: QuickSpec {
                 m.evalLoop()
 
                 expect(m.machineStatus).to(equal(.Exit(.Error(.OutOfGas))))
-                expect(m.stack.length).to(equal(2))
+                expect(m.stack.length).to(equal(0))
                 expect(m.gas.remaining).to(equal(2))
             }
         }

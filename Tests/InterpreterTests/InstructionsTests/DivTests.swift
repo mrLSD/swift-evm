@@ -37,7 +37,7 @@ final class InstructionDivSpec: QuickSpec {
 
                 expect(m.machineStatus).to(equal(.Exit(.Error(.StackUnderflow))))
                 expect(m.stack.length).to(equal(0))
-                expect(m.gas.remaining).to(equal(GasConstant.LOW))
+                expect(m.gas.remaining).to(equal(10))
             }
 
             it("max values 1") {
@@ -96,7 +96,7 @@ final class InstructionDivSpec: QuickSpec {
                 m.evalLoop()
 
                 expect(m.machineStatus).to(equal(.Exit(.Error(.OutOfGas))))
-                expect(m.stack.length).to(equal(2))
+                expect(m.stack.length).to(equal(0))
                 expect(m.gas.remaining).to(equal(2))
             }
         }

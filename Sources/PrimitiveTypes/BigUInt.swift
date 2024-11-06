@@ -86,7 +86,7 @@ public extension BigUInt {
     /// - Precondition:
     ///   - `from` value must be less than or equal to `numberBytes` of `BigUInt`.
     static func fromLittleEndian(from val: [UInt8]) -> Self {
-        precondition(val.count <= numberBytes, "BigUInt must be initialized with not more than \(numberBytes) bytes.")
+        precondition(val.count <= self.numberBytes, "BigUInt must be initialized with not more than \(numberBytes) bytes.")
 
         var data = [UInt64](repeating: 0, count: Int(Self.numberBase))
         for (index, byte) in val.enumerated() {
