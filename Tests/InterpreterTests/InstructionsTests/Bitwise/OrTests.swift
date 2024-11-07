@@ -11,7 +11,7 @@ final class InstructionOrSpec: QuickSpec {
 
     override class func spec() {
         describe("Instruction OR") {
-            it("8 | 5") {
+            it("a | b") {
                 var m = Self.machine
 
                 let _ = m.stack.push(value: U256(from: 8))

@@ -11,7 +11,7 @@ final class InstructionAndSpec: QuickSpec {
 
     override class func spec() {
         describe("Instruction AND") {
-            it("6 & 3") {
+            it("a & b") {
                 var m = Self.machine
 
                 let _ = m.stack.push(value: U256(from: 6))
