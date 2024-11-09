@@ -1,5 +1,6 @@
 import PrimitiveTypes
 
+/// EVM Arithmetic instructions
 enum ArithmeticInstructions {
     static func add(machine m: inout Machine) {
         do {
