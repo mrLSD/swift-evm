@@ -74,6 +74,7 @@ public struct Machine {
     /// For non-existed opcode the evaluation functions is `nil`.
     private let instructionsEvalTable: [EvalFunction?] = {
         var table = [EvalFunction?](repeating: nil, count: 255)
+        // Arithmetic
         table[Opcode.ADD.index] = ArithmeticInstructions.add
         table[Opcode.SUB.index] = ArithmeticInstructions.sub
         table[Opcode.MUL.index] = ArithmeticInstructions.mul
@@ -85,6 +86,22 @@ public struct Machine {
         table[Opcode.MULMOD.index] = ArithmeticInstructions.mulMod
         table[Opcode.EXP.index] = ArithmeticInstructions.exp
         table[Opcode.SIGNEXTEND.index] = ArithmeticInstructions.signextend
+
+        // BItwise
+        table[Opcode.LT.index] = BItwiseInstructions.lt
+        table[Opcode.GT.index] = BItwiseInstructions.gt
+        table[Opcode.SLT.index] = BItwiseInstructions.slt
+        table[Opcode.SGT.index] = BItwiseInstructions.sgt
+        table[Opcode.EQ.index] = BItwiseInstructions.eq
+        table[Opcode.ISZERO.index] = BItwiseInstructions.isZero
+        table[Opcode.AND.index] = BItwiseInstructions.and
+        table[Opcode.OR.index] = BItwiseInstructions.or
+        table[Opcode.XOR.index] = BItwiseInstructions.xor
+        table[Opcode.NOT.index] = BItwiseInstructions.not
+        table[Opcode.BYTE.index] = BItwiseInstructions.byte
+        table[Opcode.SHL.index] = BItwiseInstructions.shl
+        table[Opcode.SHR.index] = BItwiseInstructions.shr
+        table[Opcode.SAR.index] = BItwiseInstructions.sar
         return table
     }()
 

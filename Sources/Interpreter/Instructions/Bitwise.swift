@@ -44,7 +44,10 @@ enum BItwiseInstructions {
                 return
             }
 
-            let newValue: UInt64 = (op1 < op2) ? 1 : 0
+            let iOp1 = I256.fromU256(op1)
+            let iOp2 = I256.fromU256(op2)
+
+            let newValue: UInt64 = (iOp1 < iOp2) ? 1 : 0
             try m.stack.push(value: U256(from: newValue)).get()
         } catch {
             m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(error))
@@ -59,8 +62,10 @@ enum BItwiseInstructions {
                 m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.OutOfGas))
                 return
             }
+            let iOp1 = I256.fromU256(op1)
+            let iOp2 = I256.fromU256(op2)
 
-            let newValue: UInt64 = (op1 > op2) ? 1 : 0
+            let newValue: UInt64 = (iOp1 > iOp2) ? 1 : 0
             try m.stack.push(value: U256(from: newValue)).get()
         } catch {
             m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(error))
