@@ -4,18 +4,15 @@ import PrimitiveTypes
 import Quick
 
 final class InstructionAddModSpec: QuickSpec {
-    struct Handler: InterpreterHandler {
-        func beforeOpcodeExecution(machine: inout Machine, opcode: Opcode, address: H160) -> Machine.ExitError? {
-            nil
-        }
-    }
+    @MainActor
+    static let machine = TestMachine.machine(opcode: Opcode.ADDMOD, gasLimit: 10)
+    @MainActor
+    static let machineLowGas = TestMachine.machine(opcode: Opcode.ADDMOD, gasLimit: 2)
 
     override class func spec() {
         describe("Instruction AddMod") {
-            let handler = Handler()
-
             it("`(2 + 6) % 3`") {
-                var m = Machine(data: [], code: [Opcode.ADDMOD.rawValue], gasLimit: 10, handler: handler)
+                var m = Self.machine
 
                 let _ = m.stack.push(value: U256(from: 3))
                 let _ = m.stack.push(value: U256(from: 6))
@@ -32,7 +29,7 @@ final class InstructionAddModSpec: QuickSpec {
             }
 
             it("`(a + b) % c`, when `c` not in the stack") {
-                var m = Machine(data: [], code: [Opcode.ADDMOD.rawValue], gasLimit: 10, handler: handler)
+                var m = Self.machine
 
                 let _ = m.stack.push(value: U256(from: 1))
                 let _ = m.stack.push(value: U256(from: 2))
@@ -44,7 +41,7 @@ final class InstructionAddModSpec: QuickSpec {
             }
 
             it("(a + b) % 0") {
-                var m = Machine(data: [], code: [Opcode.ADDMOD.rawValue], gasLimit: 10, handler: handler)
+                var m = Self.machine
 
                 let _ = m.stack.push(value: U256(from: 0))
                 let _ = m.stack.push(value: U256(from: 6))
@@ -61,7 +58,7 @@ final class InstructionAddModSpec: QuickSpec {
             }
 
             it("Add with OutOfGas result") {
-                var m = Machine(data: [], code: [Opcode.ADDMOD.rawValue], gasLimit: 2, handler: handler)
+                var m = Self.machineLowGas
 
                 let _ = m.stack.push(value: U256(from: 1))
                 let _ = m.stack.push(value: U256(from: 2))
@@ -72,6 +69,30 @@ final class InstructionAddModSpec: QuickSpec {
                 expect(m.stack.length).to(equal(0))
                 expect(m.gas.remaining).to(equal(2))
             }
+        }
+
+        it("check stack") {
+            var m = Self.machine
+            m.evalLoop()
+            expect(m.machineStatus).to(equal(.Exit(.Error(.StackUnderflow))))
+
+            var m1 = Self.machine
+            let _ = m1.stack.push(value: U256(from: 5))
+            m1.evalLoop()
+            expect(m1.machineStatus).to(equal(.Exit(.Error(.StackUnderflow))))
+
+            var m2 = Self.machine
+            let _ = m2.stack.push(value: U256(from: 5))
+            let _ = m2.stack.push(value: U256(from: 5))
+            m2.evalLoop()
+            expect(m2.machineStatus).to(equal(.Exit(.Error(.StackUnderflow))))
+
+            var m3 = Self.machine
+            let _ = m3.stack.push(value: U256(from: 2))
+            let _ = m3.stack.push(value: U256(from: 2))
+            let _ = m3.stack.push(value: U256(from: 2))
+            m3.evalLoop()
+            expect(m3.machineStatus).to(equal(.Exit(.Success(.Stop))))
         }
     }
 }

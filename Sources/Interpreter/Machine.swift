@@ -115,7 +115,7 @@ public struct Machine {
     /// Provide one step for `Machine` execution.
     /// It will change Machine state.
     /// Especially:
-    /// - `PC` - program counter for next execution. It can just incremented or set to jump index
+    /// - `PC` - program counter for next execution. It can just incremented or set to jump index. PC range: `0..<self.code.count`. When `step` is completed PC incremented (or changed with jump destitations) for the next step opcode processing.
     /// - `machineStatus` - during evaluation can be changed, for example contain result of `ExitReason`
     mutating func step() {
         // Ensure that `PC` in code range, otherwise indicate `sTOP` execution.
