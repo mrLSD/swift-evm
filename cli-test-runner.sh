@@ -5,7 +5,7 @@ swift test 2>&1 | awk '
     # Use regular expression to capture required parts
     # Regex Breakdown:
     # ^(.+\/)?([^:]+\.swift):([0-9]+): error: -\[(.*?)\] : expected to equal <([^>]+)>, got <([^>]+)>
-    regex = "^(.+\\/)?([^:]+\\.swift):([0-9]+): error: -\\[(.*?)\\] : expected to equal <([^>]+)>, got <([^>]+)>"
+    regex = "^(.+\\/)?([^:]+\\.swift):([0-9]+): error: -\\[(.*?)\\] : expected to (.*), got <([^>]+)>"
     if (match($0, regex, m)) {
         # m[2]: Filename (e.g., AddTests.swift)
         # m[3]: Line number (e.g., 15)
