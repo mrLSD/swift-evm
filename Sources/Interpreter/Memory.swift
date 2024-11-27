@@ -28,7 +28,7 @@ public struct Memory {
     mutating func set(range: Range<Int>, with newData: [UInt8]) {
         // Check Memory range
         precondition(range.lowerBound >= 0 && range.upperBound <= self.data.count, "Set Memory out of range: \(range)\n for 0..<(self.data.count)")
-        // Check new data lenth is also in new range
+        // Check new data length is also in new range
         precondition(range.count == newData.count, "Set Memory data length \(newData.count) out of set range \(range.count)")
 
         self.data.replaceSubrange(range, with: newData)

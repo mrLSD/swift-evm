@@ -1,4 +1,3 @@
-import Foundation
 import PrimitiveTypes
 
 /// EVM BItwise instructions
