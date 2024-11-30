@@ -105,7 +105,7 @@ public struct Machine {
         table[Opcode.SHR.index] = BItwiseInstructions.shr
         table[Opcode.SAR.index] = BItwiseInstructions.sar
 
-        table[Opcode.CODECOPY.index] = SystemInstructions.codeCopy
+        table[Opcode.CODESIZE.index] = SystemInstructions.codeSize
 
         return table
     }()
