@@ -108,7 +108,7 @@ public struct Machine {
         // System
         table[Opcode.CODESIZE.index] = SystemInstructions.codeSize
         table[Opcode.PC.index] = SystemInstructions.pc
-        table[Opcode.POP.index] = SystemInstructions.pop
+        table[Opcode.POP.index] = StackInstructions.pop
 
         return table
     }()

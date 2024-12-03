@@ -43,7 +43,7 @@ final class InstructionPopSpec: QuickSpec {
                 expect(m.gas.remaining).to(equal(1))
             }
 
-            it("check stack overflow") {
+            it("check stack underflow") {
                 var m = TestMachine.machine(opcode: Opcode.POP, gasLimit: 10)
                 expect(m.stack.length).to(equal(0))
 

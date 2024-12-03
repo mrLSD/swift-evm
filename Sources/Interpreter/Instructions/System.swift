@@ -29,17 +29,4 @@ enum SystemInstructions {
             m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(error))
         }
     }
-
-    static func pop(machine m: inout Machine) {
-        do {
-            if !m.gas.recordCost(cost: GasConstant.BASE) {
-                m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.OutOfGas))
-                return
-            }
-
-            let _ = try m.stack.pop().get()
-        } catch {
-            m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(error))
-        }
-    }
 }
