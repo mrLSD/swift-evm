@@ -10,6 +10,13 @@ struct Stack {
     /// Stack length
     var length: Int { self.data.count }
 
+    #if TRACING && TRACE_STACK_INOUT
+        /// Trace Stack Out data flow
+        var traceStackIn: [U256] = []
+        /// Trace Stack Out data flow
+        var traceStackOut: [U256] = []
+    #endif
+
     /// Init Machine Stack with specific data limit
     init(limit: Int) {
         self.limit = limit
@@ -30,6 +37,9 @@ struct Stack {
         if self.data.count + 1 > self.limit {
             return .failure(.StackOverflow)
         }
+        #if TRACING && TRACE_STACK_INOUT
+            self.traceStackIn.append(value)
+        #endif
         return .success(self.data.append(value))
     }
 
@@ -42,6 +52,9 @@ struct Stack {
             // Return error, if stack is empty
             return .failure(.StackUnderflow)
         }
+        #if TRACING && TRACE_STACK_INOUT
+            self.traceStackOut.append(value)
+        #endif
         return .success(value)
     }
 
@@ -54,6 +67,9 @@ struct Stack {
             // Return error, if stack is empty
             return .failure(.StackUnderflow)
         }
+        #if TRACING && TRACE_STACK_INOUT
+            self.traceStackOut.append(value)
+        #endif
         return .success(H256(from: value.toBigEndian))
     }
 
@@ -123,4 +139,14 @@ struct Stack {
             return .failure(.StackUnderflow)
         }
     }
+
+    #if TRACING
+        /// Cleat trace Stack in/out data
+        mutating func clearTraceStack() {
+            #if TRACE_STACK_INOUT
+                self.traceStackIn = []
+                self.traceStackOut = []
+            #endif
+        }
+    #endif
 }

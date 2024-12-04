@@ -23,12 +23,18 @@ let package = Package(
         // Targets can depend on other targets in this package and products from dependencies.
         .target(
             name: "Interpreter",
-            dependencies: ["PrimitiveTypes"]),
+            dependencies: ["PrimitiveTypes"],
+            swiftSettings: [
+                .define("TRACING"),
+            ]),
         .target(
             name: "PrimitiveTypes"),
         .testTarget(
             name: "InterpreterTests",
-            dependencies: ["Interpreter", "PrimitiveTypes", "Quick", "Nimble"]),
+            dependencies: ["Interpreter", "PrimitiveTypes", "Quick", "Nimble"],
+            swiftSettings: [
+                .define("TRACING"),
+            ]),
         .testTarget(
             name: "PrimitiveTypesTests",
             dependencies: ["PrimitiveTypes", "Quick", "Nimble"]),
