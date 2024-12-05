@@ -173,7 +173,7 @@ public extension BigUInt {
 /// Implementation of `CustomStringConvertible`
 public extension BigUInt {
     var description: String {
-        self.BYTES.map { String(format: "%016lx", $0).uppercased() }.joined()
+        self.BYTES.map { String(format: "%016lX", $0) }.joined()
     }
 }
 

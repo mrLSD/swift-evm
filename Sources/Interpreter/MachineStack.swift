@@ -4,7 +4,7 @@ import PrimitiveTypes
 struct Stack {
     public static let STACK_LIMIT: Int = 1024
     /// Stack data
-    private var data: [U256] = []
+    private(set) var data: [U256] = []
     /// Stack limit
     let limit: Int
     /// Stack length

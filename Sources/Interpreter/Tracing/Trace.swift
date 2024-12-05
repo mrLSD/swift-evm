@@ -119,6 +119,8 @@ public class Trace {
         private(set) var stack: Stack?
         /// Current `Gas`
         private(set) var gas: Gas
+        /// Traced Gas after calculations
+        var tracedGas: TraceGas?
         /// Stack In data for current step
         private(set) var stackIn: [U256]?
         /// Stack Out data for current step
@@ -131,6 +133,7 @@ public class Trace {
         init(_ machine: borrowing Machine, _ opcode: Opcode, _ cfg: Config) {
             self.pc = machine.pc
             self.gas = machine.gas
+            self.tracedGas = nil
             self.opcode = opcode
             self.depth = 1
             if cfg.hideStack {
@@ -143,6 +146,21 @@ public class Trace {
             self.memory = machine.memory
             self.storage = nil
             self.subCallTrace = nil
+        }
+    }
+
+    /// Tracde Gas data
+    public struct TraceGas {
+        private(set) var remaining: UInt64
+        private(set) var refunded: Int64
+        private(set) var used: UInt64
+        private(set) var totalSpent: UInt64
+
+        init(_ remaining: UInt64, _ refunded: Int64, _ used: UInt64, _ totalSpent: UInt64) {
+            self.remaining = remaining
+            self.refunded = refunded
+            self.used = used
+            self.totalSpent = totalSpent
         }
     }
 
@@ -161,7 +179,10 @@ public class Trace {
     let context: Context?
     /// Tracing data
     var data: [TraceData] = []
-    var current: TraceData?
+    /// Tracing data before step evaluation
+    var beforeEval: TraceData?
+    /// Tracing data after step evaluation
+    var afterEval: TraceData?
 
     init() {
         self.config = Config()
@@ -175,29 +196,56 @@ public class Trace {
 
     /// Trace step before Machine opcode evaluation
     func beforeEval(_ machine: borrowing Machine, _ op: Opcode) {
-        self.current = TraceData(machine, op, self.config)
+        self.beforeEval = TraceData(machine, op, self.config)
     }
 
     /// Trace step after Machine opcode evaluation.
     func afterEval(_ machine: borrowing Machine) -> Self {
+        guard let beforeEval else { return self }
+        self.afterEval = TraceData(machine, beforeEval.opcode, self.config)
         return self
     }
 
     /// Complete tracing behavior's for current step
     func complete() {
-        guard let currentTrace = self.current else { return }
-        self.data.append(currentTrace)
+        guard let beforeEval else { return }
+        guard let current = self.afterEval else { return }
+        let usedGas = beforeEval.gas.remaining - current.gas.remaining
+        current.tracedGas = TraceGas(current.gas.remaining, current.gas.refunded, usedGas, current.gas.spent)
+        self.data.append(current)
     }
 
-    /// Print Trace ouptut
+    /// Print Trace output
     func printOutput() {
         print("\nTrace:\n")
         for trace in self.data {
-            print("\tPC: \(trace.pc)")
-            print("\t\(trace.opcode.name)")
-            print("\t\(trace.gas)")
-            print("\t\(trace.stack)")
+            print("{ PC: \(trace.pc), ", terminator: "")
+            print("\(trace.opcode), ", terminator: "")
+            print("\(trace.tracedGas!)", terminator: "")
+            if self.config.hideStack {
+                print(", Stack: ", terminator: "")
+                if let stackValues = trace.stack {
+                    let s = stackValues.data.map { value -> String in
+                        // Check is it possible print number UInt, for shot output
+                        if value < U256(from: UInt64(UInt.max)) {
+                            String(format: "%x", value.getUInt.map { $0 } ?? 0)
+                        } else {
+                            "0x\(value)"
+                        }
+                    }.joined(separator: ", ")
+                    print("[\(s)]", terminator: "")
+                } else {
+                    print("[]", terminator: "")
+                }
+            }
+            print(" }")
         }
+    }
+}
+
+extension Trace.TraceGas: CustomStringConvertible {
+    public var description: String {
+        "Gas { remaining: \(remaining), refunded: \(refunded), used: \(used), totalSpent: \(totalSpent) }"
     }
 }
 
