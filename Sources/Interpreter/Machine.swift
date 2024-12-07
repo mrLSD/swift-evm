@@ -43,7 +43,9 @@ public struct Machine {
     public enum MachineStatus: Equatable {
         case NotStarted
         case Continue
-        case Jump(Int)
+        case AddPC(Int)
+        // TODO: add for JUMP instructions
+        // case Jump(Int)
         case Trap(Opcode)
         case Exit(ExitReason)
     }
@@ -156,7 +158,9 @@ public struct Machine {
         self.code = code
         self.handler = handler
         self.gas = Gas(limit: gasLimit)
+        #if TRACING
         self.trace = Trace()
+        #endif
     }
 
     /// Provide one step for `Machine` execution.
@@ -185,12 +189,23 @@ public struct Machine {
         // NOTE: It can change `MachineStatus` or `PC`
         evalFunc(&self)
 
+        // Change `PC` for the next step
+        switch self.machineStatus {
+        case .AddPC(let add):
+            self.pc += add
+            self.machineStatus = .Continue
+
+        // TODO: Add for JUMP instr
+        // case .Jump(let jumpPC):
+        //    self.pc = jumpPC
+        //    self.machineStatus = .Continue
+        default:
+            self.pc += 1
+        }
+
         #if TRACING
         self.trace.afterEval(self).complete()
         #endif
-
-        // Increment `PC` for the next step
-        self.pc += 1
     }
 
     /// Evaluation loop for `Machine` code.
