@@ -168,6 +168,22 @@ public struct Machine {
         table[Opcode.SWAP14.index] = { (_ m: inout Self) in StackInstructions.swap(machine: &m, n: 14) }
         table[Opcode.SWAP15.index] = { (_ m: inout Self) in StackInstructions.swap(machine: &m, n: 15) }
         table[Opcode.SWAP16.index] = { (_ m: inout Self) in StackInstructions.swap(machine: &m, n: 16) }
+        table[Opcode.DUP1.index] = { (_ m: inout Self) in StackInstructions.dup(machine: &m, n: 1) }
+        table[Opcode.DUP2.index] = { (_ m: inout Self) in StackInstructions.dup(machine: &m, n: 2) }
+        table[Opcode.DUP3.index] = { (_ m: inout Self) in StackInstructions.dup(machine: &m, n: 3) }
+        table[Opcode.DUP4.index] = { (_ m: inout Self) in StackInstructions.dup(machine: &m, n: 4) }
+        table[Opcode.DUP5.index] = { (_ m: inout Self) in StackInstructions.dup(machine: &m, n: 5) }
+        table[Opcode.DUP6.index] = { (_ m: inout Self) in StackInstructions.dup(machine: &m, n: 6) }
+        table[Opcode.DUP7.index] = { (_ m: inout Self) in StackInstructions.dup(machine: &m, n: 7) }
+        table[Opcode.DUP8.index] = { (_ m: inout Self) in StackInstructions.dup(machine: &m, n: 8) }
+        table[Opcode.DUP9.index] = { (_ m: inout Self) in StackInstructions.dup(machine: &m, n: 9) }
+        table[Opcode.DUP10.index] = { (_ m: inout Self) in StackInstructions.dup(machine: &m, n: 10) }
+        table[Opcode.DUP11.index] = { (_ m: inout Self) in StackInstructions.dup(machine: &m, n: 11) }
+        table[Opcode.DUP12.index] = { (_ m: inout Self) in StackInstructions.dup(machine: &m, n: 12) }
+        table[Opcode.DUP13.index] = { (_ m: inout Self) in StackInstructions.dup(machine: &m, n: 13) }
+        table[Opcode.DUP14.index] = { (_ m: inout Self) in StackInstructions.dup(machine: &m, n: 14) }
+        table[Opcode.DUP15.index] = { (_ m: inout Self) in StackInstructions.dup(machine: &m, n: 15) }
+        table[Opcode.DUP16.index] = { (_ m: inout Self) in StackInstructions.dup(machine: &m, n: 16) }
 
         return table
     }()

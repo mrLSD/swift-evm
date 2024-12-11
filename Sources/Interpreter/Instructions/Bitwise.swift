@@ -4,12 +4,13 @@ import PrimitiveTypes
 enum BItwiseInstructions {
     static func lt(machine m: inout Machine) {
         do {
-            let op1 = try m.stack.pop().get()
-            let op2 = try m.stack.pop().get()
             if !m.gas.recordCost(cost: GasConstant.VERYLOW) {
                 m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.OutOfGas))
                 return
             }
+
+            let op1 = try m.stack.pop().get()
+            let op2 = try m.stack.pop().get()
 
             let newValue: UInt64 = (op1 < op2) ? 1 : 0
             try m.stack.push(value: U256(from: newValue)).get()
@@ -20,12 +21,13 @@ enum BItwiseInstructions {
 
     static func gt(machine m: inout Machine) {
         do {
-            let op1 = try m.stack.pop().get()
-            let op2 = try m.stack.pop().get()
             if !m.gas.recordCost(cost: GasConstant.VERYLOW) {
                 m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.OutOfGas))
                 return
             }
+
+            let op1 = try m.stack.pop().get()
+            let op2 = try m.stack.pop().get()
 
             let newValue: UInt64 = (op1 > op2) ? 1 : 0
             try m.stack.push(value: U256(from: newValue)).get()
@@ -36,12 +38,13 @@ enum BItwiseInstructions {
 
     static func slt(machine m: inout Machine) {
         do {
-            let op1 = try m.stack.pop().get()
-            let op2 = try m.stack.pop().get()
             if !m.gas.recordCost(cost: GasConstant.VERYLOW) {
                 m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.OutOfGas))
                 return
             }
+
+            let op1 = try m.stack.pop().get()
+            let op2 = try m.stack.pop().get()
 
             let iOp1 = I256.fromU256(op1)
             let iOp2 = I256.fromU256(op2)
@@ -55,12 +58,14 @@ enum BItwiseInstructions {
 
     static func sgt(machine m: inout Machine) {
         do {
-            let op1 = try m.stack.pop().get()
-            let op2 = try m.stack.pop().get()
             if !m.gas.recordCost(cost: GasConstant.VERYLOW) {
                 m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.OutOfGas))
                 return
             }
+
+            let op1 = try m.stack.pop().get()
+            let op2 = try m.stack.pop().get()
+
             let iOp1 = I256.fromU256(op1)
             let iOp2 = I256.fromU256(op2)
 
@@ -73,12 +78,13 @@ enum BItwiseInstructions {
 
     static func eq(machine m: inout Machine) {
         do {
-            let op1 = try m.stack.pop().get()
-            let op2 = try m.stack.pop().get()
             if !m.gas.recordCost(cost: GasConstant.VERYLOW) {
                 m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.OutOfGas))
                 return
             }
+
+            let op1 = try m.stack.pop().get()
+            let op2 = try m.stack.pop().get()
 
             let newValue: UInt64 = (op1 == op2) ? 1 : 0
             try m.stack.push(value: U256(from: newValue)).get()
@@ -89,11 +95,12 @@ enum BItwiseInstructions {
 
     static func isZero(machine m: inout Machine) {
         do {
-            let op1 = try m.stack.pop().get()
             if !m.gas.recordCost(cost: GasConstant.VERYLOW) {
                 m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.OutOfGas))
                 return
             }
+
+            let op1 = try m.stack.pop().get()
 
             let newValue: UInt64 = (op1.isZero) ? 1 : 0
             try m.stack.push(value: U256(from: newValue)).get()
@@ -104,12 +111,13 @@ enum BItwiseInstructions {
 
     static func and(machine m: inout Machine) {
         do {
-            let op1 = try m.stack.pop().get()
-            let op2 = try m.stack.pop().get()
             if !m.gas.recordCost(cost: GasConstant.VERYLOW) {
                 m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.OutOfGas))
                 return
             }
+
+            let op1 = try m.stack.pop().get()
+            let op2 = try m.stack.pop().get()
 
             let newValue = op1 & op2
             try m.stack.push(value: newValue).get()
@@ -120,12 +128,13 @@ enum BItwiseInstructions {
 
     static func or(machine m: inout Machine) {
         do {
-            let op1 = try m.stack.pop().get()
-            let op2 = try m.stack.pop().get()
             if !m.gas.recordCost(cost: GasConstant.VERYLOW) {
                 m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.OutOfGas))
                 return
             }
+
+            let op1 = try m.stack.pop().get()
+            let op2 = try m.stack.pop().get()
 
             let newValue = op1 | op2
             try m.stack.push(value: newValue).get()
@@ -136,12 +145,13 @@ enum BItwiseInstructions {
 
     static func xor(machine m: inout Machine) {
         do {
-            let op1 = try m.stack.pop().get()
-            let op2 = try m.stack.pop().get()
             if !m.gas.recordCost(cost: GasConstant.VERYLOW) {
                 m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.OutOfGas))
                 return
             }
+
+            let op1 = try m.stack.pop().get()
+            let op2 = try m.stack.pop().get()
 
             let newValue = op1 ^ op2
             try m.stack.push(value: newValue).get()
@@ -152,11 +162,12 @@ enum BItwiseInstructions {
 
     static func not(machine m: inout Machine) {
         do {
-            let op1 = try m.stack.pop().get()
             if !m.gas.recordCost(cost: GasConstant.VERYLOW) {
                 m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.OutOfGas))
                 return
             }
+
+            let op1 = try m.stack.pop().get()
 
             let newValue = ~op1
             try m.stack.push(value: newValue).get()
@@ -167,12 +178,13 @@ enum BItwiseInstructions {
 
     static func byte(machine m: inout Machine) {
         do {
-            let op1 = try m.stack.pop().get()
-            let op2 = try m.stack.pop().get()
             if !m.gas.recordCost(cost: GasConstant.VERYLOW) {
                 m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.OutOfGas))
                 return
             }
+
+            let op1 = try m.stack.pop().get()
+            let op2 = try m.stack.pop().get()
 
             var newValue = U256.ZERO
             if op1 < U256(from: 32) {
@@ -192,12 +204,13 @@ enum BItwiseInstructions {
 
     static func shl(machine m: inout Machine) {
         do {
-            let op1 = try m.stack.pop().get()
-            let op2 = try m.stack.pop().get()
             if !m.gas.recordCost(cost: GasConstant.VERYLOW) {
                 m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.OutOfGas))
                 return
             }
+
+            let op1 = try m.stack.pop().get()
+            let op2 = try m.stack.pop().get()
 
             var newValue = U256.ZERO
             if !op2.isZero, op1 < U256(from: 256) {
@@ -213,12 +226,12 @@ enum BItwiseInstructions {
 
     static func shr(machine m: inout Machine) {
         do {
-            let op1 = try m.stack.pop().get()
-            let op2 = try m.stack.pop().get()
             if !m.gas.recordCost(cost: GasConstant.VERYLOW) {
                 m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.OutOfGas))
                 return
             }
+            let op1 = try m.stack.pop().get()
+            let op2 = try m.stack.pop().get()
 
             var newValue = U256.ZERO
             if !op2.isZero, op1 < U256(from: 256) {
@@ -234,12 +247,13 @@ enum BItwiseInstructions {
 
     static func sar(machine m: inout Machine) {
         do {
-            let op1 = try m.stack.pop().get()
-            let op2 = try m.stack.pop().get()
             if !m.gas.recordCost(cost: GasConstant.VERYLOW) {
                 m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.OutOfGas))
                 return
             }
+            let op1 = try m.stack.pop().get()
+            let op2 = try m.stack.pop().get()
+
             let iOp2 = I256.fromU256(op2)
 
             var newValue = U256.ZERO
