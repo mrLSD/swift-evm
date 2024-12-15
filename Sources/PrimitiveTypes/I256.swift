@@ -126,6 +126,11 @@ public extension I256 {
         }
     }
 
+    /// Operator `!=`: Check if two `BigUInt` values are not equal
+    static func != (lhs: Self, rhs: Self) -> Bool {
+        !(lhs == rhs)
+    }
+
     static func < (lhs: Self, rhs: Self) -> Bool {
         switch (lhs.signExtend, rhs.signExtend) {
         case (true, true):
@@ -137,6 +142,21 @@ public extension I256 {
         case (false, true):
             false
         }
+    }
+
+    /// Operator `>`: Compare two `BigUInt` values
+    static func > (lhs: Self, rhs: Self) -> Bool {
+        rhs < lhs
+    }
+
+    /// Operator `<=`: Compare two `BigUInt` values for less than or equal
+    static func <= (lhs: Self, rhs: Self) -> Bool {
+        !(lhs > rhs)
+    }
+
+    /// Operator `>=`: Compare two `BigUInt` values for less than or equal
+    static func >= (lhs: Self, rhs: Self) -> Bool {
+        !(lhs < rhs)
     }
 }
 

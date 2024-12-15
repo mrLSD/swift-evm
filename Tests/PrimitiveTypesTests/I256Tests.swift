@@ -181,6 +181,24 @@ final class I256Spec: QuickSpec {
                     expect(val1 == val2).to(beTrue())
                 }
 
+                it("== [sign extend, not sign extend]") {
+                    let val1 = I256(from: [5, 0, 0, 0], signExtend: true)
+                    let val2 = I256(from: [5, 0, 0, 0])
+                    expect(val1 == val2).to(beFalse())
+                }
+
+                it("== [not sign extend, sign extend]") {
+                    let val1 = I256(from: [5, 0, 0, 0])
+                    let val2 = I256(from: [5, 0, 0, 0], signExtend: true)
+                    expect(val1 == val2).to(beFalse())
+                }
+
+                it("== [sign extend, sign extend]") {
+                    let val1 = I256(from: [5, 0, 0, 0], signExtend: true)
+                    let val2 = I256(from: [5, 0, 0, 0], signExtend: true)
+                    expect(val1 == val2).to(beTrue())
+                }
+
                 it("!=") {
                     let val1 = I256(from: [1, 2, 3, 4])
                     let val2 = I256(from: [1, 2, 3, 5])
@@ -189,6 +207,20 @@ final class I256Spec: QuickSpec {
                     let val3 = I256(from: [1, 2, 3, 4])
                     let val4 = I256(from: [1, 2, 3, 4])
                     expect(val3 != val4).to(beFalse())
+
+                    let val5 = I256(from: [3, 0, 0, 0], signExtend: true)
+                    let val6 = I256(from: [3, 0, 0, 0])
+                    expect(val5 != val6).to(beTrue())
+
+                    let val7 = I256(from: [3, 0, 0, 0], signExtend: true)
+                    let val8 = I256(from: [3, 0, 0, 0], signExtend: true)
+                    expect(val7 != val8).to(beFalse())
+                }
+
+                it("!= [sign extend, sign extend]") {
+                    let val1 = I256(from: [5, 0, 0, 0], signExtend: true)
+                    let val2 = I256(from: [6, 0, 0, 0], signExtend: true)
+                    expect(val1 != val2).to(beTrue())
                 }
 
                 it("<") {
@@ -203,9 +235,21 @@ final class I256Spec: QuickSpec {
                     let val5 = I256(from: [1, 2, 3, 4])
                     let val6 = I256(from: [1, 2, 3, 4])
                     expect(val5 < val6).to(beFalse())
+
+                    let val7 = I256(from: [2, 0, 0, 0])
+                    let val8 = I256(from: [3, 0, 0, 0])
+                    expect(val7 < val8).to(beTrue())
+
+                    let val9 = I256(from: [2, 0, 0, 0])
+                    let val10 = I256(from: [2, 0, 0, 0])
+                    expect(val9 < val10).to(beFalse())
+
+                    let val11 = I256(from: [2, 0, 0, 0])
+                    let val12 = I256(from: [1, 0, 0, 0])
+                    expect(val11 < val12).to(beFalse())
                 }
 
-                it("< [signe extend, not signe extend]") {
+                it("< [sign extend, not sign extend]") {
                     let val1 = I256(from: [1, 2, 3, 4], signExtend: true)
                     let val2 = I256(from: [1, 2, 3, 5], signExtend: false)
                     expect(val1 < val2).to(beTrue())
@@ -218,9 +262,21 @@ final class I256Spec: QuickSpec {
                     let val6 = I256(from: [1, 2, 3, 4], signExtend: false)
                     expect(val5 < val6).to(beTrue())
                     expect(val5 == val6).to(beFalse())
+
+                    let val7 = I256(from: [3, 0, 0, 0], signExtend: true)
+                    let val8 = I256(from: [2, 0, 0, 0], signExtend: false)
+                    expect(val7 < val8).to(beTrue())
+
+                    let val9 = I256(from: [3, 0, 0, 0], signExtend: true)
+                    let val10 = I256(from: [3, 0, 0, 0], signExtend: false)
+                    expect(val9 < val10).to(beTrue())
+
+                    let val11 = I256(from: [3, 0, 0, 0], signExtend: true)
+                    let val12 = I256(from: [5, 0, 0, 0], signExtend: false)
+                    expect(val11 < val12).to(beTrue())
                 }
 
-                it("< [not signe extend, signe extend]") {
+                it("< [not sign extend, sign extend]") {
                     let val1 = I256(from: [1, 2, 3, 4], signExtend: false)
                     let val2 = I256(from: [1, 2, 3, 5], signExtend: true)
                     expect(val1 < val2).to(beFalse())
@@ -233,9 +289,21 @@ final class I256Spec: QuickSpec {
                     let val6 = I256(from: [1, 2, 3, 4], signExtend: true)
                     expect(val5 < val6).to(beFalse())
                     expect(val5 == val6).to(beFalse())
+
+                    let val7 = I256(from: [3, 0, 0, 0], signExtend: false)
+                    let val8 = I256(from: [2, 0, 0, 0], signExtend: true)
+                    expect(val7 < val8).to(beFalse())
+
+                    let val9 = I256(from: [3, 0, 0, 0], signExtend: false)
+                    let val10 = I256(from: [3, 0, 0, 0], signExtend: true)
+                    expect(val9 < val10).to(beFalse())
+
+                    let val11 = I256(from: [3, 0, 0, 0], signExtend: false)
+                    let val12 = I256(from: [5, 0, 0, 0], signExtend: true)
+                    expect(val11 < val12).to(beFalse())
                 }
 
-                it("< [signe extend, signe extend]") {
+                it("< [sign extend, sign extend]") {
                     let val1 = I256(from: [1, 2, 3, 4], signExtend: true)
                     let val2 = I256(from: [1, 2, 3, 3], signExtend: true)
                     expect(val1 < val2).to(beTrue())
@@ -251,6 +319,18 @@ final class I256Spec: QuickSpec {
                     let val7 = I256(from: [1, 2, 3, 5], signExtend: true)
                     let val8 = I256(from: [1, 2, 3, 5], signExtend: true)
                     expect(val7 == val8).to(beTrue())
+
+                    let val9 = I256(from: [4, 0, 0, 0], signExtend: true)
+                    let val10 = I256(from: [3, 0, 0, 0], signExtend: true)
+                    expect(val9 < val10).to(beTrue())
+
+                    let val11 = I256(from: [3, 0, 0, 0], signExtend: true)
+                    let val12 = I256(from: [3, 0, 0, 0], signExtend: true)
+                    expect(val11 < val12).to(beFalse())
+
+                    let val13 = I256(from: [2, 0, 0, 0], signExtend: true)
+                    let val14 = I256(from: [3, 0, 0, 0], signExtend: true)
+                    expect(val13 < val14).to(beFalse())
                 }
 
                 it(">") {
@@ -265,6 +345,60 @@ final class I256Spec: QuickSpec {
                     let val5 = I256(from: [1, 2, 3, 4])
                     let val6 = I256(from: [1, 2, 3, 4])
                     expect(val5 > val6).to(beFalse())
+
+                    let val7 = I256(from: [3, 0, 0, 0])
+                    let val8 = I256(from: [2, 0, 0, 0])
+                    expect(val7 > val8).to(beTrue())
+
+                    let val9 = I256(from: [2, 0, 0, 0])
+                    let val10 = I256(from: [2, 0, 0, 0])
+                    expect(val9 > val10).to(beFalse())
+
+                    let val11 = I256(from: [2, 0, 0, 0])
+                    let val12 = I256(from: [3, 0, 0, 0])
+                    expect(val11 > val12).to(beFalse())
+                }
+
+                it("> [sign extend, not sign extend]") {
+                    let val1 = I256(from: [3, 0, 0, 0], signExtend: true)
+                    let val2 = I256(from: [2, 0, 0, 0], signExtend: false)
+                    expect(val1 > val2).to(beFalse())
+
+                    let val3 = I256(from: [3, 0, 0, 0], signExtend: true)
+                    let val4 = I256(from: [3, 0, 0, 0], signExtend: false)
+                    expect(val3 > val4).to(beFalse())
+
+                    let val5 = I256(from: [3, 0, 0, 0], signExtend: true)
+                    let val6 = I256(from: [5, 0, 0, 0], signExtend: false)
+                    expect(val5 > val6).to(beFalse())
+                }
+
+                it("> [not sign extend, sign extend]") {
+                    let val1 = I256(from: [3, 0, 0, 0], signExtend: false)
+                    let val2 = I256(from: [2, 0, 0, 0], signExtend: true)
+                    expect(val1 > val2).to(beTrue())
+
+                    let val3 = I256(from: [3, 0, 0, 0], signExtend: false)
+                    let val4 = I256(from: [3, 0, 0, 0], signExtend: true)
+                    expect(val3 > val4).to(beTrue())
+
+                    let val5 = I256(from: [3, 0, 0, 0], signExtend: false)
+                    let val6 = I256(from: [5, 0, 0, 0], signExtend: true)
+                    expect(val5 > val6).to(beTrue())
+                }
+
+                it("> [sign extend, sign extend]") {
+                    let val1 = I256(from: [3, 0, 0, 0], signExtend: true)
+                    let val2 = I256(from: [2, 0, 0, 0], signExtend: true)
+                    expect(val1 > val2).to(beFalse())
+
+                    let val3 = I256(from: [3, 0, 0, 0], signExtend: true)
+                    let val4 = I256(from: [3, 0, 0, 0], signExtend: true)
+                    expect(val3 > val4).to(beFalse())
+
+                    let val5 = I256(from: [3, 0, 0, 0], signExtend: true)
+                    let val6 = I256(from: [5, 0, 0, 0], signExtend: true)
+                    expect(val5 > val6).to(beTrue())
                 }
 
                 it("<, > combinations") {
@@ -309,6 +443,8 @@ final class I256Spec: QuickSpec {
                     let val3 = I256(from: [1, 2, 3, 4])
                     let val4 = I256(from: [0, 0, 0, 0])
                     let val5 = I256(from: [UInt64.max, UInt64.max, UInt64.max, UInt64.max])
+                    let val6 = I256(from: [5, 0, 0, 0], signExtend: true)
+                    let val7 = I256(from: [6, 0, 0, 0], signExtend: true)
 
                     // Basic comparisons
                     expect(val1 <= val2).to(beTrue())
@@ -323,6 +459,11 @@ final class I256Spec: QuickSpec {
                     expect(val5 <= val5).to(beTrue())
                     expect(val1 <= val5).to(beTrue())
                     expect(val5 <= val1).to(beFalse())
+
+                    expect(val6 <= val4).to(beTrue())
+                    expect(val7 <= val6).to(beTrue())
+                    expect(val6 <= val7).to(beFalse())
+                    expect(val6 <= val6).to(beTrue())
                 }
 
                 it(">=") {
@@ -331,6 +472,8 @@ final class I256Spec: QuickSpec {
                     let val3 = I256(from: [1, 2, 3, 5])
                     let val4 = I256(from: [0, 0, 0, 0])
                     let val5 = I256(from: [UInt64.max, UInt64.max, UInt64.max, UInt64.max])
+                    let val6 = I256(from: [5, 0, 0, 0], signExtend: true)
+                    let val7 = I256(from: [6, 0, 0, 0], signExtend: true)
 
                     // Basic comparisons
                     expect(val1 >= val2).to(beTrue())
@@ -345,6 +488,11 @@ final class I256Spec: QuickSpec {
                     expect(val5 >= val5).to(beTrue())
                     expect(val5 >= val1).to(beTrue())
                     expect(val1 >= val5).to(beFalse())
+
+                    expect(val6 >= val4).to(beFalse())
+                    expect(val7 >= val6).to(beFalse())
+                    expect(val6 >= val7).to(beTrue())
+                    expect(val6 >= val6).to(beTrue())
                 }
             }
 
