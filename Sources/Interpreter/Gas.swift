@@ -69,6 +69,8 @@ enum GasConstant {
     static let VERYLOW: UInt64 = 3
     static let LOW: UInt64 = 5
     static let MID: UInt64 = 8
+    static let HIGH: UInt64 = 10
+    static let JUMPDEST: UInt64 = 1
     static let EXP: UInt64 = 10
 
     // TODO: Add hard fork config

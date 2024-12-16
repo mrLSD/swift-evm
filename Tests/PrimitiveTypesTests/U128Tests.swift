@@ -156,7 +156,20 @@ final class U128Spec: QuickSpec {
                     let val = U128.fromLittleEndian(from: [
                         0xf, 1, 2, 3, 0xc1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xac, 2,
                     ])
-                    expect(0x000000c10302010f).to(equal(val.getUInt))
+                    expect(val.getUInt).to(beNil())
+
+                    let val2 = U128(from: [0xffff, 0])
+                    expect(0xffff).to(equal(val2.getUInt))
+                }
+
+                it("getInt") {
+                    let val = U128.fromLittleEndian(from: [
+                        0xf, 1, 2, 3, 0xc1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xac, 2,
+                    ])
+                    expect(val.getInt).to(beNil())
+
+                    let val2 = U128(from: [0xffff, 0])
+                    expect(0xffff).to(equal(val2.getInt))
                 }
             }
 

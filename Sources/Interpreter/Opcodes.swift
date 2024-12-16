@@ -228,6 +228,15 @@ public enum Opcode: UInt8, CustomStringConvertible {
     /// Opcode index
     var index: Int { Int(rawValue) }
 
+    /// Whether the opcode is a push opcode. And return push count identifier
+    var isPush: Int? {
+        if (Self.PUSH1.rawValue ... Self.PUSH32.rawValue).contains(self.rawValue) {
+            return self.index - Self.PUSH1.index + 1
+        } else {
+            return nil
+        }
+    }
+
     var name: String {
         switch self {
         case .STOP: "STOP"

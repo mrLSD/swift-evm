@@ -40,6 +40,7 @@ final class InstructionPcSpec: QuickSpec {
                     })
                 }
 
+                expect(m.pc).to(equal(4))
                 expect(m.stack.length).to(equal(0))
                 expect(m.gas.remaining).to(equal(2))
             }

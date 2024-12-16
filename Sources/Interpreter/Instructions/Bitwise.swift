@@ -188,8 +188,8 @@ enum BItwiseInstructions {
 
             var newValue = U256.ZERO
             if op1 < U256(from: 32) {
-                // Force get UInt, because we know it is less than 32
-                let o = Int(op1.getUInt!)
+                // Force get Int, because we know it is less than 32
+                let o = op1.getInt!
                 for i in 0 ..< 8 {
                     let t = 255 - (7 - i + 8 * o)
                     let value = (op2 >> t) & U256(from: 1)
@@ -214,8 +214,8 @@ enum BItwiseInstructions {
 
             var newValue = U256.ZERO
             if !op2.isZero, op1 < U256(from: 256) {
-                // Force get UInt, because we know it is less than 256
-                let shift = Int(op1.getUInt!)
+                // Force get Int, because we know it is less than 256
+                let shift = op1.getInt!
                 newValue = op2 << shift
             }
             try m.stack.push(value: newValue).get()
@@ -235,8 +235,8 @@ enum BItwiseInstructions {
 
             var newValue = U256.ZERO
             if !op2.isZero, op1 < U256(from: 256) {
-                // Force get UInt, because we know it is less than 256
-                let shift = Int(op1.getUInt!)
+                // Force get Int, because we know it is less than 256
+                let shift = op1.getInt!
                 newValue = op2 >> shift
             }
             try m.stack.push(value: newValue).get()
@@ -264,8 +264,8 @@ enum BItwiseInstructions {
                     newValue = I256(from: [1, 0, 0, 0], signExtend: true).toU256
                 }
             } else {
-                // Force get UInt, because we know it is less than 256
-                let shift = Int(op1.getUInt!)
+                // Force get Int, because we know it is less than 256
+                let shift = op1.getInt!
                 // Check is positive number
                 if !iOp2.signExtend {
                     // Shift Right
