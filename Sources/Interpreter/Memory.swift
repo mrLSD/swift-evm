@@ -1,16 +1,28 @@
 /// Machine Memory with  specific limit.
 public struct Memory {
+    /// Memory data
     private var data: [UInt8] = []
-    private var limit: Int = 0
+    /// Get Memory data
+    public var getData: [UInt8] { self.data }
 
-    /// Init Memory with empty data and Memory limit
+    /// Memory limit
+    private(set) var limit: Int = 0
+
+    /// Get Memory length
+    public var length: Int { self.data.count }
+
+    /// Memory effective length, that changed after resize operations.
+    private(set) var effectiveLength: Int = 0
+
+    /// Creates a new memory instance that can be shared between calls.
+    /// With memory `limit` as upper bound for allocation size.
     init(limit: Int) {
         self.limit = limit
     }
 
-    /// Get Memory length
-    func length() -> Int {
-        self.data.count
+    /// Creates a new memory instance that can be shared between calls.
+    init() {
+        self.limit = Int.max
     }
 
     /// Get memory data from range.
@@ -20,7 +32,7 @@ public struct Memory {
     /// If `range` value out of Memory diapason - just returns empty result
     func get(range: Range<Int>) -> [UInt8] {
         // Check Memory range
-        precondition(range.lowerBound >= 0 && range.upperBound <= self.data.count, "Get Memory out of range: \(range)\n for 0..<(self.data.count)")
+        precondition(range.lowerBound >= 0 && range.upperBound <= self.length, "Get Memory out of range: \(range)\n for 0..<(self.data.count)")
 
         return Array(self.data[range])
     }
@@ -36,7 +48,7 @@ public struct Memory {
 
     /// Resize memory  extending to specific size with zero data
     mutating func resize(size: Int) {
-        let addSize = size - self.data.count
+        let addSize = size - self.length
         if addSize <= 0 {
             return
         }

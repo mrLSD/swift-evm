@@ -9,17 +9,17 @@ final class InterpreterMemorySpec: QuickSpec {
             context("initialization") {
                 it("should have a length of 0 after initialization") {
                     let memory = Memory(limit: 100)
-                    expect(memory.length()).to(equal(0))
+                    expect(memory.length).to(equal(0))
                 }
             }
 
             context("length after resize") {
                 it("should return the correct length") {
                     var memory = Memory(limit: 100)
-                    expect(memory.length()).to(equal(0))
+                    expect(memory.length).to(equal(0))
 
                     memory.resize(size: 50)
-                    expect(memory.length()).to(equal(50))
+                    expect(memory.length).to(equal(50))
                 }
             }
 
@@ -27,12 +27,12 @@ final class InterpreterMemorySpec: QuickSpec {
                 it("should increase the size and fill new bytes with zeros") {
                     var memory = Memory(limit: 100)
                     memory.resize(size: 10)
-                    expect(memory.length()).to(equal(10))
+                    expect(memory.length).to(equal(10))
                     expect(memory.get(range: 0..<10)).to(equal([UInt8](repeating: 0, count: 10)))
 
                     memory.set(range: 0..<10, with: [UInt8](repeating: 5, count: 10))
                     memory.resize(size: 15)
-                    expect(memory.length()).to(equal(15))
+                    expect(memory.length).to(equal(15))
                     expect(memory.get(range: 0..<10)).to(equal([UInt8](repeating: 5, count: 10)))
                     expect(memory.get(range: 10..<15)).to(equal([UInt8](repeating: 0, count: 5)))
                 }
@@ -42,7 +42,7 @@ final class InterpreterMemorySpec: QuickSpec {
                     memory.resize(size: 20)
                     memory.set(range: 0..<20, with: [UInt8](repeating: 1, count: 20))
                     memory.resize(size: 10)
-                    expect(memory.length()).to(equal(20))
+                    expect(memory.length).to(equal(20))
                     expect(memory.get(range: 0..<20)).to(equal([UInt8](repeating: 1, count: 20)))
                 }
 
@@ -51,7 +51,7 @@ final class InterpreterMemorySpec: QuickSpec {
                     memory.resize(size: 30)
                     memory.set(range: 0..<30, with: [UInt8](repeating: 2, count: 30))
                     memory.resize(size: 30)
-                    expect(memory.length()).to(equal(30))
+                    expect(memory.length).to(equal(30))
                     expect(memory.get(range: 0..<30)).to(equal([UInt8](repeating: 2, count: 30)))
                 }
             }

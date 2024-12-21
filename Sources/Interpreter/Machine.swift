@@ -285,7 +285,7 @@ public struct Machine {
         // Set `MachineStatus` to `Continue` to start evaluation.
         self.machineStatus = MachineStatus.Continue
         // Evaluation loop
-        while case MachineStatus.Continue = self.machineStatus {
+        while self.machineStatus == MachineStatus.Continue {
             self.step()
         }
     }
