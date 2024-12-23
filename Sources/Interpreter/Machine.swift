@@ -48,16 +48,30 @@ public struct Machine {
         case Exit(ExitReason)
     }
 
-    public enum ExitReason: Equatable {
+    public enum ExitReason: Equatable, Error {
         case Success(ExitSuccess)
         case Revert
         case Error(ExitError)
-        case Fatal
+        case Fatal(ExitFatal)
     }
 
-    public enum ExitSuccess: Equatable {
+    public enum ExitSuccess: Equatable, Error {
         case Stop
         case Return
+    }
+
+    public enum ExitFatal: Equatable, Error {
+        case ReadMemory
+    }
+
+    public enum MemoryError: Equatable, Error {
+        case SetSizeOverflow
+        case SetLimitExceeded
+        case CopyOSizeOverflow
+        case CopyLimitExceeded
+        case CopyDataOffsetOutOfBounds
+        case CopyDataSizeOverflow
+        case CopyDataLimitExceeded
     }
 
     public enum ExitError: Equatable, Error {
@@ -71,6 +85,7 @@ public struct Machine {
         case OutOfGas
         case OutOfFund
         case InvalidOpcode(UInt8)
+        case MemoryOperation(MemoryError)
     }
 
     /// Closure type of Evaluation function.
@@ -288,6 +303,49 @@ public struct Machine {
         while self.machineStatus == MachineStatus.Continue {
             self.step()
         }
+    }
+
+    /// Wrapper for `MachineStack` pop operation. If `pop` operation fails, set
+    /// `machineStatus` exit error status.
+    ///
+    /// ## Return
+    /// Optional value
+    mutating func stackPop() -> U256? {
+        switch self.stack.pop() {
+        case .success(let value):
+            return value
+        case .failure(let err):
+            self.machineStatus = .Exit(.Error(err))
+            return nil
+        }
+    }
+
+    /// Wrapper for `MachineStack` push operation. If `push` operation fails, set
+    /// `machineStatus` exit error status.
+    ///
+    /// ## Return
+    /// Boolean value is operation success or not
+    mutating func stackPush(_ value: U256) -> Bool {
+        switch self.stack.push(value: value) {
+        case .success:
+            return true
+        case .failure(let err):
+            self.machineStatus = .Exit(.Error(err))
+            return false
+        }
+    }
+
+    /// Wrapper for `Machine` gas `recordCost` operation. If operation fails, set
+    /// `machineStatus` exit error `OutOfGas`.
+    ///
+    /// ## Return
+    /// Boolean value is operation success or not
+    mutating func gasRecordCost(cost: UInt64) -> Bool {
+        if !self.gas.recordCost(cost: cost) {
+            self.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.OutOfGas))
+            return false
+        }
+        return true
     }
 
     // TODO: refactore it
