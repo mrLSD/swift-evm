@@ -65,12 +65,9 @@ public struct Machine {
     }
 
     public enum MemoryError: Equatable, Error {
-        case SetSizeOverflow
         case SetLimitExceeded
-        case CopyOSizeOverflow
         case CopyLimitExceeded
         case CopyDataOffsetOutOfBounds
-        case CopyDataSizeOverflow
         case CopyDataLimitExceeded
     }
 
@@ -325,7 +322,7 @@ public struct Machine {
     ///
     /// ## Return
     /// Boolean value is operation success or not
-    mutating func stackPush(_ value: U256) -> Bool {
+    mutating func stackPush(value: U256) -> Bool {
         switch self.stack.push(value: value) {
         case .success:
             return true
