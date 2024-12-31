@@ -3,202 +3,199 @@ import PrimitiveTypes
 /// EVM Arithmetic instructions
 enum ArithmeticInstructions {
     static func add(machine m: inout Machine) {
-        do {
-            if !m.gas.recordCost(cost: GasConstant.VERYLOW) {
-                m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.OutOfGas))
-                return
-            }
-            let op1 = try m.stack.pop().get()
-            let op2 = try m.stack.pop().get()
-
-            let (newValue, _) = op1.overflowAdd(op2)
-            try m.stack.push(value: newValue).get()
-        } catch {
-            m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(error))
+        if !m.gasRecordCost(cost: GasConstant.VERYLOW) {
+            return
         }
+        guard let op1 = m.stackPop() else {
+            return
+        }
+        guard let op2 = m.stackPop() else {
+            return
+        }
+
+        let (newValue, _) = op1.overflowAdd(op2)
+        m.stackPush(value: newValue)
     }
 
     static func sub(machine m: inout Machine) {
-        do {
-            if !m.gas.recordCost(cost: GasConstant.VERYLOW) {
-                m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.OutOfGas))
-                return
-            }
-            let op1 = try m.stack.pop().get()
-            let op2 = try m.stack.pop().get()
-
-            let (newValue, _) = op1.overflowSub(op2)
-            try m.stack.push(value: newValue).get()
-        } catch {
-            m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(error))
+        if !m.gasRecordCost(cost: GasConstant.VERYLOW) {
+            return
         }
+        guard let op1 = m.stackPop() else {
+            return
+        }
+        guard let op2 = m.stackPop() else {
+            return
+        }
+
+        let (newValue, _) = op1.overflowSub(op2)
+        m.stackPush(value: newValue)
     }
 
     static func mul(machine m: inout Machine) {
-        do {
-            if !m.gas.recordCost(cost: GasConstant.LOW) {
-                m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.OutOfGas))
-                return
-            }
-            let op1 = try m.stack.pop().get()
-            let op2 = try m.stack.pop().get()
-
-            let newValue = op1.mul(op2)
-            try m.stack.push(value: newValue).get()
-        } catch {
-            m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(error))
+        if !m.gasRecordCost(cost: GasConstant.LOW) {
+            return
         }
+        guard let op1 = m.stackPop() else {
+            return
+        }
+        guard let op2 = m.stackPop() else {
+            return
+        }
+
+        let newValue = op1.mul(op2)
+        m.stackPush(value: newValue)
     }
 
     static func div(machine m: inout Machine) {
-        do {
-            if !m.gas.recordCost(cost: GasConstant.LOW) {
-                m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.OutOfGas))
-                return
-            }
-            let op1 = try m.stack.pop().get()
-            let op2 = try m.stack.pop().get()
-
-            let newValue = op2.isZero ? op2 : op1 / op2
-            try m.stack.push(value: newValue).get()
-        } catch {
-            m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(error))
+        if !m.gasRecordCost(cost: GasConstant.LOW) {
+            return
         }
+        guard let op1 = m.stackPop() else {
+            return
+        }
+        guard let op2 = m.stackPop() else {
+            return
+        }
+
+        let newValue = op2.isZero ? op2 : op1 / op2
+        _ = m.stack.push(value: newValue)
     }
 
     static func rem(machine m: inout Machine) {
-        do {
-            if !m.gas.recordCost(cost: GasConstant.LOW) {
-                m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.OutOfGas))
-                return
-            }
-            let op1 = try m.stack.pop().get()
-            let op2 = try m.stack.pop().get()
-
-            let newValue = op2.isZero ? op2 : op1 % op2
-            try m.stack.push(value: newValue).get()
-        } catch {
-            m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(error))
+        if !m.gasRecordCost(cost: GasConstant.LOW) {
+            return
         }
+        guard let op1 = m.stackPop() else {
+            return
+        }
+        guard let op2 = m.stackPop() else {
+            return
+        }
+
+        let newValue = op2.isZero ? op2 : op1 % op2
+        _ = m.stack.push(value: newValue)
     }
 
     static func sdiv(machine m: inout Machine) {
-        do {
-            if !m.gas.recordCost(cost: GasConstant.LOW) {
-                m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.OutOfGas))
-                return
-            }
-            let op1 = try m.stack.pop().get()
-            let op2 = try m.stack.pop().get()
-
-            let iOp1 = I256.fromU256(op1)
-            let iOp2 = I256.fromU256(op2)
-            let newValue = iOp1 / iOp2
-            try m.stack.push(value: newValue.toU256).get()
-        } catch {
-            m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(error))
+        if !m.gasRecordCost(cost: GasConstant.LOW) {
+            return
         }
+        guard let op1 = m.stackPop() else {
+            return
+        }
+        guard let op2 = m.stackPop() else {
+            return
+        }
+
+        let iOp1 = I256.fromU256(op1)
+        let iOp2 = I256.fromU256(op2)
+        let newValue = iOp1 / iOp2
+        m.stackPush(value: newValue.toU256)
     }
 
     static func smod(machine m: inout Machine) {
-        do {
-            if !m.gas.recordCost(cost: GasConstant.LOW) {
-                m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.OutOfGas))
-                return
-            }
-            let op1 = try m.stack.pop().get()
-            let op2 = try m.stack.pop().get()
-
-            let iOp1 = I256.fromU256(op1)
-            let iOp2 = I256.fromU256(op2)
-            let newValue = iOp2.isZero ? iOp2 : iOp1 % iOp2
-            try m.stack.push(value: newValue.toU256).get()
-        } catch {
-            m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(error))
+        if !m.gasRecordCost(cost: GasConstant.LOW) {
+            return
         }
+        guard let op1 = m.stackPop() else {
+            return
+        }
+        guard let op2 = m.stackPop() else {
+            return
+        }
+
+        let iOp1 = I256.fromU256(op1)
+        let iOp2 = I256.fromU256(op2)
+        let newValue = iOp2.isZero ? iOp2 : iOp1 % iOp2
+        m.stackPush(value: newValue.toU256)
     }
 
     static func addMod(machine m: inout Machine) {
-        do {
-            if !m.gas.recordCost(cost: GasConstant.MID) {
-                m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.OutOfGas))
-                return
-            }
-            let op1 = try m.stack.pop().get()
-            let op2 = try m.stack.pop().get()
-            let op3 = try m.stack.pop().get()
-
-            let op1u512 = U512(from: op1)
-            let op2u512 = U512(from: op2)
-            let op3u512 = U512(from: op3)
-
-            var newValueu512 = U512.ZERO
-            if !op3u512.isZero {
-                // We ignore possible overflow, as we takes only first 4 elements from array as results
-                newValueu512 = (op1u512 + op2u512) % op3u512
-            }
-
-            // Set first 4 elements from `U512`
-            let newValue = U256(from: Array(newValueu512.BYTES.prefix(4)))
-            try m.stack.push(value: newValue).get()
-        } catch {
-            m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(error))
+        if !m.gasRecordCost(cost: GasConstant.MID) {
+            return
         }
+        guard let op1 = m.stackPop() else {
+            return
+        }
+        guard let op2 = m.stackPop() else {
+            return
+        }
+        guard let op3 = m.stackPop() else {
+            return
+        }
+
+        let op1u512 = U512(from: op1)
+        let op2u512 = U512(from: op2)
+        let op3u512 = U512(from: op3)
+
+        var newValueu512 = U512.ZERO
+        if !op3u512.isZero {
+            // We ignore possible overflow, as we takes only first 4 elements from array as results
+            newValueu512 = (op1u512 + op2u512) % op3u512
+        }
+
+        // Set first 4 elements from `U512`
+        let newValue = U256(from: Array(newValueu512.BYTES.prefix(4)))
+        m.stackPush(value: newValue)
     }
 
     static func mulMod(machine m: inout Machine) {
-        do {
-            if !m.gas.recordCost(cost: GasConstant.MID) {
-                m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.OutOfGas))
-                return
-            }
-            let op1 = try m.stack.pop().get()
-            let op2 = try m.stack.pop().get()
-            let op3 = try m.stack.pop().get()
-
-            let op1u512 = U512(from: op1)
-            let op2u512 = U512(from: op2)
-            let op3u512 = U512(from: op3)
-
-            var newValueu512 = U512.ZERO
-            if !op3u512.isZero {
-                // We ignore possible overflow, as we takes only first 4 elements from array as results
-                newValueu512 = (op1u512 * op2u512) % op3u512
-            }
-
-            // Set first 4 elements from `U512`
-            let newValue = U256(from: Array(newValueu512.BYTES.prefix(4)))
-            try m.stack.push(value: newValue).get()
-        } catch {
-            m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(error))
+        if !m.gasRecordCost(cost: GasConstant.MID) {
+            return
         }
+        guard let op1 = m.stackPop() else {
+            return
+        }
+        guard let op2 = m.stackPop() else {
+            return
+        }
+        guard let op3 = m.stackPop() else {
+            return
+        }
+
+        let op1u512 = U512(from: op1)
+        let op2u512 = U512(from: op2)
+        let op3u512 = U512(from: op3)
+
+        var newValueu512 = U512.ZERO
+        if !op3u512.isZero {
+            // We ignore possible overflow, as we takes only first 4 elements from array as results
+            newValueu512 = (op1u512 * op2u512) % op3u512
+        }
+
+        // Set first 4 elements from `U512`
+        let newValue = U256(from: Array(newValueu512.BYTES.prefix(4)))
+        m.stackPush(value: newValue)
     }
 
     static func exp(machine m: inout Machine) {
-        do {
-            var op1 = try m.stack.pop().get()
-            var op2 = try m.stack.pop().get()
-            if !m.gas.recordCost(cost: GasConstant.expCost(power: op2)) {
-                m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.OutOfGas))
-                return
-            }
-
-            let one = U256(from: 1)
-            var r = one
-
-            while !op2.isZero {
-                if !(op2 & one).isZero {
-                    r = r * op1
-                }
-                op2 = op2 >> 1
-                op1 = op1 * op1
-            }
-            let newValue = r
-
-            try m.stack.push(value: newValue).get()
-        } catch {
-            m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(error))
+        // Pop from stack before Gas cost charge for gas cost calculation
+        guard var op1 = m.stackPop() else {
+            return
         }
+        guard var op2 = m.stackPop() else {
+            return
+        }
+
+        if !m.gasRecordCost(cost: GasConstant.expCost(power: op2)) {
+            m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.OutOfGas))
+            return
+        }
+
+        let one = U256(from: 1)
+        var r = one
+
+        while !op2.isZero {
+            if !(op2 & one).isZero {
+                r = r * op1
+            }
+            op2 = op2 >> 1
+            op1 = op1 * op1
+        }
+        let newValue = r
+
+        m.stackPush(value: newValue)
     }
 
     /// In the yellow paper `SIGNEXTEND` is defined to take two inputs, we will call them
@@ -217,25 +214,24 @@ enum ArithmeticInstructions {
     /// `b == 0` then the yellow paper says the output should start with all zeros, then end with
     /// bits from `b`; this is equal to `y & mask` where `&` is bitwise `AND`.
     static func signextend(machine m: inout Machine) {
-        do {
-            if !m.gas.recordCost(cost: GasConstant.LOW) {
-                m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.OutOfGas))
-                return
-            }
-            let op1 = try m.stack.pop().get()
-            let op2 = try m.stack.pop().get()
-
-            var newValue = op2
-            if op1 < U256(from: 32) {
-                let bitIndex = Int(8 * op1.BYTES[0] + 7)
-                let bit = op2.BYTES[bitIndex / 64] & (1 << (bitIndex % 64)) != 0
-                let mask = (U256(from: 1) << bitIndex) - U256(from: 1)
-                newValue = bit ? op2 | ~mask : op2 & mask
-            }
-
-            try m.stack.push(value: newValue).get()
-        } catch {
-            m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(error))
+        if !m.gasRecordCost(cost: GasConstant.LOW) {
+            return
         }
+        guard let op1 = m.stackPop() else {
+            return
+        }
+        guard let op2 = m.stackPop() else {
+            return
+        }
+
+        var newValue = op2
+        if op1 < U256(from: 32) {
+            let bitIndex = Int(8 * op1.BYTES[0] + 7)
+            let bit = op2.BYTES[bitIndex / 64] & (1 << (bitIndex % 64)) != 0
+            let mask = (U256(from: 1) << bitIndex) - U256(from: 1)
+            newValue = bit ? op2 | ~mask : op2 & mask
+        }
+
+        _ = m.stack.push(value: newValue)
     }
 }

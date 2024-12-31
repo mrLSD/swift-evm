@@ -319,16 +319,29 @@ public struct Machine {
 
     /// Wrapper for `MachineStack` push operation. If `push` operation fails, set
     /// `machineStatus` exit error status.
+
+    mutating func stackPush(value: U256) {
+        switch self.stack.push(value: value) {
+        case .success:
+            return
+        case .failure(let err):
+            self.machineStatus = .Exit(.Error(err))
+            return
+        }
+    }
+
+    /// Wrapper for `MachineStack` peek operation. If `peek` operation fails, set
+    /// `machineStatus` exit error status.
     ///
     /// ## Return
     /// Boolean value is operation success or not
-    mutating func stackPush(value: U256) -> Bool {
-        switch self.stack.push(value: value) {
-        case .success:
-            return true
+    mutating func stackPeek(indexFromTop: Int) -> U256? {
+        switch self.stack.peek(indexFromTop: indexFromTop) {
+        case .success(let val):
+            return val
         case .failure(let err):
             self.machineStatus = .Exit(.Error(err))
-            return false
+            return nil
         }
     }
 
@@ -344,10 +357,4 @@ public struct Machine {
         }
         return true
     }
-
-    // TODO: refactore it
-//    /// Get `Return` value
-//    func returnValue() -> [UInt8] {
-//        self.memory.get(range: self.returnRange)
-//    }
 }
