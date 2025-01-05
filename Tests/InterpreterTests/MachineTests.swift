@@ -11,7 +11,13 @@ struct TestHandler: InterpreterHandler {
 }
 
 enum TestMachine {
+    /// Init simple Machine
     static func machine(opcode: Opcode, gasLimit: UInt64) -> Machine {
         Machine(data: [], code: [opcode.rawValue], gasLimit: gasLimit, handler: TestHandler())
+    }
+
+    /// Init Machine with predefined code with `Opcode` type
+    static func machine(opcodes code: [Opcode], gasLimit: UInt64) -> Machine {
+        Machine(data: [], code: code.map(\.rawValue), gasLimit: gasLimit, handler: TestHandler())
     }
 }

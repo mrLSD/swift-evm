@@ -26,6 +26,8 @@ public struct Machine {
     var stack: Stack = .init()
     /// Machine Gasometr
     var gas: Gas
+    /// Calculate Code Size
+    var codeSize: Int { self.code.count }
 
     /// Current Machine status
     var machineStatus: MachineStatus = .NotStarted
@@ -102,6 +104,9 @@ public struct Machine {
         table[Opcode.SHL.index] = BItwiseInstructions.shl
         table[Opcode.SHR.index] = BItwiseInstructions.shr
         table[Opcode.SAR.index] = BItwiseInstructions.sar
+
+        table[Opcode.CODESIZE.index] = SystemInstructions.codeSize
+
         return table
     }()
 
@@ -147,7 +152,8 @@ public struct Machine {
         }
     }
 
-    // Get `Return` value
+    // TODO: refactore it
+//    /// Get `Return` value
 //    func returnValue() -> [UInt8] {
 //        self.memory.get(range: self.returnRange)
 //    }

@@ -1,4 +1,5 @@
 {
+  "originHash" : "c003563333ffbf0143ec76cfad9ec936809a79e6b0e66e2cc0610d3414d7d4f9",
   "pins" : [
     {
       "identity" : "cwlcatchexception",
@@ -23,8 +24,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/Quick/Nimble.git",
       "state" : {
-        "revision" : "cecacf00ddf36c1efff8d14beb65087f2a676be9",
-        "version" : "13.5.0"
+        "revision" : "7795df4fff1a9cd231fe4867ae54f4dc5f5734f9",
+        "version" : "13.7.1"
       }
     },
     {
@@ -64,5 +65,5 @@
       }
     }
   ],
-  "version" : 2
+  "version" : 3
 }

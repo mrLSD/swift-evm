@@ -124,6 +124,7 @@ final class InterpreterMemorySpec: QuickSpec {
                     expect(Memory.ceil32(31)).to(equal(32))
                     expect(Memory.ceil32(33)).to(equal(64))
                     expect(Memory.ceil32(63)).to(equal(64))
+                    expect(Memory.ceil32(65)).to(equal(96))
                 }
             }
         }
