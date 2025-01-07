@@ -15,7 +15,7 @@ public struct Machine {
     /// Program code.
     private let code: [UInt8]
     /// Program counter.
-    private var pc: Int = 0
+    private(set) var pc: Int = 0
     /// Return value.
     private var returnRange: Range<Int> = 0 ..< 0
     /// Code validity maps.
@@ -105,7 +105,9 @@ public struct Machine {
         table[Opcode.SHR.index] = BItwiseInstructions.shr
         table[Opcode.SAR.index] = BItwiseInstructions.sar
 
+        // System
         table[Opcode.CODESIZE.index] = SystemInstructions.codeSize
+        table[Opcode.PC.index] = SystemInstructions.pc
 
         return table
     }()
@@ -134,11 +136,11 @@ public struct Machine {
             self.machineStatus = MachineStatus.Exit(ExitReason.Error(ExitError.InvalidOpcode(opcodeNum)))
             return
         }
-        // Increment `PC` for the next step
-        self.pc += 1
         // Run evaluation function for Opcode.
         // NOTE: It can change `MachineStatus` or `PC`
         evalFunc(&self)
+        // Increment `PC` for the next step
+        self.pc += 1
     }
 
     /// Evaluation loop for `Machine` code.
