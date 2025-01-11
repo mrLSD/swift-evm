@@ -3,7 +3,7 @@ import Nimble
 import PrimitiveTypes
 import Quick
 
-final class InterpreterStackSpec: QuickSpec {
+final class InterpreterMachineStackSpec: QuickSpec {
     override class func spec() {
         describe("Stack type") {
             context("initialization") {

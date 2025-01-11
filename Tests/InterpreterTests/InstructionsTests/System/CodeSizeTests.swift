@@ -61,6 +61,8 @@ final class InstructionCodeSizeSpec: QuickSpec {
 
                 m.evalLoop()
                 expect(m.machineStatus).to(equal(.Exit(.Error(.StackOverflow))))
+                expect(m.stack.length).to(equal(m.stack.limit))
+                expect(m.gas.remaining).to(equal(8))
             }
         }
     }

@@ -23,11 +23,10 @@ enum SystemInstructions {
                 return
             }
 
-            let newValue = UInt64(m.pc	)
+            let newValue = UInt64(m.pc)
             try m.stack.push(value: U256(from: newValue)).get()
         } catch {
             m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(error))
         }
     }
-
 }
