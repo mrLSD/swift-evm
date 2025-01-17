@@ -14,6 +14,7 @@ final class InstructionPopSpec: QuickSpec {
 
                 let _ = m.stack.push(value: U256(from: 5))
                 m.evalLoop()
+                m.trace.printOutput()
 
                 expect(m.machineStatus).to(equal(.Exit(.Success(.Stop))))
                 expect(m.stack.length).to(equal(0))

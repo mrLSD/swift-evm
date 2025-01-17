@@ -21,13 +21,18 @@ public struct Machine {
     /// Code validity maps.
     private let valids: [UInt8] = []
     /// Machine Memory.
-    private var memory: Memory = .init(limit: 0)
+    private(set) var memory: Memory = .init(limit: 0)
     /// Machine Stack
     var stack: Stack = .init()
     /// Machine Gasometr
     var gas: Gas
     /// Calculate Code Size
     var codeSize: Int { self.code.count }
+
+    #if TRACING
+    /// Tracing data
+    var trace: Trace
+    #endif
 
     /// Current Machine status
     var machineStatus: MachineStatus = .NotStarted
@@ -118,6 +123,7 @@ public struct Machine {
         self.code = code
         self.handler = handler
         self.gas = Gas(limit: gasLimit)
+        self.trace = Trace()
     }
 
     /// Provide one step for `Machine` execution.
@@ -137,9 +143,19 @@ public struct Machine {
             self.machineStatus = MachineStatus.Exit(ExitReason.Error(ExitError.InvalidOpcode(opcodeNum)))
             return
         }
+
+        #if TRACING
+        self.trace.beforeEval(self, op)
+        #endif
+
         // Run evaluation function for Opcode.
         // NOTE: It can change `MachineStatus` or `PC`
         evalFunc(&self)
+
+        #if TRACING
+        self.trace.afterEval(self).complete()
+        #endif
+
         // Increment `PC` for the next step
         self.pc += 1
     }

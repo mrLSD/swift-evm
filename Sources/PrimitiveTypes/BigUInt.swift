@@ -1,7 +1,7 @@
 import Foundation
 
 /// `BigUInt` Protocol - represent Bit Unsigner Integers
-public protocol BigUInt: CustomStringConvertible, Equatable, Sendable {
+public protocol BigUInt: CustomStringConvertible, Equatable, Sendable, Hashable {
     /// `BigUInt` bytes
     var BYTES: [UInt64] { get }
     /// Calculate`BigUInt` Max value
@@ -173,7 +173,7 @@ public extension BigUInt {
 /// Implementation of `CustomStringConvertible`
 public extension BigUInt {
     var description: String {
-        self.BYTES.map { String(format: "%016lx", $0).uppercased() }.joined()
+        self.BYTES.map { String(format: "%016lX", $0) }.joined()
     }
 }
 
