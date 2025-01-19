@@ -25,7 +25,7 @@ let package = Package(
             name: "Interpreter",
             dependencies: ["PrimitiveTypes"],
             swiftSettings: [
-                .define("TRACING"),
+                .define("DISABLE_TRACING"),
             ]),
         .target(
             name: "PrimitiveTypes"),
@@ -33,7 +33,7 @@ let package = Package(
             name: "InterpreterTests",
             dependencies: ["Interpreter", "PrimitiveTypes", "Quick", "Nimble"],
             swiftSettings: [
-                .define("TRACING"),
+                .define("DISABLE_TRACING"),
             ]),
         .testTarget(
             name: "PrimitiveTypesTests",

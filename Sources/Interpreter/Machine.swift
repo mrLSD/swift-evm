@@ -11,9 +11,9 @@ public protocol InterpreterHandler {
 /// Machine represents EVM core execution layer
 public struct Machine {
     /// Program data
-    private let data: [UInt8]
+    let data: [UInt8]
     /// Program code.
-    private let code: [UInt8]
+    let code: [UInt8]
     /// Program counter.
     private(set) var pc: Int = 0
     /// Return value.
@@ -43,7 +43,9 @@ public struct Machine {
     public enum MachineStatus: Equatable {
         case NotStarted
         case Continue
-        case Jump(Int)
+        case AddPC(Int)
+        // TODO: add for JUMP instructions
+        // case Jump(Int)
         case Trap(Opcode)
         case Exit(ExitReason)
     }
@@ -114,6 +116,39 @@ public struct Machine {
         table[Opcode.CODESIZE.index] = SystemInstructions.codeSize
         table[Opcode.PC.index] = SystemInstructions.pc
         table[Opcode.POP.index] = StackInstructions.pop
+        table[Opcode.PUSH0.index] = StackInstructions.push0
+        table[Opcode.PUSH1.index] = { (_ m: inout Self) in StackInstructions.push(machine: &m, n: 1) }
+        table[Opcode.PUSH2.index] = { (_ m: inout Self) in StackInstructions.push(machine: &m, n: 2) }
+        table[Opcode.PUSH3.index] = { (_ m: inout Self) in StackInstructions.push(machine: &m, n: 3) }
+        table[Opcode.PUSH4.index] = { (_ m: inout Self) in StackInstructions.push(machine: &m, n: 4) }
+        table[Opcode.PUSH5.index] = { (_ m: inout Self) in StackInstructions.push(machine: &m, n: 5) }
+        table[Opcode.PUSH6.index] = { (_ m: inout Self) in StackInstructions.push(machine: &m, n: 6) }
+        table[Opcode.PUSH7.index] = { (_ m: inout Self) in StackInstructions.push(machine: &m, n: 7) }
+        table[Opcode.PUSH8.index] = { (_ m: inout Self) in StackInstructions.push(machine: &m, n: 8) }
+        table[Opcode.PUSH9.index] = { (_ m: inout Self) in StackInstructions.push(machine: &m, n: 9) }
+        table[Opcode.PUSH10.index] = { (_ m: inout Self) in StackInstructions.push(machine: &m, n: 10) }
+        table[Opcode.PUSH11.index] = { (_ m: inout Self) in StackInstructions.push(machine: &m, n: 11) }
+        table[Opcode.PUSH12.index] = { (_ m: inout Self) in StackInstructions.push(machine: &m, n: 12) }
+        table[Opcode.PUSH13.index] = { (_ m: inout Self) in StackInstructions.push(machine: &m, n: 13) }
+        table[Opcode.PUSH14.index] = { (_ m: inout Self) in StackInstructions.push(machine: &m, n: 14) }
+        table[Opcode.PUSH15.index] = { (_ m: inout Self) in StackInstructions.push(machine: &m, n: 15) }
+        table[Opcode.PUSH16.index] = { (_ m: inout Self) in StackInstructions.push(machine: &m, n: 16) }
+        table[Opcode.PUSH17.index] = { (_ m: inout Self) in StackInstructions.push(machine: &m, n: 17) }
+        table[Opcode.PUSH18.index] = { (_ m: inout Self) in StackInstructions.push(machine: &m, n: 18) }
+        table[Opcode.PUSH19.index] = { (_ m: inout Self) in StackInstructions.push(machine: &m, n: 19) }
+        table[Opcode.PUSH20.index] = { (_ m: inout Self) in StackInstructions.push(machine: &m, n: 20) }
+        table[Opcode.PUSH21.index] = { (_ m: inout Self) in StackInstructions.push(machine: &m, n: 21) }
+        table[Opcode.PUSH22.index] = { (_ m: inout Self) in StackInstructions.push(machine: &m, n: 22) }
+        table[Opcode.PUSH23.index] = { (_ m: inout Self) in StackInstructions.push(machine: &m, n: 23) }
+        table[Opcode.PUSH24.index] = { (_ m: inout Self) in StackInstructions.push(machine: &m, n: 24) }
+        table[Opcode.PUSH25.index] = { (_ m: inout Self) in StackInstructions.push(machine: &m, n: 25) }
+        table[Opcode.PUSH26.index] = { (_ m: inout Self) in StackInstructions.push(machine: &m, n: 26) }
+        table[Opcode.PUSH27.index] = { (_ m: inout Self) in StackInstructions.push(machine: &m, n: 27) }
+        table[Opcode.PUSH28.index] = { (_ m: inout Self) in StackInstructions.push(machine: &m, n: 28) }
+        table[Opcode.PUSH29.index] = { (_ m: inout Self) in StackInstructions.push(machine: &m, n: 29) }
+        table[Opcode.PUSH30.index] = { (_ m: inout Self) in StackInstructions.push(machine: &m, n: 30) }
+        table[Opcode.PUSH31.index] = { (_ m: inout Self) in StackInstructions.push(machine: &m, n: 31) }
+        table[Opcode.PUSH32.index] = { (_ m: inout Self) in StackInstructions.push(machine: &m, n: 32) }
 
         return table
     }()
@@ -123,7 +158,9 @@ public struct Machine {
         self.code = code
         self.handler = handler
         self.gas = Gas(limit: gasLimit)
+        #if TRACING
         self.trace = Trace()
+        #endif
     }
 
     /// Provide one step for `Machine` execution.
@@ -152,12 +189,23 @@ public struct Machine {
         // NOTE: It can change `MachineStatus` or `PC`
         evalFunc(&self)
 
+        // Change `PC` for the next step
+        switch self.machineStatus {
+        case .AddPC(let add):
+            self.pc += add
+            self.machineStatus = .Continue
+
+        // TODO: Add for JUMP instr
+        // case .Jump(let jumpPC):
+        //    self.pc = jumpPC
+        //    self.machineStatus = .Continue
+        default:
+            self.pc += 1
+        }
+
         #if TRACING
         self.trace.afterEval(self).complete()
         #endif
-
-        // Increment `PC` for the next step
-        self.pc += 1
     }
 
     /// Evaluation loop for `Machine` code.
