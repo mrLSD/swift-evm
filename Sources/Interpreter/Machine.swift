@@ -115,6 +115,8 @@ public struct Machine {
         // System
         table[Opcode.CODESIZE.index] = SystemInstructions.codeSize
         table[Opcode.PC.index] = SystemInstructions.pc
+
+        // Stack
         table[Opcode.POP.index] = StackInstructions.pop
         table[Opcode.PUSH0.index] = StackInstructions.push0
         table[Opcode.PUSH1.index] = { (_ m: inout Self) in StackInstructions.push(machine: &m, n: 1) }
@@ -149,6 +151,23 @@ public struct Machine {
         table[Opcode.PUSH30.index] = { (_ m: inout Self) in StackInstructions.push(machine: &m, n: 30) }
         table[Opcode.PUSH31.index] = { (_ m: inout Self) in StackInstructions.push(machine: &m, n: 31) }
         table[Opcode.PUSH32.index] = { (_ m: inout Self) in StackInstructions.push(machine: &m, n: 32) }
+
+        table[Opcode.SWAP1.index] = { (_ m: inout Self) in StackInstructions.swap(machine: &m, n: 1) }
+        table[Opcode.SWAP2.index] = { (_ m: inout Self) in StackInstructions.swap(machine: &m, n: 2) }
+        table[Opcode.SWAP3.index] = { (_ m: inout Self) in StackInstructions.swap(machine: &m, n: 3) }
+        table[Opcode.SWAP4.index] = { (_ m: inout Self) in StackInstructions.swap(machine: &m, n: 4) }
+        table[Opcode.SWAP5.index] = { (_ m: inout Self) in StackInstructions.swap(machine: &m, n: 5) }
+        table[Opcode.SWAP6.index] = { (_ m: inout Self) in StackInstructions.swap(machine: &m, n: 6) }
+        table[Opcode.SWAP7.index] = { (_ m: inout Self) in StackInstructions.swap(machine: &m, n: 7) }
+        table[Opcode.SWAP8.index] = { (_ m: inout Self) in StackInstructions.swap(machine: &m, n: 8) }
+        table[Opcode.SWAP9.index] = { (_ m: inout Self) in StackInstructions.swap(machine: &m, n: 9) }
+        table[Opcode.SWAP10.index] = { (_ m: inout Self) in StackInstructions.swap(machine: &m, n: 10) }
+        table[Opcode.SWAP11.index] = { (_ m: inout Self) in StackInstructions.swap(machine: &m, n: 11) }
+        table[Opcode.SWAP12.index] = { (_ m: inout Self) in StackInstructions.swap(machine: &m, n: 12) }
+        table[Opcode.SWAP13.index] = { (_ m: inout Self) in StackInstructions.swap(machine: &m, n: 13) }
+        table[Opcode.SWAP14.index] = { (_ m: inout Self) in StackInstructions.swap(machine: &m, n: 14) }
+        table[Opcode.SWAP15.index] = { (_ m: inout Self) in StackInstructions.swap(machine: &m, n: 15) }
+        table[Opcode.SWAP16.index] = { (_ m: inout Self) in StackInstructions.swap(machine: &m, n: 16) }
 
         return table
     }()
