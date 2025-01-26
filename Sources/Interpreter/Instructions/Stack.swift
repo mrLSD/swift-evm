@@ -56,16 +56,30 @@ enum StackInstructions {
 
     static func swap(machine m: inout Machine, n: Int) {
         do {
-            let val1 = try m.stack.peek(indexFromTop: 0).get()
-            let val2 = try m.stack.peek(indexFromTop: n).get()
-
             if !m.gas.recordCost(cost: GasConstant.VERYLOW) {
                 m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.OutOfGas))
                 return
             }
 
+            let val1 = try m.stack.peek(indexFromTop: 0).get()
+            let val2 = try m.stack.peek(indexFromTop: n).get()
+
             try m.stack.set(indexFromTop: n, value: val1).get()
             try m.stack.set(indexFromTop: 0, value: val2).get()
+        } catch {
+            m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(error))
+        }
+    }
+
+    static func dup(machine m: inout Machine, n: Int) {
+        do {
+            if !m.gas.recordCost(cost: GasConstant.VERYLOW) {
+                m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.OutOfGas))
+                return
+            }
+
+            let dupVal = try m.stack.peek(indexFromTop: n - 1).get()
+            try m.stack.push(value: dupVal).get()
         } catch {
             m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(error))
         }

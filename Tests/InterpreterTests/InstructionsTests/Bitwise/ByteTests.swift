@@ -56,7 +56,7 @@ final class InstructionByteSpec: QuickSpec {
 
                 expect(m.machineStatus).to(equal(.Exit(.Error(.StackUnderflow))))
                 expect(m.stack.length).to(equal(0))
-                expect(m.gas.remaining).to(equal(10))
+                expect(m.gas.remaining).to(equal(7))
             }
 
             it("with OutOfGas result") {
@@ -67,7 +67,7 @@ final class InstructionByteSpec: QuickSpec {
                 m.evalLoop()
 
                 expect(m.machineStatus).to(equal(.Exit(.Error(.OutOfGas))))
-                expect(m.stack.length).to(equal(0))
+                expect(m.stack.length).to(equal(2))
                 expect(m.gas.remaining).to(equal(2))
             }
 

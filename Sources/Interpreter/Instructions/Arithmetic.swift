@@ -4,12 +4,12 @@ import PrimitiveTypes
 enum ArithmeticInstructions {
     static func add(machine m: inout Machine) {
         do {
-            let op1 = try m.stack.pop().get()
-            let op2 = try m.stack.pop().get()
             if !m.gas.recordCost(cost: GasConstant.VERYLOW) {
                 m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.OutOfGas))
                 return
             }
+            let op1 = try m.stack.pop().get()
+            let op2 = try m.stack.pop().get()
 
             let (newValue, _) = op1.overflowAdd(op2)
             try m.stack.push(value: newValue).get()
@@ -20,12 +20,12 @@ enum ArithmeticInstructions {
 
     static func sub(machine m: inout Machine) {
         do {
-            let op1 = try m.stack.pop().get()
-            let op2 = try m.stack.pop().get()
             if !m.gas.recordCost(cost: GasConstant.VERYLOW) {
                 m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.OutOfGas))
                 return
             }
+            let op1 = try m.stack.pop().get()
+            let op2 = try m.stack.pop().get()
 
             let (newValue, _) = op1.overflowSub(op2)
             try m.stack.push(value: newValue).get()
@@ -36,12 +36,12 @@ enum ArithmeticInstructions {
 
     static func mul(machine m: inout Machine) {
         do {
-            let op1 = try m.stack.pop().get()
-            let op2 = try m.stack.pop().get()
             if !m.gas.recordCost(cost: GasConstant.LOW) {
                 m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.OutOfGas))
                 return
             }
+            let op1 = try m.stack.pop().get()
+            let op2 = try m.stack.pop().get()
 
             let newValue = op1.mul(op2)
             try m.stack.push(value: newValue).get()
@@ -52,12 +52,12 @@ enum ArithmeticInstructions {
 
     static func div(machine m: inout Machine) {
         do {
-            let op1 = try m.stack.pop().get()
-            let op2 = try m.stack.pop().get()
             if !m.gas.recordCost(cost: GasConstant.LOW) {
                 m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.OutOfGas))
                 return
             }
+            let op1 = try m.stack.pop().get()
+            let op2 = try m.stack.pop().get()
 
             let newValue = op2.isZero ? op2 : op1 / op2
             try m.stack.push(value: newValue).get()
@@ -68,12 +68,12 @@ enum ArithmeticInstructions {
 
     static func rem(machine m: inout Machine) {
         do {
-            let op1 = try m.stack.pop().get()
-            let op2 = try m.stack.pop().get()
             if !m.gas.recordCost(cost: GasConstant.LOW) {
                 m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.OutOfGas))
                 return
             }
+            let op1 = try m.stack.pop().get()
+            let op2 = try m.stack.pop().get()
 
             let newValue = op2.isZero ? op2 : op1 % op2
             try m.stack.push(value: newValue).get()
@@ -84,12 +84,12 @@ enum ArithmeticInstructions {
 
     static func sdiv(machine m: inout Machine) {
         do {
-            let op1 = try m.stack.pop().get()
-            let op2 = try m.stack.pop().get()
             if !m.gas.recordCost(cost: GasConstant.LOW) {
                 m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.OutOfGas))
                 return
             }
+            let op1 = try m.stack.pop().get()
+            let op2 = try m.stack.pop().get()
 
             let iOp1 = I256.fromU256(op1)
             let iOp2 = I256.fromU256(op2)
@@ -102,12 +102,12 @@ enum ArithmeticInstructions {
 
     static func smod(machine m: inout Machine) {
         do {
-            let op1 = try m.stack.pop().get()
-            let op2 = try m.stack.pop().get()
             if !m.gas.recordCost(cost: GasConstant.LOW) {
                 m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.OutOfGas))
                 return
             }
+            let op1 = try m.stack.pop().get()
+            let op2 = try m.stack.pop().get()
 
             let iOp1 = I256.fromU256(op1)
             let iOp2 = I256.fromU256(op2)
@@ -120,13 +120,13 @@ enum ArithmeticInstructions {
 
     static func addMod(machine m: inout Machine) {
         do {
-            let op1 = try m.stack.pop().get()
-            let op2 = try m.stack.pop().get()
-            let op3 = try m.stack.pop().get()
             if !m.gas.recordCost(cost: GasConstant.MID) {
                 m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.OutOfGas))
                 return
             }
+            let op1 = try m.stack.pop().get()
+            let op2 = try m.stack.pop().get()
+            let op3 = try m.stack.pop().get()
 
             let op1u512 = U512(from: op1)
             let op2u512 = U512(from: op2)
@@ -148,13 +148,13 @@ enum ArithmeticInstructions {
 
     static func mulMod(machine m: inout Machine) {
         do {
-            let op1 = try m.stack.pop().get()
-            let op2 = try m.stack.pop().get()
-            let op3 = try m.stack.pop().get()
             if !m.gas.recordCost(cost: GasConstant.MID) {
                 m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.OutOfGas))
                 return
             }
+            let op1 = try m.stack.pop().get()
+            let op2 = try m.stack.pop().get()
+            let op3 = try m.stack.pop().get()
 
             let op1u512 = U512(from: op1)
             let op2u512 = U512(from: op2)
@@ -218,12 +218,12 @@ enum ArithmeticInstructions {
     /// bits from `b`; this is equal to `y & mask` where `&` is bitwise `AND`.
     static func signextend(machine m: inout Machine) {
         do {
-            let op1 = try m.stack.pop().get()
-            let op2 = try m.stack.pop().get()
             if !m.gas.recordCost(cost: GasConstant.LOW) {
                 m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.OutOfGas))
                 return
             }
+            let op1 = try m.stack.pop().get()
+            let op2 = try m.stack.pop().get()
 
             var newValue = op2
             if op1 < U256(from: 32) {

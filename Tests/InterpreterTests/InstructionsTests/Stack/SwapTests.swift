@@ -55,7 +55,7 @@ final class InstructionSwapSpec: QuickSpec {
             m.evalLoop()
             expect(m.machineStatus).to(equal(.Exit(.Error(.StackUnderflow))))
             expect(m.stack.length).to(equal(0))
-            expect(m.gas.remaining).to(equal(10))
+            expect(m.gas.remaining).to(equal(7))
         }
 
         it("check stack underflow for SWAP1..SWAP16") {
@@ -68,7 +68,7 @@ final class InstructionSwapSpec: QuickSpec {
                 m.evalLoop()
                 expect(m.machineStatus).to(equal(.Exit(.Error(.StackUnderflow))))
                 expect(m.stack.length).to(equal(Int(n) + 1))
-                expect(m.gas.remaining).to(equal(10))
+                expect(m.gas.remaining).to(equal(7))
             }
         }
     }
