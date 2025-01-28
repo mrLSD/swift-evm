@@ -192,7 +192,21 @@ final class U512Spec: QuickSpec {
                         0xF, 1, 2, 3, 0xC1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                         0, 0xAC, 2,
                     ])
-                    expect(0x0000_00C1_0302_010F).to(equal(val.getUInt))
+                    expect(val.getUInt).to(beNil())
+
+                    let val2 = U512(from: [0xFFFF, 0, 0, 0, 0, 0, 0, 0])
+                    expect(0xFFFF).to(equal(val2.getUInt))
+                }
+
+                it("getInt") {
+                    let val = U512.fromLittleEndian(from: [
+                        0xF, 1, 2, 3, 0xC1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                        0, 0xAC, 2,
+                    ])
+                    expect(val.getInt).to(beNil())
+
+                    let val2 = U512(from: [0xFFFF, 0, 0, 0, 0, 0, 0, 0])
+                    expect(0xFFFF).to(equal(val2.getInt))
                 }
             }
 

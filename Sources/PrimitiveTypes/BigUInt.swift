@@ -68,7 +68,26 @@ public extension BigUInt {
     ///   - `UInt` must be less than or equal to `UInt64(UInt.max)`. On 32-bit systems. For 64-bit systems always successful.
     ///     `nil` corresponds to 32-bit systems, when `UInt` is greater than `UInt32.max`.
     var getUInt: UInt? {
-        UInt(exactly: self.BYTES[0])
+        for i in 1 ..< Int(Self.numberBase) {
+            if self.BYTES[i] != 0 {
+                return nil
+            }
+        }
+        return UInt(exactly: self.BYTES[0])
+    }
+
+    /// Get int value from `BigUInt`.
+    ///
+    /// - Returns:
+    ///   - `Int` must be less than or equal to `UInt64(Int.max)`. On 32-bit systems. For 64-bit systems always successful.
+    ///     `nil` corresponds to 32-bit systems, when `Int` is greater than `Int32.max`.
+    var getInt: Int? {
+        for i in 1 ..< Int(Self.numberBase) {
+            if self.BYTES[i] != 0 {
+                return nil
+            }
+        }
+        return Int(exactly: self.BYTES[0])
     }
 
     /// Calculate is `BigUInt` value zero

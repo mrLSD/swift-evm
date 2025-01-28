@@ -18,8 +18,8 @@ public struct Machine {
     private(set) var pc: Int = 0
     /// Return value.
     private var returnRange: Range<Int> = 0 ..< 0
-    /// Code validity maps.
-    private let valids: [UInt8] = []
+    /// A map of valid `jump` destinations.
+    private var jumpTable: [Bool] = []
     /// Machine Memory.
     private(set) var memory: Memory = .init(limit: 0)
     /// Machine Stack
@@ -44,9 +44,7 @@ public struct Machine {
         case NotStarted
         case Continue
         case AddPC(Int)
-        // TODO: add for JUMP instructions
-        // case Jump(Int)
-        case Trap(Opcode)
+        case Jump(Int)
         case Exit(ExitReason)
     }
 
@@ -66,6 +64,7 @@ public struct Machine {
         case StackUnderflow
         case StackOverflow
         case InvalidJump
+        case IntOverflow
         case InvalidRange
         case CallTooDeep
         case OutOfOffset
@@ -114,7 +113,13 @@ public struct Machine {
 
         // System
         table[Opcode.CODESIZE.index] = SystemInstructions.codeSize
-        table[Opcode.PC.index] = SystemInstructions.pc
+
+        // Control
+        table[Opcode.STOP.index] = ControlInstructions.stop
+        table[Opcode.PC.index] = ControlInstructions.pc
+        table[Opcode.JUMP.index] = ControlInstructions.jump
+        table[Opcode.JUMPI.index] = ControlInstructions.jumpi
+        table[Opcode.JUMPDEST.index] = ControlInstructions.jumpDest
 
         // Stack
         table[Opcode.POP.index] = StackInstructions.pop
@@ -168,6 +173,7 @@ public struct Machine {
         table[Opcode.SWAP14.index] = { (_ m: inout Self) in StackInstructions.swap(machine: &m, n: 14) }
         table[Opcode.SWAP15.index] = { (_ m: inout Self) in StackInstructions.swap(machine: &m, n: 15) }
         table[Opcode.SWAP16.index] = { (_ m: inout Self) in StackInstructions.swap(machine: &m, n: 16) }
+
         table[Opcode.DUP1.index] = { (_ m: inout Self) in StackInstructions.dup(machine: &m, n: 1) }
         table[Opcode.DUP2.index] = { (_ m: inout Self) in StackInstructions.dup(machine: &m, n: 2) }
         table[Opcode.DUP3.index] = { (_ m: inout Self) in StackInstructions.dup(machine: &m, n: 3) }
@@ -191,11 +197,42 @@ public struct Machine {
     init(data: [UInt8], code: [UInt8], gasLimit: UInt64, handler: InterpreterHandler) {
         self.data = data
         self.code = code
+        self.jumpTable = Self.analyzeJumpTable(code: code)
         self.handler = handler
         self.gas = Gas(limit: gasLimit)
         #if TRACING
         self.trace = Trace()
         #endif
+    }
+
+    /// # Analyze valid jumps
+    /// Check is opcode `JUMPDEST` and set `JumpTable` index to  `true`.
+    /// For `PUSH` opcodes we increment jump index validation to push index, to avould get PUSH values itself.
+    private static func analyzeJumpTable(code: borrowing [UInt8]) -> [Bool] {
+        var jumpTable = [Bool](repeating: false, count: code.count)
+        var i = 0
+        while i < code.count {
+            guard let opcode = Opcode(rawValue: code[i]) else {
+                i += 1
+                continue
+            }
+            if opcode == Opcode.JUMPDEST {
+                jumpTable[i] = true
+            } else if let pushIndex = opcode.isPush {
+                // Increment PUSH opcode index
+                i += pushIndex
+            }
+            i += 1
+        }
+        return jumpTable
+    }
+
+    /// Check is valid jump destination
+    func isValidJumpDestination(at index: Int) -> Bool {
+        if index >= self.jumpTable.count {
+            return false
+        }
+        return self.jumpTable[index]
     }
 
     /// Provide one step for `Machine` execution.
@@ -229,13 +266,12 @@ public struct Machine {
         case .AddPC(let add):
             self.pc += add
             self.machineStatus = .Continue
-
-        // TODO: Add for JUMP instr
-        // case .Jump(let jumpPC):
-        //    self.pc = jumpPC
-        //    self.machineStatus = .Continue
-        default:
+        case .Jump(let jumpPC):
+            self.pc = jumpPC
+            self.machineStatus = .Continue
+        case .Continue:
             self.pc += 1
+        default: ()
         }
 
         #if TRACING
