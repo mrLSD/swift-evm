@@ -170,7 +170,7 @@ enum BItwiseInstructions {
             for i in 0 ..< 8 {
                 let t = 255 - (7 - i + 8 * o)
                 let value = (op2 >> t) & U256(from: 1)
-                newValue = newValue + (value << i)
+                newValue += (value << i)
             }
         }
         m.stackPush(value: newValue)

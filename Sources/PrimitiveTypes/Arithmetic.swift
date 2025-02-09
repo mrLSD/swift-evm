@@ -113,13 +113,10 @@ public extension BigUInt {
 
     /// Returns the least number of bits needed to represent the number
     private func leastNumber() -> Int {
-        let count = self.BYTES.count
-        for i in 1 ..< count {
-            if self.BYTES[count - i] > 0 {
-                return (0x40 * (count - i + 1)) - self.BYTES[count - i].leadingZeroBitCount
-            }
+        guard let index = BYTES.lastIndex(where: { $0 > 0 }) else {
+            return 0
         }
-        return 0x40 - self.BYTES[0].leadingZeroBitCount
+        return (0x40 * (index + 1)) - BYTES[index].leadingZeroBitCount
     }
 
     // Returns the least number of words needed to represent the nonzero number
@@ -161,7 +158,7 @@ public extension BigUInt {
     }
 
     /// Add v to u[j..<j + n]
-    static func carryAddSlice(carry: Bool, q_hat: inout UInt64, a: inout [UInt64], from: Int, b: borrowing [UInt64], to: Int) {
+    static func carryAddSlice(carry: Bool, q_hat: inout UInt64, a: inout [UInt64], from: Int, b: borrowing [UInt64], to: Int) { // // swiftlint:disable:this function_parameter_count
         if carry {
             q_hat -= 1
             let c = Self.addSlice(a: &a, from: from, b: b, to: to)
@@ -391,6 +388,15 @@ public extension BigUInt {
         return result
     }
 
+    /// Performs `addition` and updates the left-hand side with the result.
+    ///
+    /// - Parameters:
+    ///   - lhs: The left-hand side value to be modified.
+    ///   - rhs: The right-hand side value to be operated.
+    static func += (lhs: inout Self, rhs: Self) {
+        lhs = lhs + rhs
+    }
+
     /// Subtracts two values of the same type.
     ///
     /// - Parameters:
@@ -401,6 +407,15 @@ public extension BigUInt {
     static func - (lhs: Self, rhs: Self) -> Self {
         let (result, _) = lhs.overflowSub(rhs)
         return result
+    }
+
+    /// Performs `subtracts`  and updates the left-hand side with the result.
+    ///
+    /// - Parameters:
+    ///   - lhs: The left-hand side value to be modified.
+    ///   - rhs: The right-hand side value to be operated.
+    static func -= (lhs: inout Self, rhs: Self) {
+        lhs = lhs - rhs
     }
 
     /// Multiply two values of the same type.
@@ -414,6 +429,15 @@ public extension BigUInt {
         return result
     }
 
+    /// Performs `multiply` and updates the left-hand side with the result.
+    ///
+    /// - Parameters:
+    ///   - lhs: The left-hand side value to be modified.
+    ///   - rhs: The right-hand side value to be operated.
+    static func *= (lhs: inout Self, rhs: Self) {
+        lhs = lhs * rhs
+    }
+
     /// Division of two values of the same type.
     ///
     ///   - lhs: The left-hand side value to be div.
@@ -425,9 +449,28 @@ public extension BigUInt {
         return result
     }
 
+    /// Performs `div` and updates the left-hand side with the result.
+    ///
+    /// - Parameters:
+    ///   - lhs: The left-hand side value to be modified.
+    ///   - rhs: The right-hand side value to be operated.
+    static func /= (lhs: inout Self, rhs: Self) {
+        lhs = lhs / rhs
+    }
+
     /// Reminder of two values of the same type.
     static func % (lhs: Self, rhs: Self) -> Self {
         let (_, result) = lhs.divRem(divisor: rhs)
         return result
     }
+
+    /// Performs `rem` and updates the left-hand side with the result.
+    ///
+    /// - Parameters:
+    ///   - lhs: The left-hand side value to be modified.
+    ///   - rhs: The right-hand side value to be operated.
+    static func %= (lhs: inout Self, rhs: Self) {
+        lhs = lhs % rhs
+    }
+
 }

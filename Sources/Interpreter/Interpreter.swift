@@ -4,4 +4,4 @@ import Foundation
 protocol Handler {}
 
 ///
-typealias Operation = (_ state: Machine, _ handler: Handler) -> ()
+typealias Operation = (_ state: Machine, _ handler: Handler) -> Void

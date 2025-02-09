@@ -32,12 +32,7 @@ public extension FixedArray {
 
     /// Calculate is value zero
     var isZero: Bool {
-        for i in 0 ..< Int(Self.numberBytes) {
-            if self.BYTES[i] != 0 {
-                return false
-            }
-        }
-        return true
+        return BYTES.allSatisfy { $0 == 0 }
     }
 
     static func fromString(hex value: String) -> Self {
@@ -70,7 +65,7 @@ public extension FixedArray {
 
 /// Implementation of `Equatable`
 public extension FixedArray {
-    static func ==(lhs: Self, rhs: Self) -> Bool {
+    static func == (lhs: Self, rhs: Self) -> Bool {
         lhs.BYTES == rhs.BYTES
     }
 }

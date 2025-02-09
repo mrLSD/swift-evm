@@ -16,6 +16,15 @@ final class ArithmeticMulSpec: QuickSpec {
                     expect(isOverflow).to(beFalse())
                 }
 
+                it("success multiplying *= operation") {
+                    var a = U256(from: 2)
+                    let b = U256(from: 3)
+                    a *= b
+                    let result = a
+
+                    expect(result).to(equal(U256(from: 6)))
+                }
+
                 it("multiplying by one") {
                     let a = U256(from: [1, 2, 3, 4])
                     let b = U256(from: [1, 0, 0, 0])

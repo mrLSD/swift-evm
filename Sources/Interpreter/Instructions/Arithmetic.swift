@@ -188,10 +188,10 @@ enum ArithmeticInstructions {
 
         while !op2.isZero {
             if !(op2 & one).isZero {
-                r = r * op1
+                r *= op1
             }
             op2 = op2 >> 1
-            op1 = op1 * op1
+            op1 *= op1
         }
         let newValue = r
 

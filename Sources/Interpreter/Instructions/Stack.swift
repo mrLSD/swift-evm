@@ -51,14 +51,10 @@ enum StackInstructions {
             return
         }
 
-        if case .failure(let err) = m.stack.set(indexFromTop: n, value: val1) {
-            m.machineStatus = Machine.MachineStatus.Exit(.Error(err))
-            return
-        }
-        if case .failure(let err) = m.stack.set(indexFromTop: 0, value: val2) {
-            m.machineStatus = Machine.MachineStatus.Exit(.Error(err))
-            return
-        }
+        // In that particular case it's impossible to fail `stack.set` operations.
+        // As we verified indexes 0 and N for `stack.peek` before.
+        _ = m.stack.set(indexFromTop: n, value: val1)
+        _ = m.stack.set(indexFromTop: 0, value: val2)
     }
 
     static func dup(machine m: inout Machine, n: Int) {

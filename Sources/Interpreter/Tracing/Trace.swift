@@ -167,10 +167,6 @@ public class Trace {
     /// Trace data gathering context - details about current contract
     public struct Context {
         let address: H160
-
-        init(address: H160) {
-            self.address = address
-        }
     }
 
     /// Tracing config

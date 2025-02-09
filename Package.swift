@@ -12,11 +12,11 @@ let package = Package(
             targets: ["Interpreter"]),
         .library(
             name: "PrimitiveTypes",
-            targets: ["PrimitiveTypes"]),
+            targets: ["PrimitiveTypes"])
     ],
     dependencies: [
         .package(url: "https://github.com/Quick/Quick.git", from: "7.0.0"),
-        .package(url: "https://github.com/Quick/Nimble.git", from: "13.0.0"),
+        .package(url: "https://github.com/Quick/Nimble.git", from: "13.0.0")
     ],
     targets: [
         // Targets are the basic building blocks of a package, defining a module or a test suite.
@@ -25,7 +25,7 @@ let package = Package(
             name: "Interpreter",
             dependencies: ["PrimitiveTypes"],
             swiftSettings: [
-                .define("DISABLE_TRACING"),
+                .define("DISABLE_TRACING")
             ]),
         .target(
             name: "PrimitiveTypes"),
@@ -33,9 +33,9 @@ let package = Package(
             name: "InterpreterTests",
             dependencies: ["Interpreter", "PrimitiveTypes", "Quick", "Nimble"],
             swiftSettings: [
-                .define("DISABLE_TRACING"),
+                .define("DISABLE_TRACING")
             ]),
         .testTarget(
             name: "PrimitiveTypesTests",
-            dependencies: ["PrimitiveTypes", "Quick", "Nimble"]),
+            dependencies: ["PrimitiveTypes", "Quick", "Nimble"])
     ])

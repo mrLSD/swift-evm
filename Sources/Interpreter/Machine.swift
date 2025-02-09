@@ -87,7 +87,7 @@ public struct Machine {
 
     /// Closure type of Evaluation function.
     /// This function returns `MachineStatus` as result of evaluation
-    typealias EvalFunction = (_ m: inout Self) -> ()
+    typealias EvalFunction = (_ m: inout Self) -> Void
 
     /// Instructions evaluation table. Used to evaluate specific opcodes.
     /// It represent evaluation functions for each existed opcodes. Table initialized with 255 `nil` instructions and filled for each specific `EVM` opcode.
