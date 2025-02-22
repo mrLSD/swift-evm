@@ -40,7 +40,8 @@ struct Stack {
         #if TRACING && TRACE_STACK_INOUT
             self.traceStackIn.append(value)
         #endif
-        return .success(self.data.append(value))
+        self.data.append(value)
+        return .success(())
     }
 
     /// Pop `U256` value from the Stack
