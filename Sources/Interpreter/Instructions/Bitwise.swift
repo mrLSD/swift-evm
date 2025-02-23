@@ -14,7 +14,7 @@ enum BItwiseInstructions {
         }
 
         let newValue: UInt64 = (op1 < op2) ? 1 : 0
-        _ = m.stackPush(value: U256(from: newValue))
+        m.stackPush(value: U256(from: newValue))
     }
 
     static func gt(machine m: inout Machine) {
@@ -29,7 +29,7 @@ enum BItwiseInstructions {
         }
 
         let newValue: UInt64 = (op1 > op2) ? 1 : 0
-        _ = m.stackPush(value: U256(from: newValue))
+        m.stackPush(value: U256(from: newValue))
     }
 
     static func slt(machine m: inout Machine) {
@@ -47,7 +47,7 @@ enum BItwiseInstructions {
         let iOp2 = I256.fromU256(op2)
 
         let newValue: UInt64 = (iOp1 < iOp2) ? 1 : 0
-        _ = m.stackPush(value: U256(from: newValue))
+        m.stackPush(value: U256(from: newValue))
     }
 
     static func sgt(machine m: inout Machine) {
@@ -65,7 +65,7 @@ enum BItwiseInstructions {
         let iOp2 = I256.fromU256(op2)
 
         let newValue: UInt64 = (iOp1 > iOp2) ? 1 : 0
-        _ = m.stackPush(value: U256(from: newValue))
+        m.stackPush(value: U256(from: newValue))
     }
 
     static func eq(machine m: inout Machine) {
@@ -80,7 +80,7 @@ enum BItwiseInstructions {
         }
 
         let newValue: UInt64 = (op1 == op2) ? 1 : 0
-        _ = m.stackPush(value: U256(from: newValue))
+        m.stackPush(value: U256(from: newValue))
     }
 
     static func isZero(machine m: inout Machine) {
@@ -92,7 +92,7 @@ enum BItwiseInstructions {
         }
 
         let newValue: UInt64 = (op1.isZero) ? 1 : 0
-        _ = m.stackPush(value: U256(from: newValue))
+        m.stackPush(value: U256(from: newValue))
     }
 
     static func and(machine m: inout Machine) {
@@ -107,7 +107,7 @@ enum BItwiseInstructions {
         }
 
         let newValue = op1 & op2
-        _ = m.stackPush(value: newValue)
+        m.stackPush(value: newValue)
     }
 
     static func or(machine m: inout Machine) {
@@ -122,7 +122,7 @@ enum BItwiseInstructions {
         }
 
         let newValue = op1 | op2
-        _ = m.stackPush(value: newValue)
+        m.stackPush(value: newValue)
     }
 
     static func xor(machine m: inout Machine) {
@@ -137,7 +137,7 @@ enum BItwiseInstructions {
         }
 
         let newValue = op1 ^ op2
-        _ = m.stackPush(value: newValue)
+        m.stackPush(value: newValue)
     }
 
     static func not(machine m: inout Machine) {
@@ -149,7 +149,7 @@ enum BItwiseInstructions {
         }
 
         let newValue = ~op1
-        _ = m.stackPush(value: newValue)
+        m.stackPush(value: newValue)
     }
 
     static func byte(machine m: inout Machine) {
@@ -170,10 +170,10 @@ enum BItwiseInstructions {
             for i in 0 ..< 8 {
                 let t = 255 - (7 - i + 8 * o)
                 let value = (op2 >> t) & U256(from: 1)
-                newValue = newValue + (value << i)
+                newValue += (value << i)
             }
         }
-        _ = m.stackPush(value: newValue)
+        m.stackPush(value: newValue)
     }
 
     static func shl(machine m: inout Machine) {
@@ -193,7 +193,7 @@ enum BItwiseInstructions {
             let shift = op1.getInt!
             newValue = op2 << shift
         }
-        _ = m.stackPush(value: newValue)
+        m.stackPush(value: newValue)
     }
 
     static func shr(machine m: inout Machine) {
@@ -213,7 +213,7 @@ enum BItwiseInstructions {
             let shift = op1.getInt!
             newValue = op2 >> shift
         }
-        _ = m.stackPush(value: newValue)
+        m.stackPush(value: newValue)
     }
 
     static func sar(machine m: inout Machine) {
@@ -248,6 +248,6 @@ enum BItwiseInstructions {
                 newValue = (iOp2 >> shift).toU256
             }
         }
-        _ = m.stackPush(value: newValue)
+        m.stackPush(value: newValue)
     }
 }

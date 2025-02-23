@@ -16,6 +16,24 @@ final class ArithmeticDivRemSpec: QuickSpec {
                     expect(remainder.BYTES).to(equal([0, 0, 0, 0]))
                 }
 
+                it("success divide works for a /= operation") {
+                    var a = U256(from: 6)
+                    let b = U256(from: 3)
+                    a /= b
+                    let result = a
+
+                    expect(result).to(equal(U256(from: 2)))
+                }
+
+                it("success divide works for a %= operation") {
+                    var a = U256(from: 5)
+                    let b = U256(from: 3)
+                    a %= b
+                    let result = a
+
+                    expect(result).to(equal(U256(from: 2)))
+                }
+
                 it("dividing max value by one") {
                     let a = U256.MAX
                     let b = U256(from: [1, 0, 0, 0])

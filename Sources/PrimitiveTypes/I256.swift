@@ -8,7 +8,7 @@ public struct I256: BigUInt {
         0xffff_ffff_ffff_ffff,
         0xffff_ffff_ffff_ffff,
         0xffff_ffff_ffff_ffff,
-        0x7fff_ffff_ffff_ffff,
+        0x7fff_ffff_ffff_ffff
     ])
     public private(set) var signExtend: Bool
 

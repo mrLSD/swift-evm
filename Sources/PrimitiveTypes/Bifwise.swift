@@ -1,4 +1,3 @@
-
 /// Bitwise operations
 public extension BigUInt {
     /// Performs a bitwise left shift (SHL)
