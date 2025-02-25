@@ -1,12 +1,42 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Swift CI](https://github.com/mrLSD/evm-swift/actions/workflows/swift.yaml/badge.svg)](https://github.com/mrLSD/evm-swift/actions/workflows/swift.yaml)
 [![codecov](https://codecov.io/gh/mrLSD/evm-swift/graph/badge.svg?token=1uc0niBI3c)](https://codecov.io/gh/mrLSD/evm-swift)
+[![SwiftLint CI](https://img.shields.io/badge/SwiftLint-CI-blue.svg)](https://github.com/realm/SwiftLint)
 
 <div style="text-align: center;">
     <h1>mrLSD<code>/evm-swift</code></h1>
 </div>
 
-Introducing an experimental implementation of the Ethereum Virtual Machine (EVM), entirely written in pure Swift. Currently under active development, this project aims to provide developers with a flexible and efficient tool for integrating the EVM into various environments.
+
+
+Introducing blazinly fast implementation of the Ethereum Virtual Machine (EVM), entirely written in pure Swift. Swift EVM aims to provide developers with a flexible and efficient tool for integrating the EVM into various environments.
+
+Наибольшим приоритетом является:
+- максимальная скорость и производительность
+- безопасность и надежность
+- расширяемость и поддерживаемость кода
+
+Для достижения этих целей критические участки кода реализованы с акцентом на 
+максимальную производительность. Для обеспечения безопасности, надежности,
+предсказуемости - мы стараемся покрыть максимально тестами приближаясь к 100%
+покрытию тестами - логики EVM и его функциональных частей. 
+
+Также для development flow используются: SwiftLint, swiftformat
+
+## Текущий статус
+
+- [x] EVM Machine
+- [x] EVM Core (реализовано на 90%)
+- [ ] EVM Runtie (in progress)
+- [ ] Berling hard fork
+- [ ] London hard fork
+- [ ] Shanghai hard fork
+- [ ] Cancun hard fork
+- [ ] Prague hard fork
+
+### Планы по интеграции с блокчейн
+
+- NEAR Protocol
 
 ## Project Goal:
 
