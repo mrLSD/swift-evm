@@ -315,7 +315,7 @@ final class InterpreterMemorySpec: QuickSpec {
                 }
 
                 it("overflow operation") {
-                    expect(Memory.ceil32(Int.max)).to(equal(Int.max - 31))
+                    expect(Memory.ceil32(UInt.max)).to(equal(UInt.max - 31))
                 }
             }
 

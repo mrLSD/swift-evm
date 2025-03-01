@@ -83,7 +83,7 @@ public class Memory {
             return true
         }
 
-        let newSize = Memory.ceil32(Int(clamping: end))
+        let newSize = Int(clamping: Memory.ceil32(end))
         if let oldBuffer = self.buffer {
             guard let newBuffer = realloc(oldBuffer, newSize) else { return false }
             let offset = Int(self.effectiveLength)
@@ -308,9 +308,9 @@ public class Memory {
     /// - Returns:
     ///   The same value if it's a perfect multiple of 32 else it returns the smallest multiple of 32 that is greater than `value`.
     @inline(__always)
-    public static func ceil32(_ value: Int) -> Int {
+    public static func ceil32(_ value: UInt) -> UInt {
         let val = value.addingReportingOverflow(31)
-        return (val.overflow ? Int.max : val.partialValue) & ~31
+        return (val.overflow ? UInt.max : val.partialValue) & ~31
     }
 
     /// Computes the number of 32-byte words required to represent the given value.

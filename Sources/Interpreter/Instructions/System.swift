@@ -26,10 +26,7 @@ enum SystemInstructions {
         guard let size = rawSize.getUInt else { m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.OutOfGas)); return }
 
         // Calculate the gas cost for the very low copy operation.
-        guard let cost = GasCost.veryLowCopy(size: size) else {
-            m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.OutOfGas))
-            return
-        }
+        let cost = GasCost.veryLowCopy(size: size)
 
         // Record the gas cost for the copy operation.
         if !m.gasRecordCost(cost: cost) {
@@ -45,26 +42,12 @@ enum SystemInstructions {
         guard let memoryOffset = rawMemoryOffset.getUInt else { m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.OutOfGas)); return }
         guard let codeOffset = rawCodeOffset.getUInt else { m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.OutOfGas)); return }
 
-        // Calculate and record the gas cost for resizing memory.
-        let resizeMemoryCost = GasCost.resize(end: memoryOffset, length: size)
-        switch resizeMemoryCost {
-        case .success(let resizeMemoryCost):
-            if !m.gasRecordCost(cost: resizeMemoryCost) {
-                return
-            }
-        case .failure(let err):
-            m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(err))
-            return
-        }
-
-        // Attempt to resize the memory.
-        guard m.memory.resize(offset: memoryOffset, size: size) else {
-            m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.OutOfGas))
+        guard m.resizeMemoryAndRecordGas(offset: memoryOffset, size: size) else {
             return
         }
 
         // Perform the code copy. If the copy fails, update the machine status with the error.
-        if case .failure(let err) = m.memory.copyData(memoryOffset: memoryOffset, dataOffset: codeOffset, size: size, data: []) {
+        if case .failure(let err) = m.memory.copyData(memoryOffset: memoryOffset, dataOffset: codeOffset, size: size, data: m.code) {
             m.machineStatus = Machine.MachineStatus.Exit(err)
         }
     }

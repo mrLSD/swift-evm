@@ -21,7 +21,7 @@ public struct Machine {
     /// A map of valid `jump` destinations.
     private var jumpTable: [Bool] = []
     /// Machine Memory.
-    private(set) var memory: Memory = .init(limit: 0)
+    private(set) var memory: Memory = .init()
     /// Machine Stack
     var stack: Stack = .init()
     /// Machine Gasometr
@@ -218,6 +218,18 @@ public struct Machine {
         #endif
     }
 
+    init(data: [UInt8], code: [UInt8], gasLimit: UInt64, memoryLimit: UInt, handler: InterpreterHandler) {
+        self.data = data
+        self.code = code
+        self.jumpTable = Self.analyzeJumpTable(code: code)
+        self.handler = handler
+        self.gas = Gas(limit: gasLimit)
+        self.memory = Memory(limit: memoryLimit)
+        #if TRACING
+        self.trace = Trace()
+        #endif
+    }
+
     /// # Analyze valid jumps
     /// Check is opcode `JUMPDEST` and set `JumpTable` index to  `true`.
     /// For `PUSH` opcodes we increment jump index validation to push index, to avould get PUSH values itself.
@@ -356,6 +368,45 @@ public struct Machine {
             self.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.OutOfGas))
             return false
         }
+        return true
+    }
+
+    /// Resizes the memory block and records the gas cost for the resizing operation.
+    ///
+    /// This function calculates the gas cost associated with resizing the memory using the provided
+    /// offset and size. If the gas cost calculation is successful, it records the cost; otherwise,
+    /// it updates the machine status with the corresponding error and returns false.
+    ///
+    /// - Parameters:
+    ///   - offset: The starting offset from which the memory should be resized.
+    ///   - size: The new size to which the memory should be resized.
+    /// - Returns: A Boolean value indicating whether the memory was successfully resized and the gas cost recorded.
+    mutating func resizeMemoryAndRecordGas(offset: UInt, size: UInt) -> Bool {
+        // Calculate the gas cost for resizing memory.
+        let resizeMemoryCost = self.gas.memoryGas.resize(end: offset, length: size)
+        switch resizeMemoryCost {
+        case .success(let resizeMemory):
+            // If memory gas cost changed - record cost and resize memory itself
+            if case .Resized(let resizeMemoryCost) = resizeMemory {
+                guard self.gasRecordCost(cost: resizeMemoryCost) else {
+                    return false
+                }
+                // Attempt to resize the memory block using the specified `offset` and `size`.
+                // Although previous validations ensure that the parameters are correct and prevent common errors,
+                // there remains a impossibility that an unexpected condition causes the resize function to return `false`.
+                // To handle this edge case safely, we perform an additional check on the return value anyway.
+                // If the memory resize `fails`, we update the machine's status to exit with an `OutOfGas` error,
+                // thereby ensuring that the machine stops execution in a controlled manner.
+                //
+                // NOTE: This guard statement is written as a one-line expression to facilitate test coverage,
+                // even though the failure scenario is highly unlikely (for example memory I/O crash).
+                guard self.memory.resize(offset: offset, size: size) else { self.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.OutOfGas)); return false }
+            }
+        case .failure(let err):
+            self.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(err))
+            return false
+        }
+
         return true
     }
 }

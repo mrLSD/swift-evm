@@ -32,7 +32,7 @@ jobs:
     - name: Generate Coverage Report
       run: |
         mkdir -p coverage
-        xcrun llvm-cov export -format="lcov"  .build/debug/evm-swiftPackageTests.xctest/Contents/MacOS/evm-swiftPackageTests -instr-profile=.build/debug/codecov/default.profdata > coverage/lcov.info
+        xcrun llvm-cov export -format="lcov"  .build/debug/SwiftEVMPackageTests.xctest/Contents/MacOS/SwiftEVMPackageTests -instr-profile=.build/debug/codecov/default.profdata > coverage/lcov.info
         ls -la coverage/lcov.info
 
     - name: Upload coverage to Codecov
