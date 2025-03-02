@@ -291,6 +291,122 @@ final class InterpreterGasSpec: QuickSpec {
                     expect(gas.refunded).to(equal(Int64.min))
                 }
             }
+
+            context("costPerWord") {
+                it("success") {
+                    let size: UInt = 70
+                    let multiple: UInt = 10
+                    let nunWOrd: UInt = 3
+                    let expected: UInt = nunWOrd * multiple
+                    guard let res = GasCost.costPerWord(size: size, multiple: multiple) else {
+                        fail("Expected non-nil result")
+                        return
+                    }
+                    expect(res).to(equal(expected))
+                }
+
+                it("overflow") {
+                    let size: UInt = 70
+                    let multiple = UInt.max
+
+                    let res = GasCost.costPerWord(size: size, multiple: multiple)
+                    expect(res).to(beNil())
+                }
+            }
+
+            context("veryLowCopy") {
+                it("success") {
+                    let size: UInt = 33
+                    // VERYLOW + numWords * VERYLOW
+                    let expected: UInt64 = 3 + 2 * 3
+
+                    let res = GasCost.veryLowCopy(size: size)
+                    expect(res).to(equal(expected))
+                }
+
+                it("check max size not overflow") {
+                    let size = UInt.max
+                    let cost = GasCost.costPerWord(size: size, multiple: 3)!
+                    let expected: UInt64 = 3 + UInt64(cost)
+
+                    let res = GasCost.veryLowCopy(size: size)
+                    expect(res).to(equal(expected))
+                }
+            }
+
+            context("memoryGas") {
+                it("success") {
+                    let numWords: UInt64 = 3
+                    // Gas.Memory numWords + numWords * numWords
+                    let expected = 3 * numWords + numWords * numWords
+
+                    let (res, overflow) = GasCost.memoryGas(numWords: numWords)
+                    expect(overflow).to(beFalse())
+                    expect(res).to(equal(UInt64(expected)))
+                }
+
+                it("overflow") {
+                    let numWords: UInt = Memory.numWords(UInt.max)
+
+                    let (res, overflow) = GasCost.memoryGas(numWords: UInt64(numWords))
+                    expect(overflow).to(beTrue())
+                    expect(res).to(equal(UInt64(0)))
+                }
+            }
+
+            context("memory resize gas cost") {
+                it("overflow for end") {
+                    var gas = Gas(limit: 1024)
+                    let res = gas.memoryGas.resize(end: UInt.max, length: 1)
+                    expect(res).to(beFailure { error in
+                        expect(error).to(matchError(Machine.ExitError.OutOfGas))
+                    })
+                }
+
+                it("overflow for length") {
+                    var gas = Gas(limit: 1024)
+                    let res = gas.memoryGas.resize(end: 1, length: UInt.max)
+                    expect(res).to(beFailure { error in
+                        expect(error).to(matchError(Machine.ExitError.OutOfGas))
+                    })
+                }
+
+                it("overflow for numWords") {
+                    var gas = Gas(limit: 1024)
+                    let res = gas.memoryGas.resize(end: UInt.max/2 - 1, length: UInt.max/2 - 1)
+                    expect(res).to(beFailure { error in
+                        expect(error).to(matchError(Machine.ExitError.OutOfGas))
+                    })
+                }
+
+                it("success") {
+                    var gas = Gas(limit: 1024)
+                    let res = gas.memoryGas.resize(end: 31, length: 66)
+                    expect(res).to(beSuccess(.Resized(28)))
+                }
+
+                it("numWords unchanged") {
+                    var gas = Gas(limit: 1024)
+                    let res1 = gas.memoryGas.resize(end: 31, length: 66)
+                    expect(res1).to(beSuccess(.Resized(28)))
+
+                    let res2 = gas.memoryGas.resize(end: 10, length: 20)
+                    expect(res2).to(beSuccess(.Unchanged))
+                    expect(gas.memoryGas.gasCost).to(equal(28))
+                }
+
+                it("numWords changed twice") {
+                    var gas = Gas(limit: 1024)
+                    let res1 = gas.memoryGas.resize(end: 12, length: 21)
+                    expect(res1).to(beSuccess(.Resized(10)))
+                    expect(gas.memoryGas.gasCost).to(equal(10))
+
+                    let res2 = gas.memoryGas.resize(end: 31, length: 66)
+                    expect(res2).to(beSuccess(.Resized(18)))
+                    expect(gas.memoryGas.gasCost).to(equal(28))
+                }
+
+            }
         }
     }
 }

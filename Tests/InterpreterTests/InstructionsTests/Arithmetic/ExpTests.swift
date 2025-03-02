@@ -101,7 +101,7 @@ final class InstructionExpSpec: QuickSpec {
         context("log2floor logic") {
             it("log2floor [0,0,0,0]") {
                 let u256Value = U256(from: [0, 0, 0, 0])
-                let result = GasConstant.log2floor(u256Value)
+                let result = GasCost.log2floor(u256Value)
                 let expected: UInt64 = 0
 
                 expect(result).to(equal(expected))
@@ -109,7 +109,7 @@ final class InstructionExpSpec: QuickSpec {
 
             it("log2floor [2,0,0,0]") {
                 let u256Value = U256(from: [2, 0, 0, 0])
-                let result = GasConstant.log2floor(u256Value)
+                let result = GasCost.log2floor(u256Value)
                 let expected: UInt64 = 1
 
                 expect(result).to(equal(expected))
@@ -117,7 +117,7 @@ final class InstructionExpSpec: QuickSpec {
 
             it("log2floor [1,0,0,0]") {
                 let u256Value = U256(from: [1, 0, 0, 0])
-                let result = GasConstant.log2floor(u256Value)
+                let result = GasCost.log2floor(u256Value)
                 let expected: UInt64 = 0
 
                 expect(result).to(equal(expected))
@@ -125,7 +125,7 @@ final class InstructionExpSpec: QuickSpec {
 
             it("log2floor [0,1,0,0]") {
                 let u256Value = U256(from: [0, 1, 0, 0])
-                let result = GasConstant.log2floor(u256Value)
+                let result = GasCost.log2floor(u256Value)
                 let expected: UInt64 = 64
 
                 expect(result).to(equal(expected))
@@ -133,7 +133,7 @@ final class InstructionExpSpec: QuickSpec {
 
             it("log2floor [0,0,1,0]") {
                 let u256Value = U256(from: [0, 0, 1, 0])
-                let result = GasConstant.log2floor(u256Value)
+                let result = GasCost.log2floor(u256Value)
                 let expected: UInt64 = 128
 
                 expect(result).to(equal(expected))
@@ -141,7 +141,7 @@ final class InstructionExpSpec: QuickSpec {
 
             it("log2floor [0,0,0,1]") {
                 let u256Value = U256(from: [0, 0, 0, 1])
-                let result = GasConstant.log2floor(u256Value)
+                let result = GasCost.log2floor(u256Value)
                 let expected: UInt64 = 192
 
                 expect(result).to(equal(expected))

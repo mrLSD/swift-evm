@@ -301,53 +301,41 @@ final class InterpreterMemorySpec: QuickSpec {
 
             context("ceil32 method") {
                 it("should return the same value if it is a multiple of 32") {
-                    let memory = Memory(limit: 100)
-
-                    expect(memory.ceil32(32)).to(equal(32))
-                    expect(memory.ceil32(64)).to(equal(64))
-                    expect(memory.ceil32(0)).to(equal(0))
+                    expect(Memory.ceil32(32)).to(equal(32))
+                    expect(Memory.ceil32(64)).to(equal(64))
+                    expect(Memory.ceil32(0)).to(equal(0))
                 }
 
                 it("should return the next multiple of 32 if the value is not a multiple of 32") {
-                    let memory = Memory(limit: 100)
-
-                    expect(memory.ceil32(1)).to(equal(32))
-                    expect(memory.ceil32(31)).to(equal(32))
-                    expect(memory.ceil32(33)).to(equal(64))
-                    expect(memory.ceil32(63)).to(equal(64))
-                    expect(memory.ceil32(65)).to(equal(96))
+                    expect(Memory.ceil32(1)).to(equal(32))
+                    expect(Memory.ceil32(31)).to(equal(32))
+                    expect(Memory.ceil32(33)).to(equal(64))
+                    expect(Memory.ceil32(63)).to(equal(64))
+                    expect(Memory.ceil32(65)).to(equal(96))
                 }
 
                 it("overflow operation") {
-                    let memory = Memory(limit: 100)
-
-                    expect(memory.ceil32(Int.max)).to(equal(Int.max - 31))
+                    expect(Memory.ceil32(UInt.max)).to(equal(UInt.max - 31))
                 }
             }
 
             context("numWords method") {
                 it("should return the same value if it is a multiple of 32") {
-                    let memory = Memory(limit: 100)
-
-                    expect(memory.numWords(32)).to(equal(1))
-                    expect(memory.numWords(64)).to(equal(2))
-                    expect(memory.numWords(0)).to(equal(0))
+                    expect(Memory.numWords(32)).to(equal(1))
+                    expect(Memory.numWords(64)).to(equal(2))
+                    expect(Memory.numWords(0)).to(equal(0))
                 }
 
                 it("should return the next multiple of 32 if the value is not a multiple of 32") {
-                    let memory = Memory(limit: 100)
-
-                    expect(memory.numWords(1)).to(equal(1))
-                    expect(memory.numWords(31)).to(equal(1))
-                    expect(memory.numWords(33)).to(equal(2))
-                    expect(memory.numWords(63)).to(equal(2))
-                    expect(memory.numWords(65)).to(equal(3))
+                    expect(Memory.numWords(1)).to(equal(1))
+                    expect(Memory.numWords(31)).to(equal(1))
+                    expect(Memory.numWords(33)).to(equal(2))
+                    expect(Memory.numWords(63)).to(equal(2))
+                    expect(Memory.numWords(65)).to(equal(3))
                 }
 
                 it("overflow operation") {
-                    let memory = Memory(limit: 100)
-
-                    expect(memory.numWords(UInt.max)).to(equal(UInt.max / 32))
+                    expect(Memory.numWords(UInt.max)).to(equal(UInt.max / 32))
                 }
             }
         }
