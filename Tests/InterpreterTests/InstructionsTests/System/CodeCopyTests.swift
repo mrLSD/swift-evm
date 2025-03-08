@@ -24,7 +24,7 @@ final class InstructionCodeCopySpec: QuickSpec {
                 expect(m.gas.memoryGas.gasCost).to(equal(0))
             }
 
-            it("check stack underflow errors is as expecteed") {
+            it("check stack underflow errors is as expected") {
                 var m = TestMachine.machine(opcode: Opcode.CODECOPY, gasLimit: 10)
                 m.evalLoop()
                 expect(m.machineStatus).to(equal(.Exit(.Error(.StackUnderflow))))
