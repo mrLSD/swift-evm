@@ -23,7 +23,7 @@ enum TestMachine {
 
     /// Init Machine with predefined code with array `Opcode` type and `memoryLimit`
     static func machine(opcodes code: [Opcode], gasLimit: UInt64, memoryLimit: UInt) -> Machine {
-        Machine(data: [], code: code.map(\.rawValue), gasLimit: gasLimit, memoryLimit: memoryLimit, handler: TestHandler())
+        Machine(data: [], code: code.map(\.rawValue), gasLimit: gasLimit, memoryLimit: memoryLimit, handler: TestHandler(), hardFork: HardFork.latest())
     }
 
     /// Init Machine with predefined code with raw data

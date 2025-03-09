@@ -28,6 +28,8 @@ public struct Machine {
     var gas: Gas
     /// Calculate Code Size
     var codeSize: Int { self.code.count }
+    /// EVM  hard fork
+    let hardFork: HardFork
 
     #if TRACING
     /// Tracing data
@@ -213,18 +215,20 @@ public struct Machine {
         self.jumpTable = Self.analyzeJumpTable(code: code)
         self.handler = handler
         self.gas = Gas(limit: gasLimit)
+        self.hardFork = HardFork.latest()
         #if TRACING
         self.trace = Trace()
         #endif
     }
 
-    init(data: [UInt8], code: [UInt8], gasLimit: UInt64, memoryLimit: UInt, handler: InterpreterHandler) {
+    init(data: [UInt8], code: [UInt8], gasLimit: UInt64, memoryLimit: UInt, handler: InterpreterHandler, hardFork: HardFork) {
         self.data = data
         self.code = code
         self.jumpTable = Self.analyzeJumpTable(code: code)
         self.handler = handler
         self.gas = Gas(limit: gasLimit)
         self.memory = Memory(limit: memoryLimit)
+        self.hardFork = hardFork
         #if TRACING
         self.trace = Trace()
         #endif
