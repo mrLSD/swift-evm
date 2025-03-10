@@ -2,6 +2,8 @@
 [![Swift CI](https://github.com/mrLSD/evm-swift/actions/workflows/swift.yaml/badge.svg)](https://github.com/mrLSD/evm-swift/actions/workflows/swift.yaml)
 [![codecov](https://codecov.io/gh/mrLSD/evm-swift/graph/badge.svg?token=1uc0niBI3c)](https://codecov.io/gh/mrLSD/evm-swift)
 [![SwiftLint CI](https://img.shields.io/badge/SwiftLint-CI-blue.svg)](https://github.com/mrLSD/evm-swift/actions/workflows/swift.yaml)
+[![](https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2FmrLSD%2Fevm-swift%2Fbadge%3Ftype%3Dswift-versions)](https://swiftpackageindex.com/mrLSD/evm-swift)
+
 
 <div align="center">
   <img src=".github/logo.png" alt="SwiftEVM" />
@@ -13,10 +15,10 @@
 -----
 
 **SwiftEVM** is a high-performance, open-source implementation of the Ethereum Virtual Machine, 
-written entirely in **Swift**. It’s designed to empower both developers and businesses by enabling 
-seamless integration of Ethereum smart contract execution into a wide variety of applications.
+written entirely in **Swift**. Engineered to empower web3-developers, it enables seamless integration of EVM—execution into a diverse array of applications and platforms, including macOS, iOS, other Apple ecosystems, wasm32, Linux, and beyond.
 
 Our focus is on:
+- 🌐 **Opensource**: Fully open source, promoting transparency, community collaboration, and innovation.
 - ⚡ **Speed & Performance**: Critical paths are highly optimized for blazing-fast execution.
 - 🔒 **Security & Reliability**: 100% test coverage ensures predictable and robust behavior.
 - 🔧 **Extensibility & Maintainability**: A modular architecture that facilitates ongoing improvements and customizations.
@@ -44,32 +46,50 @@ consistent codebase that is both developers-friendly.
 blockchain interoperability.
 - **Key Environments**:
   - **Embedded Systems**: Bring blockchain capabilities to resource-constrained devices.
-  - **WebAssembly (WASM)**: Run the EVM directly in web browsers and server environments.
+  - **WebAssembly (WASM)**: Run the EVM directly in WASM environments.
   - **Mobile & Desktop**: Seamlessly integrate decentralized functionalities into **iOS**, **macOS**, and other `Swift`-based platforms.
 
 ## Benefits
 
-### For Developers
 - **Pure Swift Implementation**: Leverage Swift’s performance and safety to integrate EVM directly into your projects.
 - **Cross-Platform Compatibility**: Enjoy hassle-free deployment across multiple platforms.
-- **Open Source Community**: Join a vibrant community—contribute, collaborate, and help shape the project’s future.
+- **Open Source**: Join a vibrant community—contribute, collaborate, and help shape the project’s future.
 - **Customization & Extensibility**: Easily adapt and extend the EVM functionality to meet specific project needs.
 
-### For Businesses
-- **High-Performance Execution**: Incorporate a robust, optimized EVM that ensures secure and efficient smart contract processing.
-- **Future-Proof Technology**: Stay ahead with support for upcoming Ethereum hard forks and integration with leading blockchain protocols.
-- **Cost-Effective Innovation**: Utilize an open-source solution to reduce development overhead and accelerate time-to-market for blockchain-enabled applications.
+## What’s included?
 
-## Get Involved
+- 🔢 **`PrimitiveTypes` Library**: Implements high-performance math tailored specifically for Ethereum’s needs—offering
+functionalities that generic libraries like `BigInt` and other general-purpose solutions can’t provide. 
+It’s designed and optimized for the unique demands of the `EVM`.
 
-Whether you're a developer aiming to innovate with decentralized applications or a business looking to integrate blockchain 
-technology into your services, **SwiftEVM** offers a cutting-edge solution that meets your needs.
+- ⚙️ **`EVM` Library**: Contains the actual implementation of the **Ethereum Virtual Machine**, powering EVM bytecode execution seamlessly.
 
-Join us in revolutionizing smart contract execution and expanding the boundaries of blockchain 
-technology. Contributions, feedback, and collaborations are highly welcome!
+- 🔍 **EVM Tracing Support**: Provides robust tracing capabilities to assist developers in debugging and optimizing EVM execution.
 
----
+## How to use
 
-*Built with ❤️ by the @mrLSD (Evgeny Ukhanov) and the SwiftEVM community.*
+📱 Swift Support: Minimum supported version is `Swift 6`. 
+This is due the new capabilities of `Swift 6`, including support for the `UInt128` type.
+
+Use as dependency:
+```
+    dependencies: [
+        .package(url: "https://github.com/mrLSD/evm-swift.git"
+    ]
+```
+
+## How to contribute
+
+- ✅ All Tests Passing: Ensure that all tests run successfully.
+- 📊 100% Test Coverage: Verify that your tests cover the entire codebase.
+- 🛠️ SwiftFormat: Confirm that the `swiftformat` command completes.
+- 🔧 SwiftLint: Confirm that the `swiftlint` command executes successfully.
+
+### Unit tests
+
+You can run:
+- `swift test`
+- `./Tests/cli-test-runner` - simple but yet powerful tool to show tests errors
+- `swift test | xcbeautify` - swift tests xcbeautify
 
 ### LICENSE: [MIT](LICENSE)

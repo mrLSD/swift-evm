@@ -28,6 +28,23 @@ final class InstructionExpSpec: QuickSpec {
                 expect(m.gas.remaining).to(equal(15))
             }
 
+            it("2 exp 6 for Tangerine hard fork") {
+                var m = TestMachine.machine(opcodes: [Opcode.EXP], gasLimit: 75, memoryLimit: 1024, HardFork: HardFork.Tangerine)
+
+                let _ = m.stack.push(value: U256(from: 3))
+                let _ = m.stack.push(value: U256(from: 2))
+
+                m.evalLoop()
+                let result = m.stack.pop()
+
+                expect(m.machineStatus).to(equal(.Exit(.Success(.Stop))))
+                expect(result).to(beSuccess { value in
+                    expect(value).to(equal(U256(from: 8)))
+                })
+                expect(m.stack.length).to(equal(0))
+                expect(m.gas.remaining).to(equal(55))
+            }
+
             it("2 exp MAX") {
                 var m = Self.machine
 

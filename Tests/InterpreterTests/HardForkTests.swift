@@ -10,14 +10,20 @@ final class InterpreterHardForkSpec: QuickSpec {
             context("HardFork rawValue") {
                 it("should have correct rawValue for all HardFork cases") {
                     let hardForkRawValues: [HardFork: UInt8] = [
-                        .Istanbul: 0x00,
-                        .Berlin: 0x01,
-                        .London: 0x02,
-                        .Paris: 0x03,
-                        .Shanghai: 0x04,
-                        .Cancun: 0x05,
-                        .Prague: 0x06,
-                        .Osaka: 0x07,
+                        .Frontier: 0x00,
+                        .Homestead: 0x01,
+                        .Tangerine: 0x02,
+                        .SpuriousDragon: 0x03,
+                        .Byzantium: 0x04,
+                        .Constantinople: 0x05,
+                        .Istanbul: 0x06,
+                        .Berlin: 0x07,
+                        .London: 0x08,
+                        .Paris: 0x09,
+                        .Shanghai: 0x0A,
+                        .Cancun: 0x0B,
+                        .Prague: 0x0C,
+                        .Osaka: 0x0D,
                     ]
 
                     // Check that covared all cases
@@ -52,6 +58,12 @@ final class InterpreterHardForkSpec: QuickSpec {
         context("Test for description of each case") {
             it("should return correct description for all Opcode cases") {
                 let hardForkDescriptions: [HardFork: String] = [
+                    .Frontier: "Frontier",
+                    .Homestead: "Homestead",
+                    .Tangerine: "Tangerine",
+                    .SpuriousDragon: "SpuriousDragon",
+                    .Byzantium: "Byzantium",
+                    .Constantinople: "Constantinople",
                     .Istanbul: "Istanbul",
                     .Berlin: "Berlin",
                     .London: "London",
@@ -76,6 +88,12 @@ final class InterpreterHardForkSpec: QuickSpec {
 
         context("Validate functions isHardFork") {
             it("should return true for all cases") {
+                expect(HardFork.Frontier.isFrontier()).to(beTrue())
+                expect(HardFork.Homestead.isHomestead()).to(beTrue())
+                expect(HardFork.Tangerine.isTangerine()).to(beTrue())
+                expect(HardFork.SpuriousDragon.isSpuriousDragon()).to(beTrue())
+                expect(HardFork.Berlin.isByzantium()).to(beTrue())
+                expect(HardFork.Constantinople.isConstantinople()).to(beTrue())
                 expect(HardFork.Istanbul.isIstanbul()).to(beTrue())
                 expect(HardFork.Berlin.isBerlin()).to(beTrue())
                 expect(HardFork.London.isLondon()).to(beTrue())
