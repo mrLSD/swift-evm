@@ -4,7 +4,7 @@ import PrimitiveTypes
 public struct Gas {
     /// The initial gas limit. This is constant throughout execution.
     let limit: UInt64
-    var memoryGas: MemoryGas = MemoryGas()
+    var memoryGas: MemoryGas = .init()
     /// The remaining gas.
     private(set) var remaining: UInt64
     /// Refunded gas. This is used only at the end of execution.
@@ -174,16 +174,14 @@ enum GasCost {
         return overflow ? nil : numWords
     }
 
-    // TODO: Add hard fork config
-    static func expCost(power val: U256) -> UInt64 {
-        if val.isZero {
+    static func expCost(hardFork: HardFork, power: U256) -> UInt64 {
+        if power.isZero {
             return GasConstant.EXP
         } else {
             // EIP-160: EXP cost increase
-            // TODO: hard fork config
-            let gasByte = U256(from: 50)
+            let gasByte = U256(from: hardFork.isSpuriousDragon() ? 50 : 10)
             // NOTE: overflow just impossible as max value: `gasByte * (256/8 + 1)`
-            let logMul = gasByte * U256(from: Self.log2floor(val) / 8 + 1)
+            let logMul = gasByte * U256(from: Self.log2floor(power) / 8 + 1)
             let gas = U256(from: GasConstant.EXP) + logMul
             return gas.BYTES[0]
         }

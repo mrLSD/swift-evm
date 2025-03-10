@@ -178,7 +178,7 @@ enum ArithmeticInstructions {
             return
         }
 
-        if !m.gasRecordCost(cost: GasCost.expCost(power: op2)) {
+        if !m.gasRecordCost(cost: GasCost.expCost(hardFork: m.hardFork, power: op2)) {
             m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.OutOfGas))
             return
         }
