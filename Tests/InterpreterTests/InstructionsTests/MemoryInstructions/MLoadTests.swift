@@ -51,8 +51,9 @@ final class MLoadSpec: QuickSpec {
             m.evalLoop()
 
             expect(m.machineStatus).to(equal(.Exit(.Success(.Stop))))
-            let resVal = try! m.stack.peek(indexFromTop: 0).get()
-            expect(resVal.toBigEndian[..< 12]).to(equal([UInt8](repeating: 3, count: 12)))
+            let resVal: [UInt8] = try! m.stack.peek(indexFromTop: 0).get().toBigEndian
+            expect(Array(resVal[..<12])).to(equal([UInt8](repeating: 3, count: 12)))
+            expect(Array(resVal[12..<32])).to(equal([UInt8](repeating: 0, count: 20)))
 
             expect(m.stack.length).to(equal(1))
             expect(m.gas.remaining).to(equal(79))
