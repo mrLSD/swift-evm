@@ -110,20 +110,20 @@ public struct Machine {
         table[Opcode.SIGNEXTEND.index] = ArithmeticInstructions.signextend
 
         // BItwise
-        table[Opcode.LT.index] = BItwiseInstructions.lt
-        table[Opcode.GT.index] = BItwiseInstructions.gt
-        table[Opcode.SLT.index] = BItwiseInstructions.slt
-        table[Opcode.SGT.index] = BItwiseInstructions.sgt
-        table[Opcode.EQ.index] = BItwiseInstructions.eq
-        table[Opcode.ISZERO.index] = BItwiseInstructions.isZero
-        table[Opcode.AND.index] = BItwiseInstructions.and
-        table[Opcode.OR.index] = BItwiseInstructions.or
-        table[Opcode.XOR.index] = BItwiseInstructions.xor
-        table[Opcode.NOT.index] = BItwiseInstructions.not
-        table[Opcode.BYTE.index] = BItwiseInstructions.byte
-        table[Opcode.SHL.index] = BItwiseInstructions.shl
-        table[Opcode.SHR.index] = BItwiseInstructions.shr
-        table[Opcode.SAR.index] = BItwiseInstructions.sar
+        table[Opcode.LT.index] = BitwiseInstructions.lt
+        table[Opcode.GT.index] = BitwiseInstructions.gt
+        table[Opcode.SLT.index] = BitwiseInstructions.slt
+        table[Opcode.SGT.index] = BitwiseInstructions.sgt
+        table[Opcode.EQ.index] = BitwiseInstructions.eq
+        table[Opcode.ISZERO.index] = BitwiseInstructions.isZero
+        table[Opcode.AND.index] = BitwiseInstructions.and
+        table[Opcode.OR.index] = BitwiseInstructions.or
+        table[Opcode.XOR.index] = BitwiseInstructions.xor
+        table[Opcode.NOT.index] = BitwiseInstructions.not
+        table[Opcode.BYTE.index] = BitwiseInstructions.byte
+        table[Opcode.SHL.index] = BitwiseInstructions.shl
+        table[Opcode.SHR.index] = BitwiseInstructions.shr
+        table[Opcode.SAR.index] = BitwiseInstructions.sar
 
         // System
         table[Opcode.CODESIZE.index] = SystemInstructions.codeSize
@@ -205,6 +205,9 @@ public struct Machine {
         table[Opcode.DUP14.index] = { (_ m: inout Self) in StackInstructions.dup(machine: &m, n: 14) }
         table[Opcode.DUP15.index] = { (_ m: inout Self) in StackInstructions.dup(machine: &m, n: 15) }
         table[Opcode.DUP16.index] = { (_ m: inout Self) in StackInstructions.dup(machine: &m, n: 16) }
+
+        // Memory
+        table[Opcode.MLOAD.index] = MemoryInstructions.mload
 
         return table
     }()

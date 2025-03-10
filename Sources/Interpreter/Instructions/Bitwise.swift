@@ -1,7 +1,7 @@
 import PrimitiveTypes
 
-/// EVM BItwise instructions
-enum BItwiseInstructions {
+/// EVM Bitwise instructions
+enum BitwiseInstructions {
     static func lt(machine m: inout Machine) {
         if !m.gasRecordCost(cost: GasConstant.VERYLOW) {
             return
