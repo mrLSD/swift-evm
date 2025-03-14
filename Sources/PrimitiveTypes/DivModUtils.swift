@@ -22,7 +22,7 @@ enum DivModUtils {
     }
 
     /// divMod for `UInt128` types
-    @available(macOS 15.0, *)
+    @available(macOS 15.0, iOS 18.0, tvOS 18.0, watchOS 11.0, visionOS 2.0, *)
     static func divModWordU128(hi: UInt64, lo: UInt64, y: UInt64) -> (quotient: UInt64, remainder: UInt64) {
         // Construct the 128-bit number from hi and lo
         let x = (UInt128(hi) << 64) + UInt128(lo)

@@ -127,7 +127,7 @@ public class Memory {
 
         // After all validation check we can guaranty that copySize is non zero
         _ = result.withUnsafeMutableBytes { dest in
-            memcpy(dest.baseAddress, buf.advanced(by: intOffset), copySize)
+            memcpy(dest.baseAddress!, buf.advanced(by: intOffset), copySize)
         }
         return result
     }
@@ -174,7 +174,7 @@ public class Memory {
         return value.withUnsafeBytes { src in
             // Get correct range for copy
             let copyCount = min(intSize, value.count)
-            memcpy(buf.advanced(by: intOffset), src.baseAddress, copyCount)
+            memcpy(buf.advanced(by: intOffset), src.baseAddress!, copyCount)
 
             if intSize > value.count {
                 memset(buf.advanced(by: intOffset + value.count), 0, intSize - value.count)
