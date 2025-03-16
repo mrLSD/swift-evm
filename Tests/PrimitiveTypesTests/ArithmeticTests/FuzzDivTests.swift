@@ -6,7 +6,7 @@ import Quick
 final class FuzzDivRemSpec: QuickSpec {
     override class func spec() {
         describe("Fuzz divRem") {
-            if #available(macOS 15.0, *) {
+            if #available(macOS 15.0, iOS 18.0, tvOS 18.0, watchOS 11.0, visionOS 2.0, *) {
                 func splitUInt128(_ value: UInt128) -> (high: UInt64, low: UInt64) {
                     let high = UInt64(value >> 64)
                     let low = UInt64(value & 0xFFFFFFFFFFFFFFFF)
