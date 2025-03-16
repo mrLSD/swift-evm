@@ -35,7 +35,7 @@ enum DivModUtils {
     }
 
     static func divModWord(hi: UInt64, lo: UInt64, y: UInt64) -> (quotient: UInt64, remainder: UInt64) {
-        if #available(macOS 15.0, *) {
+        if #available(macOS 15.0, iOS 18.0, tvOS 18.0, watchOS 11.0, visionOS 2.0, *) {
             return self.divModWordU128(hi: hi, lo: lo, y: y)
         } else {
             return self.divModWord64(hi: hi, lo: lo, y: y)
