@@ -210,6 +210,7 @@ public struct Machine {
         table[Opcode.MLOAD.index] = MemoryInstructions.mload
         table[Opcode.MSTORE.index] = MemoryInstructions.mstore
         table[Opcode.MSTORE8.index] = MemoryInstructions.mstore8
+        table[Opcode.MSIZE.index] = MemoryInstructions.msize
 
         return table
     }()

@@ -67,4 +67,12 @@ enum MemoryInstructions {
             m.machineStatus = Machine.MachineStatus.Exit(err)
         }
     }
+
+    static func msize(machine m: inout Machine) {
+        if !m.gasRecordCost(cost: GasConstant.BASE) {
+            return
+        }
+
+        m.stackPush(value: U256(from: UInt64(m.memory.effectiveLength)))
+    }
 }
