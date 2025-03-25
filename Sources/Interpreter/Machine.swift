@@ -129,6 +129,10 @@ public struct Machine {
         table[Opcode.CODESIZE.index] = SystemInstructions.codeSize
         table[Opcode.CODECOPY.index] = SystemInstructions.codeCopy
         table[Opcode.CALLDATASIZE.index] = SystemInstructions.callDataSize
+<<<<<<< Updated upstream
+=======
+        table[Opcode.CALLDATACOPY.index] = SystemInstructions.callDataCopy
+>>>>>>> Stashed changes
 
         // Control
         table[Opcode.STOP.index] = ControlInstructions.stop
