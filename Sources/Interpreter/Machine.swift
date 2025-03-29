@@ -10,7 +10,7 @@ public protocol InterpreterHandler {
 
 /// Machine represents EVM core execution layer
 public struct Machine {
-    /// Program data
+    /// Program input data
     let data: [UInt8]
     /// Program code.
     let code: [UInt8]
@@ -128,6 +128,7 @@ public struct Machine {
         // System
         table[Opcode.CODESIZE.index] = SystemInstructions.codeSize
         table[Opcode.CODECOPY.index] = SystemInstructions.codeCopy
+        table[Opcode.CALLDATASIZE.index] = SystemInstructions.callDataSize
 
         // Control
         table[Opcode.STOP.index] = ControlInstructions.stop

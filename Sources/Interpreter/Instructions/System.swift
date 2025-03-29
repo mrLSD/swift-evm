@@ -51,4 +51,13 @@ enum SystemInstructions {
             m.machineStatus = Machine.MachineStatus.Exit(err)
         }
     }
+
+    static func callDataSize(machine m: inout Machine) {
+        if !m.gasRecordCost(cost: GasConstant.BASE) {
+            return
+        }
+
+        let newValue = UInt64(m.data.count)
+        m.stackPush(value: U256(from: newValue))
+    }
 }
