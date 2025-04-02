@@ -60,8 +60,6 @@ enum SystemInstructions {
         let newValue = UInt64(m.data.count)
         m.stackPush(value: U256(from: newValue))
     }
-<<<<<<< Updated upstream
-=======
 
     static func callDataCopy(machine m: inout Machine) {
         // Pop the required values from the stack: memory offset, code offset, and size.
@@ -101,5 +99,27 @@ enum SystemInstructions {
             m.machineStatus = Machine.MachineStatus.Exit(err)
         }
     }
->>>>>>> Stashed changes
+
+    static func callDataLoad(machine m: inout Machine) {
+        if !m.gasRecordCost(cost: GasConstant.VERYLOW) {
+            return
+        }
+
+        guard let index = m.stackPop() else {
+            return
+        }
+
+        var load = [UInt8](repeating: 0, count: 32)
+        let dataCount = UInt(m.data.count)
+        if let uintIndex = index.getUInt, uintIndex < dataCount {
+            let countToCopy = Int(min(32, dataCount - uintIndex))
+            let intIndex = Int(uintIndex)
+
+            let sourceRange = intIndex ..< (intIndex + countToCopy)
+            let destinationRange = 0 ..< countToCopy
+            load.replaceSubrange(destinationRange, with: m.data[sourceRange])
+        }
+        let newValue = U256.fromBigEndian(from: load)
+        m.stackPush(value: newValue)
+    }
 }
