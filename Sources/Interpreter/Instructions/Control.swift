@@ -73,4 +73,25 @@ enum ControlInstructions {
             m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.InvalidJump))
         }
     }
+
+    /// `Return` instruction
+    static func ret(machine m: inout Machine) {
+        guard let rawOffset = m.stackPop(), let rawLength = m.stackPop() else {
+            return
+        }
+        // Convert values
+        guard let offset = m.getUintOrFail(rawOffset), let length = m.getUintOrFail(rawLength) else {
+            return
+        }
+        // Resize memory
+        if length > 0 {
+            guard m.resizeMemoryAndRecordGas(offset: offset, size: length) else {
+                return
+            }
+        }
+        // Set return range
+        m.returnRange = offset ..< (offset + length)
+        // Set machine status
+        m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Success(.Return))
+    }
 }

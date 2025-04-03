@@ -27,7 +27,6 @@ final class MStoreSpec: QuickSpec {
                 var m1 = TestMachine.machine(opcode: Opcode.MSTORE, gasLimit: 10)
                 m1.evalLoop()
                 expect(m1.machineStatus).to(equal(.Exit(.Error(.StackUnderflow))))
-                expect(m1.machineStatus).to(equal(.Exit(.Error(.StackUnderflow))))
                 expect(m1.gas.remaining).to(equal(7))
                 expect(m1.gas.memoryGas.numWords).to(equal(0))
                 expect(m1.gas.memoryGas.gasCost).to(equal(0))

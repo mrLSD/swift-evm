@@ -16,8 +16,8 @@ public struct Machine {
     let code: [UInt8]
     /// Program counter.
     private(set) var pc: Int = 0
-    /// Return value.
-    private var returnRange: Range<Int> = 0 ..< 0
+    /// Return range for `RETURN` and `REVERT`.
+    var returnRange: Range<UInt> = 0 ..< 0
     /// A map of valid `jump` destinations.
     private var jumpTable: [Bool] = []
     /// Machine Memory.
@@ -85,6 +85,7 @@ public struct Machine {
         case OutOfFund
         case InvalidOpcode(UInt8)
         case MemoryOperation(MemoryError)
+        case UIntOverflow
     }
 
     /// Closure type of Evaluation function.
@@ -138,6 +139,7 @@ public struct Machine {
         table[Opcode.JUMP.index] = ControlInstructions.jump
         table[Opcode.JUMPI.index] = ControlInstructions.jumpi
         table[Opcode.JUMPDEST.index] = ControlInstructions.jumpDest
+        table[Opcode.RETURN.index] = ControlInstructions.ret
 
         // Stack
         table[Opcode.POP.index] = StackInstructions.pop
@@ -421,5 +423,18 @@ public struct Machine {
         }
 
         return true
+    }
+
+    /// Get `UInt` from `U256`. If fails return `nil` and set `Machine` status error to `UIntOverflow`.
+    ///
+    /// - Parameters:
+    ///   - value: `U256` for converting
+    /// - Returns: optional `UInt` value
+    mutating func getUintOrFail(_ value: U256) -> UInt? {
+        guard let uintValue = value.getUInt else {
+            self.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.UIntOverflow))
+            return nil
+        }
+        return uintValue
     }
 }
