@@ -86,6 +86,7 @@ public struct Machine {
         case InvalidOpcode(UInt8)
         case MemoryOperation(MemoryError)
         case UIntOverflow
+        case HardForkNotActive
     }
 
     /// Closure type of Evaluation function.
@@ -110,7 +111,7 @@ public struct Machine {
         table[Opcode.EXP.index] = ArithmeticInstructions.exp
         table[Opcode.SIGNEXTEND.index] = ArithmeticInstructions.signextend
 
-        // BItwise
+        // Bitwise
         table[Opcode.LT.index] = BitwiseInstructions.lt
         table[Opcode.GT.index] = BitwiseInstructions.gt
         table[Opcode.SLT.index] = BitwiseInstructions.slt
@@ -140,6 +141,7 @@ public struct Machine {
         table[Opcode.JUMPI.index] = ControlInstructions.jumpi
         table[Opcode.JUMPDEST.index] = ControlInstructions.jumpDest
         table[Opcode.RETURN.index] = ControlInstructions.ret
+        table[Opcode.REVERT.index] = ControlInstructions.revert
 
         // Stack
         table[Opcode.POP.index] = StackInstructions.pop

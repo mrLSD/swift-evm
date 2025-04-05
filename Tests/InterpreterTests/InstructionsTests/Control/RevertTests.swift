@@ -3,14 +3,14 @@ import Nimble
 import PrimitiveTypes
 import Quick
 
-final class InstructionReturnSpec: QuickSpec {
+final class InstructionRevertSpec: QuickSpec {
     @MainActor
-    static let machineLowGas = TestMachine.machine(opcode: Opcode.RETURN, gasLimit: 1)
+    static let machineLowGas = TestMachine.machine(opcodes: [Opcode.REVERT], gasLimit: 1, memoryLimit: 1024, HardFork: .Byzantium)
     @MainActor
-    static let machine = TestMachine.machine(opcode: Opcode.RETURN, gasLimit: 100)
+    static let machine = TestMachine.machine(opcodes: [Opcode.REVERT], gasLimit: 100, memoryLimit: 1024, HardFork: .Byzantium)
 
     override class func spec() {
-        describe("Instruction RETURN") {
+        describe("Instruction REVERT") {
             it("with OutOfGas result for index=0") {
                 var m = Self.machineLowGas
 
@@ -62,6 +62,17 @@ final class InstructionReturnSpec: QuickSpec {
                 expect(m2.gas.memoryGas.gasCost).to(equal(0))
             }
 
+            it("check hard fork") {
+                var m1 = TestMachine.machine(opcodes: [Opcode.REVERT], gasLimit: 100, memoryLimit: 1024, HardFork: .SpuriousDragon)
+                let _ = m1.stack.push(value: U256(from: 32))
+                let _ = m1.stack.push(value: U256(from: 33))
+                m1.evalLoop()
+                expect(m1.machineStatus).to(equal(.Exit(.Error(.HardForkNotActive))))
+                expect(m1.gas.remaining).to(equal(100))
+                expect(m1.gas.memoryGas.numWords).to(equal(0))
+                expect(m1.gas.memoryGas.gasCost).to(equal(0))
+            }
+
             it("Success") {
                 var m = Self.machine
 
@@ -69,7 +80,7 @@ final class InstructionReturnSpec: QuickSpec {
                 let _ = m.stack.push(value: U256(from: 33))
                 m.evalLoop()
 
-                expect(m.machineStatus).to(equal(.Exit(.Success(.Return))))
+                expect(m.machineStatus).to(equal(.Exit(.Revert)))
                 expect(m.returnRange).to(equal(33 ..< 33 + 32))
 
                 expect(m.stack.length).to(equal(0))
