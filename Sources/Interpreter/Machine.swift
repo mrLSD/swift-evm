@@ -17,7 +17,7 @@ public struct Machine {
     /// Program counter.
     private(set) var pc: Int = 0
     /// Return range for `RETURN` and `REVERT`.
-    var returnRange: Range<UInt> = 0 ..< 0
+    var returnRange: Range<Int> = 0 ..< 0
     /// A map of valid `jump` destinations.
     private var jumpTable: [Bool] = []
     /// Machine Memory.
@@ -85,7 +85,6 @@ public struct Machine {
         case OutOfFund
         case InvalidOpcode(UInt8)
         case MemoryOperation(MemoryError)
-        case UIntOverflow
         case HardForkNotActive
     }
 
@@ -234,7 +233,7 @@ public struct Machine {
         #endif
     }
 
-    init(data: [UInt8], code: [UInt8], gasLimit: UInt64, memoryLimit: UInt, handler: InterpreterHandler, hardFork: HardFork) {
+    init(data: [UInt8], code: [UInt8], gasLimit: UInt64, memoryLimit: Int, handler: InterpreterHandler, hardFork: HardFork) {
         self.data = data
         self.code = code
         self.jumpTable = Self.analyzeJumpTable(code: code)
@@ -398,7 +397,7 @@ public struct Machine {
     ///   - offset: The starting offset from which the memory should be resized.
     ///   - size: The new size to which the memory should be resized.
     /// - Returns: A Boolean value indicating whether the memory was successfully resized and the gas cost recorded.
-    mutating func resizeMemoryAndRecordGas(offset: UInt, size: UInt) -> Bool {
+    mutating func resizeMemoryAndRecordGas(offset: Int, size: Int) -> Bool {
         // Calculate the gas cost for resizing memory.
         let resizeMemoryCost = self.gas.memoryGas.resize(end: offset, length: size)
         switch resizeMemoryCost {
@@ -427,16 +426,16 @@ public struct Machine {
         return true
     }
 
-    /// Get `UInt` from `U256`. If fails return `nil` and set `Machine` status error to `UIntOverflow`.
+    /// Get `Int` from `U256`. If fails return `nil` and set `Machine` status error to `IntOverflow`.
     ///
     /// - Parameters:
     ///   - value: `U256` for converting
     /// - Returns: optional `UInt` value
-    mutating func getUintOrFail(_ value: U256) -> UInt? {
-        guard let uintValue = value.getUInt else {
-            self.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.UIntOverflow))
+    mutating func getIntOrFail(_ value: U256) -> Int? {
+        guard let intValue = value.getInt else {
+            self.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.IntOverflow))
             return nil
         }
-        return uintValue
+        return intValue
     }
 }

@@ -42,12 +42,13 @@ final class InstructionReturnSpec: QuickSpec {
                 expect(m2.gas.memoryGas.gasCost).to(equal(0))
             }
 
-            it("check stack UInt failure is as expected") {
+            it("check stack Int failure is as expected") {
                 var m1 = Self.machine
                 let _ = m1.stack.push(value: U256(from: 1))
                 let _ = m1.stack.push(value: U256(from: [1, 1, 0, 0]))
                 m1.evalLoop()
-                expect(m1.machineStatus).to(equal(.Exit(.Error(.UIntOverflow))))
+
+                expect(m1.machineStatus).to(equal(.Exit(.Error(.IntOverflow))))
                 expect(m1.gas.remaining).to(equal(100))
                 expect(m1.gas.memoryGas.numWords).to(equal(0))
                 expect(m1.gas.memoryGas.gasCost).to(equal(0))
@@ -56,7 +57,8 @@ final class InstructionReturnSpec: QuickSpec {
                 let _ = m2.stack.push(value: U256(from: [1, 1, 0, 0]))
                 let _ = m2.stack.push(value: U256(from: 1))
                 m2.evalLoop()
-                expect(m2.machineStatus).to(equal(.Exit(.Error(.UIntOverflow))))
+
+                expect(m2.machineStatus).to(equal(.Exit(.Error(.IntOverflow))))
                 expect(m2.gas.remaining).to(equal(100))
                 expect(m2.gas.memoryGas.numWords).to(equal(0))
                 expect(m2.gas.memoryGas.gasCost).to(equal(0))

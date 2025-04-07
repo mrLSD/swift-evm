@@ -72,6 +72,19 @@ final class MStore8Spec: QuickSpec {
                 expect(m.gas.memoryGas.gasCost).to(equal(28))
             }
 
+            it("check stack Int failure is as expected") {
+                var m = TestMachine.machine(opcodes: [Opcode.MSTORE8], gasLimit: 100, memoryLimit: 100)
+                let _ = m.stack.push(value: U256(from: 1))
+                let _ = m.stack.push(value: U256(from: [1, 1, 0, 0]))
+                m.evalLoop()
+
+                expect(m.machineStatus).to(equal(.Exit(.Error(.IntOverflow))))
+                expect(m.stack.length).to(equal(0))
+                expect(m.gas.remaining).to(equal(97))
+                expect(m.gas.memoryGas.numWords).to(equal(0))
+                expect(m.gas.memoryGas.gasCost).to(equal(0))
+            }
+
             it("success") {
                 var m = TestMachine.machine(opcode: Opcode.MSTORE8, gasLimit: 100)
 

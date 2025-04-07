@@ -14,16 +14,22 @@ enum SystemInstructions {
     /// Performs a code copy operation by reading parameters from the machine's stack,
     /// calculating the associated gas costs, and executing the memory copy.
     static func codeCopy(machine m: inout Machine) {
+        print("\(m.gas.remaining)")
         // Pop the required values from the stack: memory offset, code offset, and size.
-        guard let rawMemoryOffset = m.stackPop(),
-              let rawCodeOffset = m.stackPop(),
-              let rawSize = m.stackPop()
-        else {
+        guard let rawMemoryOffset = m.stackPop() else {
+            return
+        }
+        guard let rawCodeOffset = m.stackPop() else {
+            return
+        }
+        guard let rawSize = m.stackPop() else {
             return
         }
 
         // This situation possible only for 32-bit context (for example wasm32)
-        guard let size = rawSize.getUInt else { m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.OutOfGas)); return }
+        guard let size = m.getIntOrFail(rawSize) else {
+            return
+        }
 
         // Calculate the gas cost for the very low copy operation.
         let cost = GasCost.veryLowCopy(size: size)
@@ -39,8 +45,12 @@ enum SystemInstructions {
         }
 
         // This situation possible only for 32-bit context (for example wasm32)
-        guard let memoryOffset = rawMemoryOffset.getUInt else { m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.OutOfGas)); return }
-        guard let codeOffset = rawCodeOffset.getUInt else { m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.OutOfGas)); return }
+        guard let memoryOffset = m.getIntOrFail(rawMemoryOffset) else {
+            return
+        }
+        guard let codeOffset = m.getIntOrFail(rawCodeOffset) else {
+            return
+        }
 
         guard m.resizeMemoryAndRecordGas(offset: memoryOffset, size: size) else {
             return
@@ -63,15 +73,20 @@ enum SystemInstructions {
 
     static func callDataCopy(machine m: inout Machine) {
         // Pop the required values from the stack: memory offset, code offset, and size.
-        guard let rawMemoryOffset = m.stackPop(),
-              let rawDataOffset = m.stackPop(),
-              let rawSize = m.stackPop()
-        else {
+        guard let rawMemoryOffset = m.stackPop() else {
+            return
+        }
+        guard let rawDataOffset = m.stackPop() else {
+            return
+        }
+        guard let rawSize = m.stackPop() else {
             return
         }
 
         // This situation possible only for 32-bit context (for example wasm32)
-        guard let size = rawSize.getUInt else { m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.OutOfGas)); return }
+        guard let size = m.getIntOrFail(rawSize) else {
+            return
+        }
 
         // Calculate the gas cost for the very low copy operation.
         let cost = GasCost.veryLowCopy(size: size)
@@ -87,8 +102,12 @@ enum SystemInstructions {
         }
 
         // This situation possible only for 32-bit context (for example wasm32)
-        guard let memoryOffset = rawMemoryOffset.getUInt else { m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.OutOfGas)); return }
-        guard let dataOffset = rawDataOffset.getUInt else { m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.OutOfGas)); return }
+        guard let memoryOffset = m.getIntOrFail(rawMemoryOffset) else {
+            return
+        }
+        guard let dataOffset = m.getIntOrFail(rawDataOffset) else {
+            return
+        }
 
         guard m.resizeMemoryAndRecordGas(offset: memoryOffset, size: size) else {
             return
@@ -110,10 +129,9 @@ enum SystemInstructions {
         }
 
         var load = [UInt8](repeating: 0, count: 32)
-        let dataCount = UInt(m.data.count)
-        if let uintIndex = index.getUInt, uintIndex < dataCount {
-            let countToCopy = Int(min(32, dataCount - uintIndex))
-            let intIndex = Int(uintIndex)
+        let dataCount = m.data.count
+        if let intIndex = index.getInt, intIndex < dataCount {
+            let countToCopy = min(32, dataCount - intIndex)
 
             let sourceRange = intIndex ..< (intIndex + countToCopy)
             let destinationRange = 0 ..< countToCopy

@@ -75,7 +75,7 @@ final class InstructionCallDataCopySpec: QuickSpec {
                 var m = TestMachine.machine(data: callData, opcode: Opcode.CALLDATACOPY, gasLimit: 10)
                 let _ = m.stack.push(value: U256(from: 1))
                 let _ = m.stack.push(value: U256(from: 2))
-                let _ = m.stack.push(value: U256(from: UInt64.max))
+                let _ = m.stack.push(value: U256(from: UInt64(Int.max)))
                 m.evalLoop()
 
                 expect(m.machineStatus).to(equal(.Exit(.Error(.OutOfGas))))
@@ -114,6 +114,43 @@ final class InstructionCallDataCopySpec: QuickSpec {
                 expect(m.gas.memoryGas.numWords).to(equal(2))
                 expect(m.gas.memoryGas.gasCost).to(equal(10))
             }
+
+            it("check stack Int failure is as expected") {
+                let callData: [UInt8] = [0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07]
+                var m1 = TestMachine.machine(data: callData, opcode: Opcode.CALLDATACOPY, gasLimit: 100)
+                let _ = m1.stack.push(value: U256(from: 3))
+                let _ = m1.stack.push(value: U256(from: 4))
+                let _ = m1.stack.push(value: U256(from: [1, 1, 0, 0]))
+                m1.evalLoop()
+
+                expect(m1.machineStatus).to(equal(.Exit(.Error(.IntOverflow))))
+                expect(m1.gas.remaining).to(equal(94))
+                expect(m1.gas.memoryGas.numWords).to(equal(0))
+                expect(m1.gas.memoryGas.gasCost).to(equal(0))
+
+                var m2 = TestMachine.machine(data: callData, opcode: Opcode.CALLDATACOPY, gasLimit: 100)
+                let _ = m2.stack.push(value: U256(from: 3))
+                let _ = m2.stack.push(value: U256(from: [1, 1, 0, 0]))
+                let _ = m2.stack.push(value: U256(from: 32))
+                m2.evalLoop()
+
+                expect(m2.machineStatus).to(equal(.Exit(.Error(.IntOverflow))))
+                expect(m2.gas.remaining).to(equal(94))
+                expect(m2.gas.memoryGas.numWords).to(equal(0))
+                expect(m2.gas.memoryGas.gasCost).to(equal(0))
+
+                var m3 = TestMachine.machine(data: callData, opcode: Opcode.CALLDATACOPY, gasLimit: 100)
+                let _ = m3.stack.push(value: U256(from: [1, 1, 0, 0]))
+                let _ = m3.stack.push(value: U256(from: 4))
+                let _ = m3.stack.push(value: U256(from: 32))
+                m3.evalLoop()
+
+                expect(m3.machineStatus).to(equal(.Exit(.Error(.IntOverflow))))
+                expect(m3.gas.remaining).to(equal(100))
+                expect(m3.gas.memoryGas.numWords).to(equal(0))
+                expect(m3.gas.memoryGas.gasCost).to(equal(0))
+            }
+
 
             it("success") {
                 let callData: [UInt8] = [0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07]

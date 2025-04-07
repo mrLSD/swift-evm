@@ -11,8 +11,9 @@ enum MemoryInstructions {
             return
         }
 
-        // This situation possible only for 32-bit context (for example wasm32)
-        guard let index = rawIndex.getUInt else { m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.OutOfGas)); return }
+        guard let index = m.getIntOrFail(rawIndex) else {
+            return
+        }
 
         guard m.resizeMemoryAndRecordGas(offset: index, size: 32) else {
             return
@@ -26,14 +27,17 @@ enum MemoryInstructions {
             return
         }
 
-        guard let rawIndex = m.stackPop(),
-              let value = m.stackPop()
-        else {
+        // Pop data
+        guard let rawIndex = m.stackPop() else {
+            return
+        }
+        guard let value = m.stackPop() else {
             return
         }
 
-        // This situation possible only for 32-bit context (for example wasm32)
-        guard let index = rawIndex.getUInt else { m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.OutOfGas)); return }
+        guard let index = m.getIntOrFail(rawIndex) else {
+            return
+        }
 
         guard m.resizeMemoryAndRecordGas(offset: index, size: 32) else {
             return
@@ -49,14 +53,17 @@ enum MemoryInstructions {
             return
         }
 
-        guard let rawIndex = m.stackPop(),
-              let value = m.stackPop()
-        else {
+        // Pop data
+        guard let rawIndex = m.stackPop() else {
+            return
+        }
+        guard let value = m.stackPop() else {
             return
         }
 
-        // This situation possible only for 32-bit context (for example wasm32)
-        guard let index = rawIndex.getUInt else { m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.OutOfGas)); return }
+        guard let index = m.getIntOrFail(rawIndex) else {
+            return
+        }
 
         guard m.resizeMemoryAndRecordGas(offset: index, size: 1) else {
             return

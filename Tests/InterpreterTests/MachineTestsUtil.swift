@@ -22,7 +22,7 @@ enum TestMachine {
     }
 
     /// Init Machine with Call Input Data and predefined code with array `Opcode` type and `memoryLimit`
-    static func machine(data: [UInt8], opcodes code: [Opcode], gasLimit: UInt64, memoryLimit: UInt) -> Machine {
+    static func machine(data: [UInt8], opcodes code: [Opcode], gasLimit: UInt64, memoryLimit: Int) -> Machine {
         Machine(data: data, code: code.map(\.rawValue), gasLimit: gasLimit, memoryLimit: memoryLimit, handler: TestHandler(), hardFork: HardFork.latest())
     }
 
@@ -32,12 +32,12 @@ enum TestMachine {
     }
 
     /// Init Machine with predefined code with array `Opcode` type and `memoryLimit`
-    static func machine(opcodes code: [Opcode], gasLimit: UInt64, memoryLimit: UInt) -> Machine {
+    static func machine(opcodes code: [Opcode], gasLimit: UInt64, memoryLimit: Int) -> Machine {
         Machine(data: [], code: code.map(\.rawValue), gasLimit: gasLimit, memoryLimit: memoryLimit, handler: TestHandler(), hardFork: HardFork.latest())
     }
 
     /// Init Machine with predefined code with array `Opcode` type and `memoryLimit`, and hardFork
-    static func machine(opcodes code: [Opcode], gasLimit: UInt64, memoryLimit: UInt, HardFork: HardFork) -> Machine {
+    static func machine(opcodes code: [Opcode], gasLimit: UInt64, memoryLimit: Int, HardFork: HardFork) -> Machine {
         Machine(data: [], code: code.map(\.rawValue), gasLimit: gasLimit, memoryLimit: memoryLimit, handler: TestHandler(), hardFork: HardFork)
     }
 

@@ -294,20 +294,20 @@ final class InterpreterGasSpec: QuickSpec {
 
             context("costPerWord") {
                 it("success") {
-                    let size: UInt = 70
-                    let multiple: UInt = 10
-                    let nunWOrd: UInt = 3
-                    let expected: UInt = nunWOrd * multiple
+                    let size: Int = 70
+                    let multiple: Int = 10
+                    let nunWOrd: Int = 3
+                    let expected: UInt64 = UInt64(nunWOrd * multiple)
                     guard let res = GasCost.costPerWord(size: size, multiple: multiple) else {
                         fail("Expected non-nil result")
                         return
                     }
-                    expect(res).to(equal(expected))
+                    expect(res).to(equal(expected ))
                 }
 
                 it("overflow") {
-                    let size: UInt = 70
-                    let multiple = UInt.max
+                    let size: Int = 70
+                    let multiple = Int.max
 
                     let res = GasCost.costPerWord(size: size, multiple: multiple)
                     expect(res).to(beNil())
@@ -316,7 +316,7 @@ final class InterpreterGasSpec: QuickSpec {
 
             context("veryLowCopy") {
                 it("success") {
-                    let size: UInt = 33
+                    let size: Int = 33
                     // VERYLOW + numWords * VERYLOW
                     let expected: UInt64 = 3 + 2 * 3
 
@@ -325,7 +325,7 @@ final class InterpreterGasSpec: QuickSpec {
                 }
 
                 it("check max size not overflow") {
-                    let size = UInt.max
+                    let size = Int.max
                     let cost = GasCost.costPerWord(size: size, multiple: 3)!
                     let expected: UInt64 = 3 + UInt64(cost)
 
@@ -336,7 +336,7 @@ final class InterpreterGasSpec: QuickSpec {
 
             context("memoryGas") {
                 it("success") {
-                    let numWords: UInt64 = 3
+                    let numWords: Int = 3
                     // Gas.Memory numWords + numWords * numWords
                     let expected = 3 * numWords + numWords * numWords
 
@@ -346,9 +346,9 @@ final class InterpreterGasSpec: QuickSpec {
                 }
 
                 it("overflow") {
-                    let numWords: UInt = Memory.numWords(UInt.max)
+                    let numWords: Int = Memory.numWords(Int.max)
 
-                    let (res, overflow) = GasCost.memoryGas(numWords: UInt64(numWords))
+                    let (res, overflow) = GasCost.memoryGas(numWords: numWords)
                     expect(overflow).to(beTrue())
                     expect(res).to(equal(UInt64(0)))
                 }
@@ -357,7 +357,7 @@ final class InterpreterGasSpec: QuickSpec {
             context("memory resize gas cost") {
                 it("overflow for end") {
                     var gas = Gas(limit: 1024)
-                    let res = gas.memoryGas.resize(end: UInt.max, length: 1)
+                    let res = gas.memoryGas.resize(end: Int.max, length: 1)
                     expect(res).to(beFailure { error in
                         expect(error).to(matchError(Machine.ExitError.OutOfGas))
                     })
@@ -365,7 +365,7 @@ final class InterpreterGasSpec: QuickSpec {
 
                 it("overflow for length") {
                     var gas = Gas(limit: 1024)
-                    let res = gas.memoryGas.resize(end: 1, length: UInt.max)
+                    let res = gas.memoryGas.resize(end: 1, length: Int.max)
                     expect(res).to(beFailure { error in
                         expect(error).to(matchError(Machine.ExitError.OutOfGas))
                     })
@@ -373,7 +373,7 @@ final class InterpreterGasSpec: QuickSpec {
 
                 it("overflow for numWords") {
                     var gas = Gas(limit: 1024)
-                    let res = gas.memoryGas.resize(end: UInt.max/2 - 1, length: UInt.max/2 - 1)
+                    let res = gas.memoryGas.resize(end: Int.max/2 - 1, length: Int.max/2 - 1)
                     expect(res).to(beFailure { error in
                         expect(error).to(matchError(Machine.ExitError.OutOfGas))
                     })
