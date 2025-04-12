@@ -4,13 +4,10 @@ import PrimitiveTypes
 import Quick
 
 final class InstructionPopSpec: QuickSpec {
-    @MainActor
-    static let machineLowGas = TestMachine.machine(opcode: Opcode.POP, gasLimit: 1)
-
     override class func spec() {
         describe("Instruction POP") {
             it("POP 1") {
-                var m = TestMachine.machine(opcode: Opcode.POP, gasLimit: 10)
+                let m = TestMachine.machine(opcode: Opcode.POP, gasLimit: 10)
 
                 let _ = m.stack.push(value: U256(from: 5))
                 m.evalLoop()
@@ -21,7 +18,7 @@ final class InstructionPopSpec: QuickSpec {
             }
 
             it("POP 4") {
-                var m = TestMachine.machine(opcodes: [Opcode.POP, Opcode.POP, Opcode.POP, Opcode.POP], gasLimit: 10)
+                let m = TestMachine.machine(opcodes: [Opcode.POP, Opcode.POP, Opcode.POP, Opcode.POP], gasLimit: 10)
                 for _ in 0 ..< 10 {
                     let _ = m.stack.push(value: U256(from: 5))
                 }
@@ -34,7 +31,7 @@ final class InstructionPopSpec: QuickSpec {
             }
 
             it("with OutOfGas result") {
-                var m = Self.machineLowGas
+                let m = TestMachine.machine(opcode: Opcode.POP, gasLimit: 1)
 
                 m.evalLoop()
 
@@ -44,7 +41,7 @@ final class InstructionPopSpec: QuickSpec {
             }
 
             it("check stack underflow") {
-                var m = TestMachine.machine(opcode: Opcode.POP, gasLimit: 10)
+                let m = TestMachine.machine(opcode: Opcode.POP, gasLimit: 10)
                 expect(m.stack.length).to(equal(0))
 
                 m.evalLoop()

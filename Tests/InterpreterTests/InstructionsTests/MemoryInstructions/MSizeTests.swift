@@ -4,13 +4,10 @@ import PrimitiveTypes
 import Quick
 
 final class MSizeSpec: QuickSpec {
-    @MainActor
-    static let machineLowGas = TestMachine.machine(opcode: Opcode.MSIZE, gasLimit: 1)
-
     override class func spec() {
         describe("Instruction MSIZE") {
             it("with OutOfGas result for index=0") {
-                var m = Self.machineLowGas
+                let m = TestMachine.machine(opcode: Opcode.MSIZE, gasLimit: 1)
 
                 m.evalLoop()
 
@@ -22,7 +19,7 @@ final class MSizeSpec: QuickSpec {
             }
 
             it("success") {
-                var m = TestMachine.machine(opcode: Opcode.MSIZE, gasLimit: 10)
+                let m = TestMachine.machine(opcode: Opcode.MSIZE, gasLimit: 10)
                 let res = m.memory.set(offset: 31, value: [UInt8](repeating: 3, count: 14), size: 14)
                 expect(res).to(beSuccess())
                 expect(m.memory.effectiveLength).to(equal(64))
@@ -38,7 +35,7 @@ final class MSizeSpec: QuickSpec {
             }
 
             it("check stack overflow") {
-                var m = TestMachine.machine(opcode: Opcode.MSIZE, gasLimit: 10)
+                let m = TestMachine.machine(opcode: Opcode.MSIZE, gasLimit: 10)
                 let res = m.memory.set(offset: 31, value: [UInt8](repeating: 3, count: 14), size: 14)
                 expect(res).to(beSuccess())
                 expect(m.memory.effectiveLength).to(equal(64))

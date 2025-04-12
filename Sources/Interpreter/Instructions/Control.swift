@@ -2,7 +2,7 @@ import PrimitiveTypes
 
 /// EVM Control instructions
 enum ControlInstructions {
-    static func pc(machine m: inout Machine) {
+    static func pc(machine m: Machine) {
         if !m.gasRecordCost(cost: GasConstant.BASE) {
             return
         }
@@ -11,17 +11,17 @@ enum ControlInstructions {
         m.stackPush(value: U256(from: newValue))
     }
 
-    static func stop(machine m: inout Machine) {
+    static func stop(machine m: Machine) {
         m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Success(Machine.ExitSuccess.Stop))
     }
 
-    static func jumpDest(machine m: inout Machine) {
+    static func jumpDest(machine m: Machine) {
         if !m.gasRecordCost(cost: GasConstant.JUMPDEST) {
             return
         }
     }
 
-    static func jump(machine m: inout Machine) {
+    static func jump(machine m: Machine) {
         if !m.gasRecordCost(cost: GasConstant.MID) {
             return
         }
@@ -44,7 +44,7 @@ enum ControlInstructions {
         }
     }
 
-    static func jumpi(machine m: inout Machine) {
+    static func jumpi(machine m: Machine) {
         if !m.gasRecordCost(cost: GasConstant.HIGH) {
             return
         }
@@ -77,7 +77,7 @@ enum ControlInstructions {
     }
 
     /// `Return` instruction
-    static func ret(machine m: inout Machine) {
+    static func ret(machine m: Machine) {
         // Pop values
         guard let rawOffset = m.stackPop() else {
             return
@@ -108,7 +108,7 @@ enum ControlInstructions {
 
     /// `Revert` instruction
     /// `EIP-140`: REVERT instruction
-    static func revert(machine m: inout Machine) {
+    static func revert(machine m: Machine) {
         // Check hardfork
         guard m.hardFork.isByzantium() else {
             m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.HardForkNotActive))

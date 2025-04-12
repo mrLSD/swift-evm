@@ -10,7 +10,7 @@ final class InstructionCodeCopySpec: QuickSpec {
     override class func spec() {
         describe("Instruction CODECOPY") {
             it("with OutOfGas result for size=1") {
-                var m = Self.machineLowGas
+                 let m = Self.machineLowGas
 
                 let _ = m.stack.push(value: U256(from: 1))
                 let _ = m.stack.push(value: U256(from: 2))
@@ -25,16 +25,16 @@ final class InstructionCodeCopySpec: QuickSpec {
             }
 
             it("check stack underflow errors is as expected") {
-                var m = TestMachine.machine(opcode: Opcode.CODECOPY, gasLimit: 10)
+                 let m = TestMachine.machine(opcode: Opcode.CODECOPY, gasLimit: 10)
                 m.evalLoop()
                 expect(m.machineStatus).to(equal(.Exit(.Error(.StackUnderflow))))
 
-                var m1 = TestMachine.machine(opcode: Opcode.CODECOPY, gasLimit: 10)
+                 let m1 = TestMachine.machine(opcode: Opcode.CODECOPY, gasLimit: 10)
                 let _ = m1.stack.push(value: U256(from: 5))
                 m1.evalLoop()
                 expect(m1.machineStatus).to(equal(.Exit(.Error(.StackUnderflow))))
 
-                var m2 = TestMachine.machine(opcode: Opcode.CODECOPY, gasLimit: 10)
+                 let m2 = TestMachine.machine(opcode: Opcode.CODECOPY, gasLimit: 10)
                 let _ = m2.stack.push(value: U256(from: 2))
                 let _ = m2.stack.push(value: U256(from: 2))
                 m2.evalLoop()
@@ -42,7 +42,7 @@ final class InstructionCodeCopySpec: QuickSpec {
             }
 
             it("size = 0") {
-                var m = TestMachine.machine(opcode: Opcode.CODECOPY, gasLimit: 10)
+                 let m = TestMachine.machine(opcode: Opcode.CODECOPY, gasLimit: 10)
                 let _ = m.stack.push(value: U256(from: 0))
                 let _ = m.stack.push(value: U256(from: 1))
                 let _ = m.stack.push(value: U256(from: 2))
@@ -56,7 +56,7 @@ final class InstructionCodeCopySpec: QuickSpec {
             }
 
             it("gas memory overflow for Size") {
-                var m = TestMachine.machine(opcode: Opcode.CODECOPY, gasLimit: 10)
+                 let m = TestMachine.machine(opcode: Opcode.CODECOPY, gasLimit: 10)
                 let _ = m.stack.push(value: U256(from: UInt64.max / 2))
                 let _ = m.stack.push(value: U256(from: 1))
                 let _ = m.stack.push(value: U256(from: 2))
@@ -70,7 +70,7 @@ final class InstructionCodeCopySpec: QuickSpec {
             }
 
             it("gas memory overflow for code Offset") {
-                var m = TestMachine.machine(opcode: Opcode.CODECOPY, gasLimit: 10)
+                 let m = TestMachine.machine(opcode: Opcode.CODECOPY, gasLimit: 10)
                 let _ = m.stack.push(value: U256(from: 1))
                 let _ = m.stack.push(value: U256(from: 2))
                 let _ = m.stack.push(value: U256(from: UInt64(Int.max)))
@@ -84,7 +84,7 @@ final class InstructionCodeCopySpec: QuickSpec {
             }
 
             it("gas overflow for resized memoryGasCost") {
-                var m = TestMachine.machine(opcode: Opcode.CODECOPY, gasLimit: 10)
+                 let m = TestMachine.machine(opcode: Opcode.CODECOPY, gasLimit: 10)
                 let _ = m.stack.push(value: U256(from: 1))
                 let _ = m.stack.push(value: U256(from: 2))
                 let _ = m.stack.push(value: U256(from: 96))
@@ -98,7 +98,7 @@ final class InstructionCodeCopySpec: QuickSpec {
             }
 
             it("MemoryOperation error - CopyDataLimitExceeded") {
-                var m = TestMachine.machine(opcodes: [Opcode.JUMPDEST, Opcode.JUMPDEST, Opcode.JUMPDEST, Opcode.JUMPDEST, Opcode.JUMPDEST, Opcode.JUMPDEST, Opcode.CODECOPY], gasLimit: 100, memoryLimit: 4)
+                 let m = TestMachine.machine(opcodes: [Opcode.JUMPDEST, Opcode.JUMPDEST, Opcode.JUMPDEST, Opcode.JUMPDEST, Opcode.JUMPDEST, Opcode.JUMPDEST, Opcode.CODECOPY], gasLimit: 100, memoryLimit: 4)
                 let _ = m.stack.push(value: U256(from: 3))
                 let _ = m.stack.push(value: U256(from: 2))
                 let _ = m.stack.push(value: U256(from: 32))
@@ -112,7 +112,7 @@ final class InstructionCodeCopySpec: QuickSpec {
             }
 
             it("check stack Int failure is as expected") {
-                var m1 = TestMachine.machine(opcodes: [Opcode.CODECOPY], gasLimit: 100)
+                 let m1 = TestMachine.machine(opcodes: [Opcode.CODECOPY], gasLimit: 100)
                 let _ = m1.stack.push(value: U256(from: 3))
                 let _ = m1.stack.push(value: U256(from: 4))
                 let _ = m1.stack.push(value: U256(from: [1, 1, 0, 0]))
@@ -124,7 +124,7 @@ final class InstructionCodeCopySpec: QuickSpec {
                 expect(m1.gas.memoryGas.numWords).to(equal(0))
                 expect(m1.gas.memoryGas.gasCost).to(equal(0))
 
-                var m2 = TestMachine.machine(opcodes: [Opcode.CODECOPY], gasLimit: 100)
+                 let m2 = TestMachine.machine(opcodes: [Opcode.CODECOPY], gasLimit: 100)
                 let _ = m2.stack.push(value: U256(from: 3))
                 let _ = m2.stack.push(value: U256(from: [1, 1, 0, 0]))
                 let _ = m2.stack.push(value: U256(from: 32))
@@ -136,7 +136,7 @@ final class InstructionCodeCopySpec: QuickSpec {
                 expect(m2.gas.memoryGas.numWords).to(equal(0))
                 expect(m2.gas.memoryGas.gasCost).to(equal(0))
 
-                var m3 = TestMachine.machine(opcodes: [Opcode.CODECOPY], gasLimit: 100)
+                 let m3 = TestMachine.machine(opcodes: [Opcode.CODECOPY], gasLimit: 100)
                 let _ = m3.stack.push(value: U256(from: [1, 1, 0, 0]))
                 let _ = m3.stack.push(value: U256(from: 4))
                 let _ = m3.stack.push(value: U256(from: 32))
@@ -150,7 +150,7 @@ final class InstructionCodeCopySpec: QuickSpec {
             }
 
             it("success") {
-                var m = TestMachine.machine(opcodes: [Opcode.JUMPDEST, Opcode.JUMPDEST, Opcode.JUMPDEST, Opcode.JUMPDEST, Opcode.JUMPDEST, Opcode.JUMPDEST, Opcode.CODECOPY], gasLimit: 100)
+                 let m = TestMachine.machine(opcodes: [Opcode.JUMPDEST, Opcode.JUMPDEST, Opcode.JUMPDEST, Opcode.JUMPDEST, Opcode.JUMPDEST, Opcode.JUMPDEST, Opcode.CODECOPY], gasLimit: 100)
                 let _ = m.stack.push(value: U256(from: 3))
                 let _ = m.stack.push(value: U256(from: 4))
                 let _ = m.stack.push(value: U256(from: 32))

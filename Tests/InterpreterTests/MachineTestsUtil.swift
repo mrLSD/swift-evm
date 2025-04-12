@@ -5,7 +5,7 @@
 import PrimitiveTypes
 
 struct TestHandler: InterpreterHandler {
-    func beforeOpcodeExecution(machine: inout Machine, opcode: Opcode, address: H160) -> Machine.ExitError? {
+    func beforeOpcodeExecution(machine: Machine, opcode: Opcode, address: H160) -> Machine.ExitError? {
         nil
     }
 }

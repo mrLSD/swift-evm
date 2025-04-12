@@ -2,7 +2,7 @@ import PrimitiveTypes
 
 /// EVM Bitwise instructions
 enum BitwiseInstructions {
-    static func lt(machine m: inout Machine) {
+    static func lt(machine m: Machine) {
         if !m.gasRecordCost(cost: GasConstant.VERYLOW) {
             return
         }
@@ -17,7 +17,7 @@ enum BitwiseInstructions {
         m.stackPush(value: U256(from: newValue))
     }
 
-    static func gt(machine m: inout Machine) {
+    static func gt(machine m: Machine) {
         if !m.gasRecordCost(cost: GasConstant.VERYLOW) {
             return
         }
@@ -32,7 +32,7 @@ enum BitwiseInstructions {
         m.stackPush(value: U256(from: newValue))
     }
 
-    static func slt(machine m: inout Machine) {
+    static func slt(machine m: Machine) {
         if !m.gasRecordCost(cost: GasConstant.VERYLOW) {
             return
         }
@@ -50,7 +50,7 @@ enum BitwiseInstructions {
         m.stackPush(value: U256(from: newValue))
     }
 
-    static func sgt(machine m: inout Machine) {
+    static func sgt(machine m: Machine) {
         if !m.gasRecordCost(cost: GasConstant.VERYLOW) {
             return
         }
@@ -68,7 +68,7 @@ enum BitwiseInstructions {
         m.stackPush(value: U256(from: newValue))
     }
 
-    static func eq(machine m: inout Machine) {
+    static func eq(machine m: Machine) {
         if !m.gasRecordCost(cost: GasConstant.VERYLOW) {
             return
         }
@@ -83,7 +83,7 @@ enum BitwiseInstructions {
         m.stackPush(value: U256(from: newValue))
     }
 
-    static func isZero(machine m: inout Machine) {
+    static func isZero(machine m: Machine) {
         if !m.gasRecordCost(cost: GasConstant.VERYLOW) {
             return
         }
@@ -95,7 +95,7 @@ enum BitwiseInstructions {
         m.stackPush(value: U256(from: newValue))
     }
 
-    static func and(machine m: inout Machine) {
+    static func and(machine m: Machine) {
         if !m.gasRecordCost(cost: GasConstant.VERYLOW) {
             return
         }
@@ -110,7 +110,7 @@ enum BitwiseInstructions {
         m.stackPush(value: newValue)
     }
 
-    static func or(machine m: inout Machine) {
+    static func or(machine m: Machine) {
         if !m.gasRecordCost(cost: GasConstant.VERYLOW) {
             return
         }
@@ -125,7 +125,7 @@ enum BitwiseInstructions {
         m.stackPush(value: newValue)
     }
 
-    static func xor(machine m: inout Machine) {
+    static func xor(machine m: Machine) {
         if !m.gasRecordCost(cost: GasConstant.VERYLOW) {
             return
         }
@@ -140,7 +140,7 @@ enum BitwiseInstructions {
         m.stackPush(value: newValue)
     }
 
-    static func not(machine m: inout Machine) {
+    static func not(machine m: Machine) {
         if !m.gasRecordCost(cost: GasConstant.VERYLOW) {
             return
         }
@@ -152,7 +152,7 @@ enum BitwiseInstructions {
         m.stackPush(value: newValue)
     }
 
-    static func byte(machine m: inout Machine) {
+    static func byte(machine m: Machine) {
         if !m.gasRecordCost(cost: GasConstant.VERYLOW) {
             return
         }
@@ -176,7 +176,7 @@ enum BitwiseInstructions {
         m.stackPush(value: newValue)
     }
 
-    static func shl(machine m: inout Machine) {
+    static func shl(machine m: Machine) {
         if !m.gasRecordCost(cost: GasConstant.VERYLOW) {
             return
         }
@@ -196,7 +196,7 @@ enum BitwiseInstructions {
         m.stackPush(value: newValue)
     }
 
-    static func shr(machine m: inout Machine) {
+    static func shr(machine m: Machine) {
         if !m.gasRecordCost(cost: GasConstant.VERYLOW) {
             return
         }
@@ -216,7 +216,7 @@ enum BitwiseInstructions {
         m.stackPush(value: newValue)
     }
 
-    static func sar(machine m: inout Machine) {
+    static func sar(machine m: Machine) {
         if !m.gasRecordCost(cost: GasConstant.VERYLOW) {
             return
         }

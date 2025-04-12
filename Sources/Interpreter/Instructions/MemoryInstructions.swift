@@ -2,7 +2,7 @@ import PrimitiveTypes
 
 /// EVM Memory instructions
 enum MemoryInstructions {
-    static func mload(machine m: inout Machine) {
+    static func mload(machine m: Machine) {
         if !m.gasRecordCost(cost: GasConstant.VERYLOW) {
             return
         }
@@ -22,7 +22,7 @@ enum MemoryInstructions {
         m.stackPush(value: U256.fromBigEndian(from: val))
     }
 
-    static func mstore(machine m: inout Machine) {
+    static func mstore(machine m: Machine) {
         if !m.gasRecordCost(cost: GasConstant.VERYLOW) {
             return
         }
@@ -48,7 +48,7 @@ enum MemoryInstructions {
         }
     }
 
-    static func mstore8(machine m: inout Machine) {
+    static func mstore8(machine m: Machine) {
         if !m.gasRecordCost(cost: GasConstant.VERYLOW) {
             return
         }
@@ -75,7 +75,7 @@ enum MemoryInstructions {
         }
     }
 
-    static func msize(machine m: inout Machine) {
+    static func msize(machine m: Machine) {
         if !m.gasRecordCost(cost: GasConstant.BASE) {
             return
         }

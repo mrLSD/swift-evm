@@ -2,7 +2,7 @@ import PrimitiveTypes
 
 /// EVM Stack instructions
 enum StackInstructions {
-    static func pop(machine m: inout Machine) {
+    static func pop(machine m: Machine) {
         if !m.gasRecordCost(cost: GasConstant.BASE) {
             return
         }
@@ -16,7 +16,7 @@ enum StackInstructions {
     /// ## EIP
     /// EIP-3855: PUSH0 instruction
     /// https://eips.ethereum.org/EIPS/eip-3855
-    static func push0(machine m: inout Machine) {
+    static func push0(machine m: Machine) {
         if !m.gasRecordCost(cost: GasConstant.BASE) {
             return
         }
@@ -24,7 +24,7 @@ enum StackInstructions {
         m.stackPush(value: U256.ZERO)
     }
 
-    static func push(machine m: inout Machine, n: Int) {
+    static func push(machine m: Machine, n: Int) {
         if !m.gasRecordCost(cost: GasConstant.VERYLOW) {
             return
         }
@@ -39,7 +39,7 @@ enum StackInstructions {
         m.stackPush(value: newValue)
     }
 
-    static func swap(machine m: inout Machine, n: Int) {
+    static func swap(machine m: Machine, n: Int) {
         if !m.gasRecordCost(cost: GasConstant.VERYLOW) {
             return
         }
@@ -57,7 +57,7 @@ enum StackInstructions {
         _ = m.stack.set(indexFromTop: 0, value: val2)
     }
 
-    static func dup(machine m: inout Machine, n: Int) {
+    static func dup(machine m: Machine, n: Int) {
         if !m.gasRecordCost(cost: GasConstant.VERYLOW) {
             return
         }

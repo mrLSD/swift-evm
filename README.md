@@ -1,6 +1,6 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Swift CI](https://github.com/mrLSD/evm-swift/actions/workflows/swift.yaml/badge.svg)](https://github.com/mrLSD/evm-swift/actions/workflows/swift.yaml)
-[![codecov](https://codecov.io/gh/mrLSD/evm-swift/graph/badge.svg?token=1uc0niBI3c)](https://codecov.io/gh/mrLSD/evm-swift)
+[![codecov](https://codecov.io/gh/mrLSD/swift-evm/graph/badge.svg?token=1uc0niBI3c)](https://codecov.io/gh/mrLSD/swift-evm)
 [![SwiftLint CI](https://img.shields.io/badge/SwiftLint-CI-blue.svg)](https://github.com/mrLSD/evm-swift/actions/workflows/swift.yaml)
 [![](https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2FmrLSD%2Fevm-swift%2Fbadge%3Ftype%3Dswift-versions)](https://swiftpackageindex.com/mrLSD/evm-swift)
 
