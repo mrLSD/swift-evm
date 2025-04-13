@@ -30,6 +30,10 @@ public final class Machine {
     var codeSize: Int { self.code.count }
     /// EVM  hard fork
     let hardFork: HardFork
+    /// EVM return data
+    var returnData: ReturnData
+    /// EVM execution context
+    var context: Context
 
     #if TRACING
     /// Tracing data
@@ -41,6 +45,23 @@ public final class Machine {
 
     /// Machine Interpreter handler. User to extend evaluation functinality
     private let handler: InterpreterHandler
+
+    /// Machine return data
+    public struct ReturnData {
+        let buffer: [UInt8]
+        let length: Int
+        let offset: Int
+    }
+
+    /// Machine EVM Contextt
+    public struct Context {
+        /// Execution target address
+        let target: H160
+        /// Sender (caller) address
+        let sender: H160
+        /// EVM apparent value
+        let value: U256
+    }
 
     public enum MachineStatus: Equatable {
         case NotStarted
@@ -132,6 +153,7 @@ public final class Machine {
         table[Opcode.CALLDATASIZE.index] = SystemInstructions.callDataSize
         table[Opcode.CALLDATACOPY.index] = SystemInstructions.callDataCopy
         table[Opcode.CALLDATALOAD.index] = SystemInstructions.callDataLoad
+        table[Opcode.CALLVALUE.index] = SystemInstructions.callValue
 
         // Control
         table[Opcode.STOP.index] = ControlInstructions.stop
@@ -221,10 +243,12 @@ public final class Machine {
         return table
     }()
 
-    init(data: [UInt8], code: [UInt8], gasLimit: UInt64, handler: InterpreterHandler) {
+    init(data: [UInt8], code: [UInt8], gasLimit: UInt64, context: Context, handler: InterpreterHandler) {
         self.data = data
         self.code = code
         self.jumpTable = Self.analyzeJumpTable(code: code)
+        self.context = context
+        self.returnData = ReturnData(buffer: [], length: 0, offset: 0)
         self.handler = handler
         self.gas = Gas(limit: gasLimit)
         self.hardFork = HardFork.latest()
@@ -233,10 +257,12 @@ public final class Machine {
         #endif
     }
 
-    init(data: [UInt8], code: [UInt8], gasLimit: UInt64, memoryLimit: Int, handler: InterpreterHandler, hardFork: HardFork) {
+    init(data: [UInt8], code: [UInt8], gasLimit: UInt64, memoryLimit: Int, context: Context, handler: InterpreterHandler, hardFork: HardFork) {
         self.data = data
         self.code = code
         self.jumpTable = Self.analyzeJumpTable(code: code)
+        self.context = context
+        self.returnData = ReturnData(buffer: [], length: 0, offset: 0)
         self.handler = handler
         self.gas = Gas(limit: gasLimit)
         self.memory = Memory(limit: memoryLimit)

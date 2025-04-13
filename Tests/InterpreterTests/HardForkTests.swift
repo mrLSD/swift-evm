@@ -20,10 +20,10 @@ final class InterpreterHardForkSpec: QuickSpec {
                         .Berlin: 0x07,
                         .London: 0x08,
                         .Paris: 0x09,
-                        .Shanghai: 0x0A,
-                        .Cancun: 0x0B,
-                        .Prague: 0x0C,
-                        .Osaka: 0x0D,
+                        .Shanghai: 0x0a,
+                        .Cancun: 0x0b,
+                        .Prague: 0x0c,
+                        .Osaka: 0x0d,
                     ]
 
                     // Check that covared all cases
@@ -33,7 +33,8 @@ final class InterpreterHardForkSpec: QuickSpec {
                         expect(hardFork.rawValue).to(
                             equal(rawValue),
                             description:
-                            "HardFork \(hardFork) should have rawValue \(String(format: "0x%02X", rawValue))")
+                            "HardFork \(hardFork) should have rawValue \(String(format: "0x%02X", rawValue))"
+                        )
                     }
                 }
 
@@ -44,12 +45,12 @@ final class InterpreterHardForkSpec: QuickSpec {
 
             context("HardFork in Machine") {
                 it("validate Machine hard fork") {
-                    let m = Machine(data: [], code: [], gasLimit: 100, memoryLimit: 1024, handler: TestHandler(), hardFork: HardFork.London)
+                    let m = Machine(data: [], code: [], gasLimit: 100, memoryLimit: 1024, context: TestMachine.defaultContext(), handler: TestHandler(), hardFork: HardFork.London)
                     expect(m.hardFork).to(equal(HardFork.London))
                 }
 
                 it("validate Machine hard fork has latest hard fork") {
-                    let m = Machine(data: [], code: [], gasLimit: 100, handler: TestHandler())
+                    let m = Machine(data: [], code: [], gasLimit: 100, context: TestMachine.defaultContext(), handler: TestHandler())
                     expect(m.hardFork).to(equal(HardFork.latest()))
                 }
             }
@@ -81,7 +82,8 @@ final class InterpreterHardForkSpec: QuickSpec {
                     expect(hardFork.description).to(
                         equal(description),
                         description:
-                        "\(hardFork) should have description \"\(description)\"")
+                        "\(hardFork) should have description \"\(description)\""
+                    )
                 }
             }
         }

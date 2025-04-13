@@ -139,4 +139,11 @@ enum SystemInstructions {
         let newValue = U256.fromBigEndian(from: load)
         m.stackPush(value: newValue)
     }
+
+    static func callValue(machine m: Machine) {
+        if !m.gasRecordCost(cost: GasConstant.BASE) {
+            return
+        }
+        m.stackPush(value: m.context.value)
+    }
 }
