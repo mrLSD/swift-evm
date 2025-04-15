@@ -95,6 +95,16 @@ final class H256Spec: QuickSpec {
                             .to(equal([UInt8](repeating: 0, count: 12)))
                     }
                 }
+
+                context("when converted to H160 value") {
+                    it("correct data") {
+                        let valH160 = H160(from: [UInt8](repeating: 0xAC, count: 20))
+                        let val = H256(from: valH160)
+
+                        expect(val.BYTES).to(equal([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC]))
+                        expect(val.toH160()).to(equal(valH160))
+                    }
+                }
             }
         }
     }

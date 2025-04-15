@@ -18,4 +18,15 @@ public struct H256: FixedArray {
         newArray.replaceSubrange(12 ..< 32, with: value.BYTES)
         self.bytes = newArray
     }
+
+    /// Covert `H256` to `H160` by taking the last 20 bytes
+    /// Optimizations:  only one array copy (analog of `memcpy`)
+    public func toH160() -> H160 {
+        return bytes.withUnsafeBufferPointer { ptr in
+            let base = ptr.baseAddress! + 12
+            let buffer = UnsafeBufferPointer(start: base, count: 20)
+            // Only one copy
+            return H160(from: Array(buffer))
+        }
+    }
 }
