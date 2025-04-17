@@ -105,6 +105,38 @@ final class H256Spec: QuickSpec {
                         expect(val.toH160()).to(equal(valH160))
                     }
                 }
+
+                context("when hashing H256") {
+                    it("produces the same hash for equal values") {
+                        let bytes = [UInt8](repeating: 0xAB, count: 32)
+                        let h1 = H256(from: bytes)
+                        let h2 = H256(from: bytes)
+
+                        expect(h1.hashValue).to(equal(h2.hashValue))
+                    }
+
+                    it("produces different hash for different values") {
+                        let h1 = H256(from: [UInt8](repeating: 0x00, count: 32))
+                        let h2 = H256(from: [UInt8](repeating: 0x01, count: 32))
+
+                        expect(h1.hashValue).toNot(equal(h2.hashValue))
+                    }
+
+                    it("can be used in a Set") {
+                        let h1 = H256(from: [UInt8](repeating: 0x01, count: 32))
+                        let h2 = H256(from: [UInt8](repeating: 0x02, count: 32))
+                        let h3 = H256(from: [UInt8](repeating: 0x01, count: 32)) // same as h1
+
+                        var set: Set<H256> = []
+                        set.insert(h1)
+                        set.insert(h2)
+                        set.insert(h3)
+
+                        expect(set.count).to(equal(2))
+                        expect(set.contains(h1)).to(beTrue())
+                        expect(set.contains(h2)).to(beTrue())
+                    }
+                }
             }
         }
     }
