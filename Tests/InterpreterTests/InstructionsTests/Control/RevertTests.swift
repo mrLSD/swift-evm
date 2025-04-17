@@ -5,14 +5,14 @@ import Quick
 
 final class InstructionRevertSpec: QuickSpec {
     @MainActor
-    static let machineLowGas = TestMachine.machine(opcodes: [Opcode.REVERT], gasLimit: 1, memoryLimit: 1024, HardFork: .Byzantium)
+    static let machineLowGas = TestMachine.machine(opcodes: [Opcode.REVERT], gasLimit: 1, memoryLimit: 1024, hardFork: .Byzantium)
     @MainActor
-    static let machine = TestMachine.machine(opcodes: [Opcode.REVERT], gasLimit: 100, memoryLimit: 1024, HardFork: .Byzantium)
+    static let machine = TestMachine.machine(opcodes: [Opcode.REVERT], gasLimit: 100, memoryLimit: 1024, hardFork: .Byzantium)
 
     override class func spec() {
         describe("Instruction REVERT") {
             it("with OutOfGas result for index=0") {
-                 let m = Self.machineLowGas
+                let m = Self.machineLowGas
 
                 let _ = m.stack.push(value: U256(from: 33))
                 let _ = m.stack.push(value: U256(from: 32))
@@ -26,14 +26,14 @@ final class InstructionRevertSpec: QuickSpec {
             }
 
             it("check stack underflow errors is as expected") {
-                 let m1 = Self.machine
+                let m1 = Self.machine
                 m1.evalLoop()
                 expect(m1.machineStatus).to(equal(.Exit(.Error(.StackUnderflow))))
                 expect(m1.gas.remaining).to(equal(100))
                 expect(m1.gas.memoryGas.numWords).to(equal(0))
                 expect(m1.gas.memoryGas.gasCost).to(equal(0))
 
-                 let m2 = Self.machine
+                let m2 = Self.machine
                 let _ = m2.stack.push(value: U256(from: 0))
                 m2.evalLoop()
                 expect(m2.machineStatus).to(equal(.Exit(.Error(.StackUnderflow))))
@@ -43,7 +43,7 @@ final class InstructionRevertSpec: QuickSpec {
             }
 
             it("check stack Int failure is as expected") {
-                 let m1 = Self.machine
+                let m1 = Self.machine
                 let _ = m1.stack.push(value: U256(from: 1))
                 let _ = m1.stack.push(value: U256(from: [1, 1, 0, 0]))
                 m1.evalLoop()
@@ -52,7 +52,7 @@ final class InstructionRevertSpec: QuickSpec {
                 expect(m1.gas.memoryGas.numWords).to(equal(0))
                 expect(m1.gas.memoryGas.gasCost).to(equal(0))
 
-                 let m2 = Self.machine
+                let m2 = Self.machine
                 let _ = m2.stack.push(value: U256(from: [1, 1, 0, 0]))
                 let _ = m2.stack.push(value: U256(from: 1))
                 m2.evalLoop()
@@ -63,7 +63,7 @@ final class InstructionRevertSpec: QuickSpec {
             }
 
             it("check hard fork") {
-                 let m1 = TestMachine.machine(opcodes: [Opcode.REVERT], gasLimit: 100, memoryLimit: 1024, HardFork: .SpuriousDragon)
+                let m1 = TestMachine.machine(opcodes: [Opcode.REVERT], gasLimit: 100, memoryLimit: 1024, hardFork: .SpuriousDragon)
                 let _ = m1.stack.push(value: U256(from: 32))
                 let _ = m1.stack.push(value: U256(from: 33))
                 m1.evalLoop()
@@ -74,7 +74,7 @@ final class InstructionRevertSpec: QuickSpec {
             }
 
             it("Success") {
-                 let m = Self.machine
+                let m = Self.machine
 
                 let _ = m.stack.push(value: U256(from: 32))
                 let _ = m.stack.push(value: U256(from: 33))

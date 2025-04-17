@@ -9,7 +9,7 @@ final class RuntimeSpec: QuickSpec {
         describe("Runtime") {
             it("initializes ") {
                 let context = TestMachine.defaultContext()
-                let _ = Runtime(code: [], data: [], gasLimit: 0, context: context, handler: TestHandler())
+                let _ = Runtime(code: [], data: [], gasLimit: 0, context: context, state: ExecutionState(), handler: TestHandler())
             }
         }
     }

@@ -294,19 +294,19 @@ final class InterpreterGasSpec: QuickSpec {
 
             context("costPerWord") {
                 it("success") {
-                    let size: Int = 70
-                    let multiple: Int = 10
-                    let nunWOrd: Int = 3
-                    let expected: UInt64 = UInt64(nunWOrd * multiple)
+                    let size = 70
+                    let multiple = 10
+                    let nunWOrd = 3
+                    let expected = UInt64(nunWOrd * multiple)
                     guard let res = GasCost.costPerWord(size: size, multiple: multiple) else {
                         fail("Expected non-nil result")
                         return
                     }
-                    expect(res).to(equal(expected ))
+                    expect(res).to(equal(expected))
                 }
 
                 it("overflow") {
-                    let size: Int = 70
+                    let size = 70
                     let multiple = Int.max
 
                     let res = GasCost.costPerWord(size: size, multiple: multiple)
@@ -316,7 +316,7 @@ final class InterpreterGasSpec: QuickSpec {
 
             context("veryLowCopy") {
                 it("success") {
-                    let size: Int = 33
+                    let size = 33
                     // VERYLOW + numWords * VERYLOW
                     let expected: UInt64 = 3 + 2 * 3
 
@@ -336,7 +336,7 @@ final class InterpreterGasSpec: QuickSpec {
 
             context("memoryGas") {
                 it("success") {
-                    let numWords: Int = 3
+                    let numWords = 3
                     // Gas.Memory numWords + numWords * numWords
                     let expected = 3 * numWords + numWords * numWords
 
@@ -405,7 +405,95 @@ final class InterpreterGasSpec: QuickSpec {
                     expect(res2).to(beSuccess(.Resized(18)))
                     expect(gas.memoryGas.gasCost).to(equal(28))
                 }
+            }
 
+            context("expCosr") {
+                it("pow 0") {
+                    let result = GasCost.expCost(hardFork: HardFork.SpuriousDragon, power: U256.ZERO)
+                    let expected: UInt64 = GasConstant.EXP
+
+                    expect(result).to(equal(expected))
+                }
+
+                it("pow 6") {
+                    let result = GasCost.expCost(hardFork: HardFork.SpuriousDragon, power: U256(from: 6))
+                    let expected: UInt64 = 60
+
+                    expect(result).to(equal(expected))
+                }
+
+                it("pow 6 - Tangerine hard fork") {
+                    let result = GasCost.expCost(hardFork: HardFork.Tangerine, power: U256(from: 6))
+                    let expected: UInt64 = 20
+
+                    expect(result).to(equal(expected))
+                }
+            }
+
+            context("log2floor") {
+                it("log2floor [0,0,0,0]") {
+                    let u256Value = U256(from: [0, 0, 0, 0])
+                    let result = GasCost.log2floor(u256Value)
+                    let expected: UInt64 = 0
+
+                    expect(result).to(equal(expected))
+                }
+
+                it("log2floor [2,0,0,0]") {
+                    let u256Value = U256(from: [2, 0, 0, 0])
+                    let result = GasCost.log2floor(u256Value)
+                    let expected: UInt64 = 1
+
+                    expect(result).to(equal(expected))
+                }
+
+                it("log2floor [1,0,0,0]") {
+                    let u256Value = U256(from: [1, 0, 0, 0])
+                    let result = GasCost.log2floor(u256Value)
+                    let expected: UInt64 = 0
+
+                    expect(result).to(equal(expected))
+                }
+
+                it("log2floor [0,1,0,0]") {
+                    let u256Value = U256(from: [0, 1, 0, 0])
+                    let result = GasCost.log2floor(u256Value)
+                    let expected: UInt64 = 64
+
+                    expect(result).to(equal(expected))
+                }
+
+                it("log2floor [0,0,1,0]") {
+                    let u256Value = U256(from: [0, 0, 1, 0])
+                    let result = GasCost.log2floor(u256Value)
+                    let expected: UInt64 = 128
+
+                    expect(result).to(equal(expected))
+                }
+
+                it("log2floor [0,0,0,1]") {
+                    let u256Value = U256(from: [0, 0, 0, 1])
+                    let result = GasCost.log2floor(u256Value)
+                    let expected: UInt64 = 192
+
+                    expect(result).to(equal(expected))
+                }
+            }
+
+            context("warm and cold address") {
+                it("warm address") {
+                    let result = GasCost.warmOrColdCost(isCold: false)
+                    let expected: UInt64 = GasConstant.WARM_STORAGE_READ_COST
+
+                    expect(result).to(equal(expected))
+                }
+
+                it("cold address") {
+                    let result = GasCost.warmOrColdCost(isCold: true)
+                    let expected: UInt64 = GasConstant.COLD_ACCOUNT_ACCESS_COST
+
+                    expect(result).to(equal(expected))
+                }
             }
         }
     }

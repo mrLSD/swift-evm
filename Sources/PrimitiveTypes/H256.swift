@@ -1,4 +1,4 @@
-public struct H256: FixedArray {
+public struct H256: FixedArray, Hashable {
     private var bytes: [UInt8]
 
     public static let numberBytes: UInt8 = 32
@@ -28,5 +28,9 @@ public struct H256: FixedArray {
             // Only one copy
             return H160(from: Array(buffer))
         }
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(BYTES)
     }
 }

@@ -4,6 +4,12 @@ import PrimitiveTypes
 import Quick
 
 final class InterpreterMachineTestsSpec: QuickSpec {
+    class CustomHandler: TestHandler {
+        override func beforeOpcodeExecution(machine: Machine, opcode: Opcode?) -> Machine.ExitError? {
+            return .OutOfFund
+        }
+    }
+
     override class func spec() {
         describe("Machine tests") {
             it("Int or fail tests") {
@@ -16,6 +22,13 @@ final class InterpreterMachineTestsSpec: QuickSpec {
                 let res2 = m2.getIntOrFail(U256(from: 10))
                 expect(m2.machineStatus).to(equal(.NotStarted))
                 expect(res2).to(equal(10))
+            }
+
+            it("Machine beforeOpcodeExecution flow") {
+                print("-->")
+                let m = Machine(data: [], code: [Opcode.PC.rawValue], gasLimit: 100, context: TestMachine.defaultContext(), state: ExecutionState(), handler: CustomHandler())
+                m.evalLoop()
+                expect(m.machineStatus).to(equal(.Exit(.Error(.OutOfFund))))
             }
         }
     }
