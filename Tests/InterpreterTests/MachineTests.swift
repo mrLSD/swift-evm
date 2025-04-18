@@ -16,6 +16,11 @@ enum TestMachine {
         Machine(data: [], code: [opcode.rawValue], gasLimit: gasLimit, handler: TestHandler())
     }
 
+    /// Init simple Machine with Call Input Data
+    static func machine(data: [UInt8], opcode: Opcode, gasLimit: UInt64) -> Machine {
+        Machine(data: data, code: [opcode.rawValue], gasLimit: gasLimit, handler: TestHandler())
+    }
+
     /// Init Machine with predefined code with array `Opcode` type
     static func machine(opcodes code: [Opcode], gasLimit: UInt64) -> Machine {
         Machine(data: [], code: code.map(\.rawValue), gasLimit: gasLimit, handler: TestHandler())
