@@ -27,4 +27,18 @@ enum HostInstructions {
 
         m.stackPush(value: m.handler.balance(address: address))
     }
+
+    static func selfbalance(machine m: Machine) {
+        // Check hardfork
+        guard m.hardFork.isIstanbul() else {
+            m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.HardForkNotActive))
+            return
+        }
+
+        if !m.gasRecordCost(cost: GasConstant.LOW) {
+            return
+        }
+
+        m.stackPush(value: m.handler.balance(address: m.context.target))
+    }
 }

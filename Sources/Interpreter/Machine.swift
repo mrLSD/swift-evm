@@ -236,6 +236,7 @@ public final class Machine {
 
         // Host
         table[Opcode.BALANCE.index] = HostInstructions.balance
+        table[Opcode.SELFBALANCE.index] = HostInstructions.selfbalance
 
         return table
     }()
