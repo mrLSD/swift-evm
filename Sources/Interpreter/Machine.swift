@@ -129,6 +129,8 @@ public struct Machine {
         table[Opcode.CODESIZE.index] = SystemInstructions.codeSize
         table[Opcode.CODECOPY.index] = SystemInstructions.codeCopy
         table[Opcode.CALLDATASIZE.index] = SystemInstructions.callDataSize
+        table[Opcode.CALLDATACOPY.index] = SystemInstructions.callDataCopy
+        table[Opcode.CALLDATALOAD.index] = SystemInstructions.callDataLoad
 
         // Control
         table[Opcode.STOP.index] = ControlInstructions.stop
