@@ -26,7 +26,7 @@ final class InstructionCallDataLoadSpec: QuickSpec {
                 expect(m.gas.remaining).to(equal(7))
             }
 
-            it("index more than uint data count") {
+            it("index more than int data count") {
                 let callData: [UInt8] = [0x01, 0x02, 0x03, 0x04, 0x05]
                 var m = TestMachine.machine(data: callData, opcode: Opcode.CALLDATALOAD, gasLimit: 10)
                 let _ = m.stack.push(value: U256(from: 6))
@@ -43,7 +43,7 @@ final class InstructionCallDataLoadSpec: QuickSpec {
                 expect(m.gas.remaining).to(equal(7))
             }
 
-            it("index more than uint max size") {
+            it("index more than int max size") {
                 let callData: [UInt8] = [0x01, 0x02, 0x03, 0x04, 0x05]
                 var m = TestMachine.machine(data: callData, opcode: Opcode.CALLDATALOAD, gasLimit: 10)
                 let _ = m.stack.push(value: U256(from: [UInt64.max, 1, 0, 0]))

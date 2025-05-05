@@ -67,7 +67,7 @@ public struct Gas {
 /// Memory gas data
 struct MemoryGas {
     /// Number of words in memory. Used for memory resize gas calculation
-    var numWords: UInt = 0
+    var numWords: Int = 0
     /// Memory gas cost
     var gasCost: UInt64 = 0
 
@@ -91,7 +91,7 @@ struct MemoryGas {
     /// - Returns: A `Result` containing:
     ///   - `UInt64`: The additional gas cost if the operation is successful.
     ///   - `Machine.ExitError`: `.OutOfGas` error if an overflow occurs during the calculation.
-    mutating func resize(end: UInt, length: UInt) -> Result<MemoryGasStatus, Machine.ExitError> {
+    mutating func resize(end: Int, length: Int) -> Result<MemoryGasStatus, Machine.ExitError> {
         let (newSize, overflow) = end.addingReportingOverflow(length)
         guard !overflow else {
             return .failure(.OutOfGas)
@@ -103,7 +103,7 @@ struct MemoryGas {
         }
         self.numWords = numWords
 
-        let (newGasCost, overflow1) = GasCost.memoryGas(numWords: UInt64(numWords))
+        let (newGasCost, overflow1) = GasCost.memoryGas(numWords: numWords)
         if overflow1 {
             return .failure(.OutOfGas)
         }
@@ -137,10 +137,11 @@ enum GasCost {
     /// - Returns: A tuple containing:
     ///   - `UInt64`: The computed gas cost (0 if an overflow occurs).
     ///   - `Bool`: A flag indicating the success of the calculation (true if no overflow occurred, false otherwise).
-    static func memoryGas(numWords: UInt64) -> (cost: UInt64, overflow: Bool) {
-        let mul1 = GasConstant.MEMORY * numWords
+    static func memoryGas(numWords: Int) -> (cost: UInt64, overflow: Bool) {
+        let uintNumWords = UInt64(numWords)
+        let mul1 = GasConstant.MEMORY * uintNumWords
 
-        let (mul2, overflow) = numWords.multipliedReportingOverflow(by: numWords)
+        let (mul2, overflow) = uintNumWords.multipliedReportingOverflow(by: uintNumWords)
         if overflow {
             return (0, true)
         }
@@ -157,10 +158,10 @@ enum GasCost {
     ///
     /// - Parameter size: The size of the memory segment to be copied.
     /// - Returns: The computed gas cost as a `UInt64`
-    static func veryLowCopy(size: UInt) -> UInt64 {
+    static func veryLowCopy(size: Int) -> UInt64 {
         // Overflow impossible in that case
-        let costPerCopy = self.costPerWord(size: size, multiple: UInt(clamping: GasConstant.COPY))!
-        return GasConstant.VERYLOW + UInt64(costPerCopy)
+        let costPerCopy = self.costPerWord(size: size, multiple: Int(clamping: GasConstant.COPY))!
+        return GasConstant.VERYLOW + costPerCopy
     }
 
     /// Calculates the cost per word by multiplying the number of memory words for a given size by a specified multiplier.
@@ -169,9 +170,9 @@ enum GasCost {
     ///   - size: The memory size for which the number of words is determined.
     ///   - multiple: The multiplier used to calculate the cost per word.
     /// - Returns: The calculated cost per word as a `UInt`, or `nil` if an arithmetic overflow occurs.
-    static func costPerWord(size: UInt, multiple: UInt) -> UInt? {
+    static func costPerWord(size: Int, multiple: Int) -> UInt64? {
         let (numWords, overflow) = Memory.numWords(size).multipliedReportingOverflow(by: multiple)
-        return overflow ? nil : numWords
+        return overflow ? nil : UInt64(numWords)
     }
 
     static func expCost(hardFork: HardFork, power: U256) -> UInt64 {

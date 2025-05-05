@@ -111,7 +111,7 @@ final class InterpreterMemorySpec: QuickSpec {
 
                 it("check is new size is filled with zeros") {
                     let memory = Memory(limit: 100)
-                    let res1 = memory.resize(offset: UInt.max, size: 3)
+                    let res1 = memory.resize(offset: Int.max, size: 3)
                     expect(res1).to(beFalse())
                     expect(memory.effectiveLength).to(equal(0))
                 }
@@ -315,7 +315,7 @@ final class InterpreterMemorySpec: QuickSpec {
                 }
 
                 it("overflow operation") {
-                    expect(Memory.ceil32(UInt.max)).to(equal(UInt.max - 31))
+                    expect(Memory.ceil32(Int.max)).to(equal(Int.max - 31))
                 }
             }
 
@@ -335,7 +335,7 @@ final class InterpreterMemorySpec: QuickSpec {
                 }
 
                 it("overflow operation") {
-                    expect(Memory.numWords(UInt.max)).to(equal(UInt.max / 32))
+                    expect(Memory.numWords(Int.max)).to(equal(Int.max / 32))
                 }
             }
         }

@@ -30,8 +30,9 @@ enum ControlInstructions {
         guard let target = m.stackPop() else {
             return
         }
-        guard let dest = target.getInt else {
-            m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.IntOverflow))
+
+        // Convert jump destination
+        guard let dest = m.getIntOrFail(target) else {
             return
         }
 
@@ -56,13 +57,14 @@ enum ControlInstructions {
             return
         }
 
+        // Jump destination can't be zero
         if value.isZero {
             m.machineStatus = Machine.MachineStatus.Continue
             return
         }
 
-        guard let dest = target.getInt else {
-            m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.IntOverflow))
+        // Convert jump destination
+        guard let dest = m.getIntOrFail(target) else {
             return
         }
 
@@ -76,13 +78,22 @@ enum ControlInstructions {
 
     /// `Return` instruction
     static func ret(machine m: inout Machine) {
-        guard let rawOffset = m.stackPop(), let rawLength = m.stackPop() else {
+        // Pop values
+        guard let rawOffset = m.stackPop() else {
             return
         }
+        guard let rawLength = m.stackPop() else {
+            return
+        }
+
         // Convert values
-        guard let offset = m.getUintOrFail(rawOffset), let length = m.getUintOrFail(rawLength) else {
+        guard let offset = m.getIntOrFail(rawOffset) else {
             return
         }
+        guard let length = m.getIntOrFail(rawLength) else {
+            return
+        }
+
         // Resize memory
         if length > 0 {
             guard m.resizeMemoryAndRecordGas(offset: offset, size: length) else {
@@ -98,18 +109,28 @@ enum ControlInstructions {
     /// `Revert` instruction
     /// `EIP-140`: REVERT instruction
     static func revert(machine m: inout Machine) {
+        // Check hardfork
         guard m.hardFork.isByzantium() else {
             m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.HardForkNotActive))
             return
         }
 
-        guard let rawOffset = m.stackPop(), let rawLength = m.stackPop() else {
+        // Pop values
+        guard let rawOffset = m.stackPop() else {
             return
         }
+        guard let rawLength = m.stackPop() else {
+            return
+        }
+
         // Convert values
-        guard let offset = m.getUintOrFail(rawOffset), let length = m.getUintOrFail(rawLength) else {
+        guard let offset = m.getIntOrFail(rawOffset) else {
             return
         }
+        guard let length = m.getIntOrFail(rawLength) else {
+            return
+        }
+
         // Resize memory
         if length > 0 {
             guard m.resizeMemoryAndRecordGas(offset: offset, size: length) else {

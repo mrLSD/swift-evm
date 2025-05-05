@@ -10,10 +10,10 @@ public class Memory {
     private var buffer: UnsafeMutableRawPointer?
 
     /// Memory limit
-    private(set) var limit: UInt = 0
+    private(set) var limit: Int = 0
 
     /// Memory effective length, that changed after resize operations.
-    private(set) var effectiveLength: UInt = 0
+    private(set) var effectiveLength: Int = 0
 
     /// Creates a new memory instance that can be shared between calls.
     ///
@@ -21,13 +21,13 @@ public class Memory {
     /// The `limit` parameter defines the maximum amount of memory that can be allocated for this instance.
     ///
     /// - Parameter limit: The upper bound for the memory size.
-    init(limit: UInt) {
+    init(limit: Int) {
         self.limit = limit
     }
 
     /// Creates a new memory instance that can be shared between calls.
     init() {
-        self.limit = UInt(Int.max)
+        self.limit = Int.max
     }
 
     /// Deinitializes the instance by freeing any allocated buffer memory.
@@ -54,7 +54,7 @@ public class Memory {
     ///            `false` if the length is zero, an overflow occurred, or if resizing fails.
     /// - Note: This function is marked with `@inline(__always)` to encourage aggressive inlining in performance-critical contexts.
     @inline(__always)
-    func resize(offset: UInt, size: UInt) -> Bool {
+    func resize(offset: Int, size: Int) -> Bool {
         if size == 0 {
             return false
         }
@@ -78,15 +78,15 @@ public class Memory {
     /// - Returns: `true` if the buffer is already large enough or if resizing succeeds; otherwise, `false` when memory allocation fails.
     /// - Note: This function is marked with `@inline(__always)` to suggest aggressive inlining for performance-critical contexts.
     @inline(__always)
-    func resize(end: UInt) -> Bool {
+    func resize(end: Int) -> Bool {
         guard end > self.effectiveLength else {
             return true
         }
 
-        let newSize = Int(clamping: Memory.ceil32(end))
+        let newSize = Memory.ceil32(end)
         if let oldBuffer = self.buffer {
             guard let newBuffer = realloc(oldBuffer, newSize) else { return false }
-            let offset = Int(self.effectiveLength)
+            let offset = self.effectiveLength
             // Set resized `newSize` with zero
             memset(newBuffer.advanced(by: offset), 0, newSize - offset)
             self.buffer = newBuffer
@@ -96,7 +96,7 @@ public class Memory {
             self.buffer = newBuffer
         }
 
-        self.effectiveLength = UInt(newSize)
+        self.effectiveLength = newSize
 
         return true
     }
@@ -113,21 +113,18 @@ public class Memory {
     /// - Returns: An array of `UInt8` with exactly `size` elements containing the data copied from the Memory,
     ///            with any missing bytes filled with zeros.
     /// - Note: The copy operation is safely bounded by the Memory's effective length.
-    func get(offset: UInt, size: UInt) -> [UInt8] {
-        // It's practically impossible value, we don't add additional checks for Int casting
-        let intSize = Int(size)
-        var result = [UInt8](repeating: 0, count: intSize)
+    func get(offset: Int, size: Int) -> [UInt8] {
+        var result = [UInt8](repeating: 0, count: size)
         guard size > 0, offset < self.effectiveLength, let buf = self.buffer else {
             return result
         }
-        let intOffset = Int(clamping: offset)
 
         // We don't check overflow, as it's practically impossible size for Memory
-        let copySize = min(intOffset + intSize, Int(self.effectiveLength)) - intOffset
+        let copySize = min(offset + size, self.effectiveLength) - offset
 
         // After all validation check we can guaranty that copySize is non zero
         _ = result.withUnsafeMutableBytes { dest in
-            memcpy(dest.baseAddress!, buf.advanced(by: intOffset), copySize)
+            memcpy(dest.baseAddress!, buf.advanced(by: offset), copySize)
         }
         return result
     }
@@ -153,31 +150,27 @@ public class Memory {
     ///         This function is marked with `@inline(__always)` to promote aggressive inlining for performance-critical code paths.
     ///         It uses low-level memory operations (`memcpy` and `memset`), thereby bypassing some of Swift’s safety checks.
     @inline(__always)
-    func set(offset: UInt, value: [UInt8], size: UInt) -> Result<Void, Machine.ExitReason> {
+    func set(offset: Int, value: [UInt8], size: Int) -> Result<Void, Machine.ExitReason> {
         if size == 0 {
             return .success(())
         }
 
-        // We don't check type casting overflow, as it's impossible size for memory
-        let intSize = Int(size)
-        let intOffset = Int(offset)
-
         // We don't overflow as Int.max impossible size for memory
-        let requiredLength = intOffset + intSize
+        let requiredLength = offset + size
         if requiredLength > self.limit {
             return .failure(.Error(.MemoryOperation(.SetLimitExceeded)))
         }
 
-        guard self.resize(end: UInt(requiredLength)) else { return .failure(.Fatal(.ReadMemory)) }
+        guard self.resize(end: requiredLength) else { return .failure(.Fatal(.ReadMemory)) }
         guard let buf = self.buffer else { return .failure(.Fatal(.ReadMemory)) }
 
         return value.withUnsafeBytes { src in
             // Get correct range for copy
-            let copyCount = min(intSize, value.count)
-            memcpy(buf.advanced(by: intOffset), src.baseAddress!, copyCount)
+            let copyCount = min(size, value.count)
+            memcpy(buf.advanced(by: offset), src.baseAddress!, copyCount)
 
-            if intSize > value.count {
-                memset(buf.advanced(by: intOffset + value.count), 0, intSize - value.count)
+            if size > value.count {
+                memset(buf.advanced(by: offset + value.count), 0, size - value.count)
             }
 
             return .success(())
@@ -207,32 +200,27 @@ public class Memory {
     ///         It employs low-level memory operations directly (using `memmove`) instead of wrappers like `withUnsafeBytes` for maximum performance,
     ///         while ensuring safety through explicit bounds and overflow checks.
     @inline(__always)
-    func copy(srcOffset: UInt, dstOffset: UInt, size: UInt) -> Result<Void, Machine.ExitReason> {
+    func copy(srcOffset: Int, dstOffset: Int, size: Int) -> Result<Void, Machine.ExitReason> {
         if size == 0 || srcOffset == dstOffset {
             return .success(())
         }
 
-        // We don't check type casting overflow, as it's impossible size for memory
-        let intSrcOffset = Int(srcOffset)
-        let intDstOffset = Int(dstOffset)
-        let intSize = Int(size)
-
-        let maxOffset = max(intSrcOffset, intDstOffset)
+        let maxOffset = max(srcOffset, dstOffset)
         // We don't check overflow as Int.max impossible size for memory
-        let requiredLength = maxOffset + intSize
+        let requiredLength = maxOffset + size
         if requiredLength > self.limit {
             return .failure(.Error(.MemoryOperation(.CopyLimitExceeded)))
         }
 
-        guard self.resize(end: UInt(requiredLength)) else { return .failure(.Fatal(.ReadMemory)) }
+        guard self.resize(end: requiredLength) else { return .failure(.Fatal(.ReadMemory)) }
         guard let buf = self.buffer else { return .failure(.Fatal(.ReadMemory)) }
 
         // SAFTY: We guaranty that buffer is not nil
-        let srcPtr = buf.advanced(by: intSrcOffset)
-        let dstPtr = buf.advanced(by: intDstOffset)
+        let srcPtr = buf.advanced(by: srcOffset)
+        let dstPtr = buf.advanced(by: dstOffset)
 
         // Correct copy for cross ranges with `memmove`
-        memmove(dstPtr, srcPtr, intSize)
+        memmove(dstPtr, srcPtr, size)
         return .success(())
     }
 
@@ -256,45 +244,40 @@ public class Memory {
     /// - Note: This function uses unsafe memory operations (`withUnsafeBytes`, `memcpy`, and `memset`) to achieve
     ///         maximum performance.
     @inline(__always)
-    func copyData(memoryOffset: UInt, dataOffset: UInt, size: UInt, data: [UInt8]) -> Result<Void, Machine.ExitReason> {
+    func copyData(memoryOffset: Int, dataOffset: Int, size: Int, data: [UInt8]) -> Result<Void, Machine.ExitReason> {
         // Check is no data to copy.
         if size == 0 {
             return .success(())
         }
 
-        // We don't check type casting overflow, as it's impossible size for memory
-        let intDataOffset = Int(dataOffset)
-        let intSize = Int(size)
-        let intMemoryOffset = Int(memoryOffset)
-
         // Ensure the dataOffset is within bounds.
-        guard intDataOffset < data.count else {
+        guard dataOffset < data.count else {
             return .failure(.Error(.MemoryOperation(.CopyDataOffsetOutOfBounds)))
         }
 
         // Calculate how many bytes are available starting from dataOffset.
-        let available = data.count - intDataOffset
-        let copyLength = min(intSize, available)
+        let available = data.count - dataOffset
+        let copyLength = min(size, available)
 
         // We don't check overflow as Int.max impossible size for memory
-        let requiredLength = intMemoryOffset + intSize
+        let requiredLength = memoryOffset + size
         if requiredLength > self.limit {
             return .failure(.Error(.MemoryOperation(.CopyDataLimitExceeded)))
         }
 
         // Ensure the internal buffer is resized to accommodate the required length.
-        guard self.resize(end: UInt(requiredLength)) else { return .failure(.Fatal(.ReadMemory)) }
+        guard self.resize(end: requiredLength) else { return .failure(.Fatal(.ReadMemory)) }
         guard let buf = self.buffer else { return .failure(.Fatal(.ReadMemory)) }
 
         return data.withUnsafeBytes { rawBuffer in
             // SAFTY: As we validated data length, we can unwrap `rawBuffer.baseAddress`
-            let srcPtr = rawBuffer.baseAddress!.advanced(by: intDataOffset)
-            let dstPtr = buf.advanced(by: intMemoryOffset)
+            let srcPtr = rawBuffer.baseAddress!.advanced(by: dataOffset)
+            let dstPtr = buf.advanced(by: memoryOffset)
             memcpy(dstPtr, srcPtr, copyLength)
 
             // If the requested length exceeds the available data, zero-fill the remainder.
-            if intSize > copyLength {
-                memset(dstPtr.advanced(by: copyLength), 0, intSize - copyLength)
+            if size > copyLength {
+                memset(dstPtr.advanced(by: copyLength), 0, size - copyLength)
             }
             return .success(())
         }
@@ -308,9 +291,9 @@ public class Memory {
     /// - Returns:
     ///   The same value if it's a perfect multiple of 32 else it returns the smallest multiple of 32 that is greater than `value`.
     @inline(__always)
-    public static func ceil32(_ value: UInt) -> UInt {
+    public static func ceil32(_ value: Int) -> Int {
         let val = value.addingReportingOverflow(31)
-        return (val.overflow ? UInt.max : val.partialValue) & ~31
+        return (val.overflow ? Int.max : val.partialValue) & ~31
     }
 
     /// Computes the number of 32-byte words required to represent the given value.
@@ -322,8 +305,8 @@ public class Memory {
     /// - Parameter value: The unsigned integer value to be converted into a count of 32-byte words.
     /// - Returns: The number of 32-byte words needed to represent `value`.
     @inline(__always)
-    public static func numWords(_ value: UInt) -> UInt {
+    public static func numWords(_ value: Int) -> Int {
         let val = value.addingReportingOverflow(31)
-        return (val.overflow ? UInt.max : val.partialValue) >> 5
+        return (val.overflow ? Int.max : val.partialValue) >> 5
     }
 }
