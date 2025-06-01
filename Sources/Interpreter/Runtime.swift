@@ -22,9 +22,9 @@ public final class Runtime {
     var returnData: ReturnData
     var context: Context
 
-    init(machine: Machine, returnData: ReturnData, context: Context) {
-        self.machine = machine
-        self.returnData = returnData
+    init(code: [UInt8], data: [UInt8], gasLimit: UInt64, context: Context, handler: InterpreterHandler) {
+        self.machine = Machine(data: data, code: code, gasLimit: 0, handler: handler)
         self.context = context
+        self.returnData = ReturnData(buffer: [], length: 0, offset: 0)
     }
 }

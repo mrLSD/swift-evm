@@ -4,15 +4,18 @@ import PrimitiveTypes
 import Quick
 
 final class InstructionAndSpec: QuickSpec {
-    @MainActor
-    static let machine = TestMachine.machine(opcode: Opcode.AND, gasLimit: 10)
-    @MainActor
-    static let machineLowGas = TestMachine.machine(opcode: Opcode.AND, gasLimit: 2)
+    static var machine: Machine {
+        return TestMachine.machine(opcode: Opcode.AND, gasLimit: 10)
+    }
+
+    static var machineLowGas: Machine {
+        return TestMachine.machine(opcode: Opcode.AND, gasLimit: 2)
+    }
 
     override class func spec() {
         describe("Instruction AND") {
             it("a & b") {
-                var m = Self.machine
+                let m = Self.machine
 
                 let _ = m.stack.push(value: U256(from: 6))
                 let _ = m.stack.push(value: U256(from: 3))
@@ -28,7 +31,7 @@ final class InstructionAndSpec: QuickSpec {
             }
 
             it("`a & b`, when `b` not in the stack") {
-                var m = Self.machine
+                let m = Self.machine
 
                 let _ = m.stack.push(value: U256(from: 2))
                 m.evalLoop()
@@ -39,7 +42,7 @@ final class InstructionAndSpec: QuickSpec {
             }
 
             it("with OutOfGas result") {
-                var m = Self.machineLowGas
+                let m = Self.machineLowGas
 
                 let _ = m.stack.push(value: U256(from: 1))
                 let _ = m.stack.push(value: U256(from: 2))
@@ -51,16 +54,16 @@ final class InstructionAndSpec: QuickSpec {
             }
 
             it("check stack") {
-                var m = Self.machine
+                let m = Self.machine
                 m.evalLoop()
                 expect(m.machineStatus).to(equal(.Exit(.Error(.StackUnderflow))))
 
-                var m1 = Self.machine
+                let m1 = Self.machine
                 let _ = m1.stack.push(value: U256(from: 5))
                 m1.evalLoop()
                 expect(m1.machineStatus).to(equal(.Exit(.Error(.StackUnderflow))))
 
-                var m2 = Self.machine
+                let m2 = Self.machine
                 let _ = m2.stack.push(value: U256(from: 2))
                 let _ = m2.stack.push(value: U256(from: 2))
                 m2.evalLoop()
