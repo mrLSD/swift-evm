@@ -2,7 +2,7 @@ import PrimitiveTypes
 
 /// EVM System instructions
 enum SystemInstructions {
-    static func codeSize(machine m: inout Machine) {
+    static func codeSize(machine m: Machine) {
         if !m.gasRecordCost(cost: GasConstant.BASE) {
             return
         }
@@ -13,8 +13,7 @@ enum SystemInstructions {
 
     /// Performs a code copy operation by reading parameters from the machine's stack,
     /// calculating the associated gas costs, and executing the memory copy.
-    static func codeCopy(machine m: inout Machine) {
-        print("\(m.gas.remaining)")
+    static func codeCopy(machine m: Machine) {
         // Pop the required values from the stack: memory offset, code offset, and size.
         guard let rawMemoryOffset = m.stackPop() else {
             return
@@ -62,7 +61,7 @@ enum SystemInstructions {
         }
     }
 
-    static func callDataSize(machine m: inout Machine) {
+    static func callDataSize(machine m: Machine) {
         if !m.gasRecordCost(cost: GasConstant.BASE) {
             return
         }
@@ -71,7 +70,7 @@ enum SystemInstructions {
         m.stackPush(value: U256(from: newValue))
     }
 
-    static func callDataCopy(machine m: inout Machine) {
+    static func callDataCopy(machine m: Machine) {
         // Pop the required values from the stack: memory offset, code offset, and size.
         guard let rawMemoryOffset = m.stackPop() else {
             return
@@ -119,7 +118,7 @@ enum SystemInstructions {
         }
     }
 
-    static func callDataLoad(machine m: inout Machine) {
+    static func callDataLoad(machine m: Machine) {
         if !m.gasRecordCost(cost: GasConstant.VERYLOW) {
             return
         }

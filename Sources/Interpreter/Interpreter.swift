@@ -3,5 +3,4 @@ import Foundation
 /// EVM Handler protocol
 protocol Handler {}
 
-///
-typealias Operation = (_ state: Machine, _ handler: Handler) -> Void
+// typealias  = (_ state: Machine, _ handler: Handler) -> Void

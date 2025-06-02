@@ -4,15 +4,18 @@ import PrimitiveTypes
 import Quick
 
 final class InstructionIsZeroSpec: QuickSpec {
-    @MainActor
-    static let machine = TestMachine.machine(opcode: Opcode.ISZERO, gasLimit: 10)
-    @MainActor
-    static let machineLowGas = TestMachine.machine(opcode: Opcode.ISZERO, gasLimit: 2)
+    static var machine: Machine {
+        return TestMachine.machine(opcode: Opcode.ISZERO, gasLimit: 10)
+    }
+
+    static var machineLowGas: Machine {
+        return TestMachine.machine(opcode: Opcode.ISZERO, gasLimit: 2)
+    }
 
     override class func spec() {
         describe("Instruction ISZERO") {
             it("isZero true") {
-                var m = Self.machine
+                let m = Self.machine
 
                 let _ = m.stack.push(value: U256.ZERO)
                 m.evalLoop()
@@ -27,7 +30,7 @@ final class InstructionIsZeroSpec: QuickSpec {
             }
 
             it("isZero false") {
-                var m = Self.machine
+                let m = Self.machine
 
                 let _ = m.stack.push(value: U256(from: 5))
                 m.evalLoop()
@@ -42,7 +45,7 @@ final class InstructionIsZeroSpec: QuickSpec {
             }
 
             it("with OutOfGas result") {
-                var m = Self.machineLowGas
+                let m = Self.machineLowGas
 
                 let _ = m.stack.push(value: U256(from: 1))
                 m.evalLoop()
@@ -53,11 +56,11 @@ final class InstructionIsZeroSpec: QuickSpec {
             }
 
             it("check stack") {
-                var m = Self.machine
+                let m = Self.machine
                 m.evalLoop()
                 expect(m.machineStatus).to(equal(.Exit(.Error(.StackUnderflow))))
 
-                var m1 = Self.machine
+                let m1 = Self.machine
                 let _ = m1.stack.push(value: U256(from: 5))
                 m1.evalLoop()
                 expect(m1.machineStatus).to(equal(.Exit(.Success(.Stop))))

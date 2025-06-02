@@ -8,7 +8,7 @@ final class InstructionCallDataCopySpec: QuickSpec {
         describe("Instruction CALLDATACOPY") {
             it("with OutOfGas result for size=1") {
                 let callData: [UInt8] = [0x01, 0x02, 0x03, 0x04, 0x05]
-                var m = TestMachine.machine(data: callData, opcode: Opcode.CALLDATACOPY, gasLimit: 1)
+                let m = TestMachine.machine(data: callData, opcode: Opcode.CALLDATACOPY, gasLimit: 1)
 
                 let _ = m.stack.push(value: U256(from: 1))
                 let _ = m.stack.push(value: U256(from: 2))
@@ -24,17 +24,17 @@ final class InstructionCallDataCopySpec: QuickSpec {
 
             it("check stack underflow errors is as expected") {
                 let callData: [UInt8] = [0x01, 0x02, 0x03, 0x04, 0x05]
-                var m = TestMachine.machine(data: callData, opcode: Opcode.CALLDATACOPY, gasLimit: 10)
+                let m = TestMachine.machine(data: callData, opcode: Opcode.CALLDATACOPY, gasLimit: 10)
 
                 m.evalLoop()
                 expect(m.machineStatus).to(equal(.Exit(.Error(.StackUnderflow))))
 
-                var m1 = TestMachine.machine(data: callData, opcode: Opcode.CALLDATACOPY, gasLimit: 10)
+                let m1 = TestMachine.machine(data: callData, opcode: Opcode.CALLDATACOPY, gasLimit: 10)
                 let _ = m1.stack.push(value: U256(from: 5))
                 m1.evalLoop()
                 expect(m1.machineStatus).to(equal(.Exit(.Error(.StackUnderflow))))
 
-                var m2 = TestMachine.machine(data: callData, opcode: Opcode.CALLDATACOPY, gasLimit: 10)
+                let m2 = TestMachine.machine(data: callData, opcode: Opcode.CALLDATACOPY, gasLimit: 10)
                 let _ = m2.stack.push(value: U256(from: 2))
                 let _ = m2.stack.push(value: U256(from: 2))
                 m2.evalLoop()
@@ -42,7 +42,7 @@ final class InstructionCallDataCopySpec: QuickSpec {
             }
 
             it("data size = 0") {
-                var m = TestMachine.machine(data: [], opcode: Opcode.CALLDATACOPY, gasLimit: 10)
+                let m = TestMachine.machine(data: [], opcode: Opcode.CALLDATACOPY, gasLimit: 10)
                 let _ = m.stack.push(value: U256(from: 0))
                 let _ = m.stack.push(value: U256(from: 1))
                 let _ = m.stack.push(value: U256(from: 2))
@@ -57,7 +57,7 @@ final class InstructionCallDataCopySpec: QuickSpec {
 
             it("gas memory overflow for Data Size") {
                 let callData: [UInt8] = [0x01, 0x02, 0x03, 0x04, 0x05]
-                var m = TestMachine.machine(data: callData, opcode: Opcode.CALLDATACOPY, gasLimit: 10)
+                let m = TestMachine.machine(data: callData, opcode: Opcode.CALLDATACOPY, gasLimit: 10)
                 let _ = m.stack.push(value: U256(from: UInt64.max / 2))
                 let _ = m.stack.push(value: U256(from: 1))
                 let _ = m.stack.push(value: U256(from: 2))
@@ -72,7 +72,7 @@ final class InstructionCallDataCopySpec: QuickSpec {
 
             it("gas memory overflow for Data Offset") {
                 let callData: [UInt8] = [0x01, 0x02, 0x03, 0x04, 0x05]
-                var m = TestMachine.machine(data: callData, opcode: Opcode.CALLDATACOPY, gasLimit: 10)
+                let m = TestMachine.machine(data: callData, opcode: Opcode.CALLDATACOPY, gasLimit: 10)
                 let _ = m.stack.push(value: U256(from: 1))
                 let _ = m.stack.push(value: U256(from: 2))
                 let _ = m.stack.push(value: U256(from: UInt64(Int.max)))
@@ -87,7 +87,7 @@ final class InstructionCallDataCopySpec: QuickSpec {
 
             it("gas overflow for resized memoryGasCost") {
                 let callData: [UInt8] = [0x01, 0x02, 0x03, 0x04, 0x05]
-                var m = TestMachine.machine(data: callData, opcode: Opcode.CALLDATACOPY, gasLimit: 10)
+                let m = TestMachine.machine(data: callData, opcode: Opcode.CALLDATACOPY, gasLimit: 10)
                 let _ = m.stack.push(value: U256(from: 1))
                 let _ = m.stack.push(value: U256(from: 2))
                 let _ = m.stack.push(value: U256(from: 96))
@@ -102,7 +102,7 @@ final class InstructionCallDataCopySpec: QuickSpec {
 
             it("MemoryOperation error - CopyDataLimitExceeded") {
                 let callData: [UInt8] = [0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07]
-                var m = TestMachine.machine(data: callData, opcodes: [Opcode.JUMPDEST, Opcode.JUMPDEST, Opcode.JUMPDEST, Opcode.JUMPDEST, Opcode.JUMPDEST, Opcode.JUMPDEST, Opcode.CALLDATACOPY], gasLimit: 100, memoryLimit: 4)
+                let m = TestMachine.machine(data: callData, opcodes: [Opcode.JUMPDEST, Opcode.JUMPDEST, Opcode.JUMPDEST, Opcode.JUMPDEST, Opcode.JUMPDEST, Opcode.JUMPDEST, Opcode.CALLDATACOPY], gasLimit: 100, memoryLimit: 4)
                 let _ = m.stack.push(value: U256(from: 3))
                 let _ = m.stack.push(value: U256(from: 2))
                 let _ = m.stack.push(value: U256(from: 32))
@@ -117,7 +117,7 @@ final class InstructionCallDataCopySpec: QuickSpec {
 
             it("check stack Int failure is as expected") {
                 let callData: [UInt8] = [0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07]
-                var m1 = TestMachine.machine(data: callData, opcode: Opcode.CALLDATACOPY, gasLimit: 100)
+                let m1 = TestMachine.machine(data: callData, opcode: Opcode.CALLDATACOPY, gasLimit: 100)
                 let _ = m1.stack.push(value: U256(from: 3))
                 let _ = m1.stack.push(value: U256(from: 4))
                 let _ = m1.stack.push(value: U256(from: [1, 1, 0, 0]))
@@ -128,7 +128,7 @@ final class InstructionCallDataCopySpec: QuickSpec {
                 expect(m1.gas.memoryGas.numWords).to(equal(0))
                 expect(m1.gas.memoryGas.gasCost).to(equal(0))
 
-                var m2 = TestMachine.machine(data: callData, opcode: Opcode.CALLDATACOPY, gasLimit: 100)
+                let m2 = TestMachine.machine(data: callData, opcode: Opcode.CALLDATACOPY, gasLimit: 100)
                 let _ = m2.stack.push(value: U256(from: 3))
                 let _ = m2.stack.push(value: U256(from: [1, 1, 0, 0]))
                 let _ = m2.stack.push(value: U256(from: 32))
@@ -139,7 +139,7 @@ final class InstructionCallDataCopySpec: QuickSpec {
                 expect(m2.gas.memoryGas.numWords).to(equal(0))
                 expect(m2.gas.memoryGas.gasCost).to(equal(0))
 
-                var m3 = TestMachine.machine(data: callData, opcode: Opcode.CALLDATACOPY, gasLimit: 100)
+                let m3 = TestMachine.machine(data: callData, opcode: Opcode.CALLDATACOPY, gasLimit: 100)
                 let _ = m3.stack.push(value: U256(from: [1, 1, 0, 0]))
                 let _ = m3.stack.push(value: U256(from: 4))
                 let _ = m3.stack.push(value: U256(from: 32))
@@ -151,10 +151,9 @@ final class InstructionCallDataCopySpec: QuickSpec {
                 expect(m3.gas.memoryGas.gasCost).to(equal(0))
             }
 
-
             it("success") {
                 let callData: [UInt8] = [0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07]
-                var m = TestMachine.machine(data: callData, opcode: Opcode.CALLDATACOPY, gasLimit: 100)
+                let m = TestMachine.machine(data: callData, opcode: Opcode.CALLDATACOPY, gasLimit: 100)
                 let _ = m.stack.push(value: U256(from: 3))
                 let _ = m.stack.push(value: U256(from: 4))
                 let _ = m.stack.push(value: U256(from: 32))

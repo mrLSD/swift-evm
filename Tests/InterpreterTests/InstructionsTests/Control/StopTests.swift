@@ -8,7 +8,7 @@ final class InstructionStopSpec: QuickSpec {
     override class func spec() {
         describe("Instruction STOP") {
             it("Stop immediately") {
-                var m = TestMachine.machine(opcodes: [Opcode.STOP, Opcode.PC], gasLimit: 10)
+                 let m = TestMachine.machine(opcodes: [Opcode.STOP, Opcode.PC], gasLimit: 10)
 
                 m.evalLoop()
 
@@ -19,7 +19,7 @@ final class InstructionStopSpec: QuickSpec {
             }
 
             it("Stop after multiple instructions") {
-                var m = TestMachine.machine(opcodes: [Opcode.PC, Opcode.PC, Opcode.PC, Opcode.STOP], gasLimit: 10)
+                 let m = TestMachine.machine(opcodes: [Opcode.PC, Opcode.PC, Opcode.PC, Opcode.STOP], gasLimit: 10)
 
                 m.evalLoop()
 

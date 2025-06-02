@@ -7,7 +7,7 @@ final class InstructionNotExistSpec: QuickSpec {
     override class func spec() {
         describe("Instruction Not Exist (invalid opcode)") {
             it("Not existed opcode") {
-                var m = Machine(data: [], code: [0xEF], gasLimit: 10, handler: TestHandler())
+                let m = Machine(data: [], code: [0xEF], gasLimit: 10, handler: TestHandler())
 
                 let _ = m.stack.push(value: U256(from: 1))
                 let _ = m.stack.push(value: U256(from: 2))

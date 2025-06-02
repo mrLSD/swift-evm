@@ -4,12 +4,12 @@ import PrimitiveTypes
 /// extend functionality for specific needs
 public protocol InterpreterHandler {
     /// Run function before `Opcode` execution in evaluation stage in Machine
-    func beforeOpcodeExecution(machine: inout Machine, opcode: Opcode, address: H160) -> Machine
+    func beforeOpcodeExecution(machine: Machine, opcode: Opcode, address: H160) -> Machine
         .ExitError?
 }
 
 /// Machine represents EVM core execution layer
-public struct Machine {
+public final class Machine {
     /// Program input data
     let data: [UInt8]
     /// Program code.
@@ -90,7 +90,7 @@ public struct Machine {
 
     /// Closure type of Evaluation function.
     /// This function returns `MachineStatus` as result of evaluation
-    typealias EvalFunction = (_ m: inout Self) -> Void
+    typealias EvalFunction = (_ m: Machine) -> Void
 
     /// Instructions evaluation table. Used to evaluate specific opcodes.
     /// It represent evaluation functions for each existed opcodes. Table initialized with 255 `nil` instructions and filled for each specific `EVM` opcode.
@@ -145,72 +145,72 @@ public struct Machine {
         // Stack
         table[Opcode.POP.index] = StackInstructions.pop
         table[Opcode.PUSH0.index] = StackInstructions.push0
-        table[Opcode.PUSH1.index] = { (_ m: inout Self) in StackInstructions.push(machine: &m, n: 1) }
-        table[Opcode.PUSH2.index] = { (_ m: inout Self) in StackInstructions.push(machine: &m, n: 2) }
-        table[Opcode.PUSH3.index] = { (_ m: inout Self) in StackInstructions.push(machine: &m, n: 3) }
-        table[Opcode.PUSH4.index] = { (_ m: inout Self) in StackInstructions.push(machine: &m, n: 4) }
-        table[Opcode.PUSH5.index] = { (_ m: inout Self) in StackInstructions.push(machine: &m, n: 5) }
-        table[Opcode.PUSH6.index] = { (_ m: inout Self) in StackInstructions.push(machine: &m, n: 6) }
-        table[Opcode.PUSH7.index] = { (_ m: inout Self) in StackInstructions.push(machine: &m, n: 7) }
-        table[Opcode.PUSH8.index] = { (_ m: inout Self) in StackInstructions.push(machine: &m, n: 8) }
-        table[Opcode.PUSH9.index] = { (_ m: inout Self) in StackInstructions.push(machine: &m, n: 9) }
-        table[Opcode.PUSH10.index] = { (_ m: inout Self) in StackInstructions.push(machine: &m, n: 10) }
-        table[Opcode.PUSH11.index] = { (_ m: inout Self) in StackInstructions.push(machine: &m, n: 11) }
-        table[Opcode.PUSH12.index] = { (_ m: inout Self) in StackInstructions.push(machine: &m, n: 12) }
-        table[Opcode.PUSH13.index] = { (_ m: inout Self) in StackInstructions.push(machine: &m, n: 13) }
-        table[Opcode.PUSH14.index] = { (_ m: inout Self) in StackInstructions.push(machine: &m, n: 14) }
-        table[Opcode.PUSH15.index] = { (_ m: inout Self) in StackInstructions.push(machine: &m, n: 15) }
-        table[Opcode.PUSH16.index] = { (_ m: inout Self) in StackInstructions.push(machine: &m, n: 16) }
-        table[Opcode.PUSH17.index] = { (_ m: inout Self) in StackInstructions.push(machine: &m, n: 17) }
-        table[Opcode.PUSH18.index] = { (_ m: inout Self) in StackInstructions.push(machine: &m, n: 18) }
-        table[Opcode.PUSH19.index] = { (_ m: inout Self) in StackInstructions.push(machine: &m, n: 19) }
-        table[Opcode.PUSH20.index] = { (_ m: inout Self) in StackInstructions.push(machine: &m, n: 20) }
-        table[Opcode.PUSH21.index] = { (_ m: inout Self) in StackInstructions.push(machine: &m, n: 21) }
-        table[Opcode.PUSH22.index] = { (_ m: inout Self) in StackInstructions.push(machine: &m, n: 22) }
-        table[Opcode.PUSH23.index] = { (_ m: inout Self) in StackInstructions.push(machine: &m, n: 23) }
-        table[Opcode.PUSH24.index] = { (_ m: inout Self) in StackInstructions.push(machine: &m, n: 24) }
-        table[Opcode.PUSH25.index] = { (_ m: inout Self) in StackInstructions.push(machine: &m, n: 25) }
-        table[Opcode.PUSH26.index] = { (_ m: inout Self) in StackInstructions.push(machine: &m, n: 26) }
-        table[Opcode.PUSH27.index] = { (_ m: inout Self) in StackInstructions.push(machine: &m, n: 27) }
-        table[Opcode.PUSH28.index] = { (_ m: inout Self) in StackInstructions.push(machine: &m, n: 28) }
-        table[Opcode.PUSH29.index] = { (_ m: inout Self) in StackInstructions.push(machine: &m, n: 29) }
-        table[Opcode.PUSH30.index] = { (_ m: inout Self) in StackInstructions.push(machine: &m, n: 30) }
-        table[Opcode.PUSH31.index] = { (_ m: inout Self) in StackInstructions.push(machine: &m, n: 31) }
-        table[Opcode.PUSH32.index] = { (_ m: inout Self) in StackInstructions.push(machine: &m, n: 32) }
+        table[Opcode.PUSH1.index] = { (_ m: Machine) in StackInstructions.push(machine: m, n: 1) }
+        table[Opcode.PUSH2.index] = { (_ m: Machine) in StackInstructions.push(machine: m, n: 2) }
+        table[Opcode.PUSH3.index] = { (_ m: Machine) in StackInstructions.push(machine: m, n: 3) }
+        table[Opcode.PUSH4.index] = { (_ m: Machine) in StackInstructions.push(machine: m, n: 4) }
+        table[Opcode.PUSH5.index] = { (_ m: Machine) in StackInstructions.push(machine: m, n: 5) }
+        table[Opcode.PUSH6.index] = { (_ m: Machine) in StackInstructions.push(machine: m, n: 6) }
+        table[Opcode.PUSH7.index] = { (_ m: Machine) in StackInstructions.push(machine: m, n: 7) }
+        table[Opcode.PUSH8.index] = { (_ m: Machine) in StackInstructions.push(machine: m, n: 8) }
+        table[Opcode.PUSH9.index] = { (_ m: Machine) in StackInstructions.push(machine: m, n: 9) }
+        table[Opcode.PUSH10.index] = { (_ m: Machine) in StackInstructions.push(machine: m, n: 10) }
+        table[Opcode.PUSH11.index] = { (_ m: Machine) in StackInstructions.push(machine: m, n: 11) }
+        table[Opcode.PUSH12.index] = { (_ m: Machine) in StackInstructions.push(machine: m, n: 12) }
+        table[Opcode.PUSH13.index] = { (_ m: Machine) in StackInstructions.push(machine: m, n: 13) }
+        table[Opcode.PUSH14.index] = { (_ m: Machine) in StackInstructions.push(machine: m, n: 14) }
+        table[Opcode.PUSH15.index] = { (_ m: Machine) in StackInstructions.push(machine: m, n: 15) }
+        table[Opcode.PUSH16.index] = { (_ m: Machine) in StackInstructions.push(machine: m, n: 16) }
+        table[Opcode.PUSH17.index] = { (_ m: Machine) in StackInstructions.push(machine: m, n: 17) }
+        table[Opcode.PUSH18.index] = { (_ m: Machine) in StackInstructions.push(machine: m, n: 18) }
+        table[Opcode.PUSH19.index] = { (_ m: Machine) in StackInstructions.push(machine: m, n: 19) }
+        table[Opcode.PUSH20.index] = { (_ m: Machine) in StackInstructions.push(machine: m, n: 20) }
+        table[Opcode.PUSH21.index] = { (_ m: Machine) in StackInstructions.push(machine: m, n: 21) }
+        table[Opcode.PUSH22.index] = { (_ m: Machine) in StackInstructions.push(machine: m, n: 22) }
+        table[Opcode.PUSH23.index] = { (_ m: Machine) in StackInstructions.push(machine: m, n: 23) }
+        table[Opcode.PUSH24.index] = { (_ m: Machine) in StackInstructions.push(machine: m, n: 24) }
+        table[Opcode.PUSH25.index] = { (_ m: Machine) in StackInstructions.push(machine: m, n: 25) }
+        table[Opcode.PUSH26.index] = { (_ m: Machine) in StackInstructions.push(machine: m, n: 26) }
+        table[Opcode.PUSH27.index] = { (_ m: Machine) in StackInstructions.push(machine: m, n: 27) }
+        table[Opcode.PUSH28.index] = { (_ m: Machine) in StackInstructions.push(machine: m, n: 28) }
+        table[Opcode.PUSH29.index] = { (_ m: Machine) in StackInstructions.push(machine: m, n: 29) }
+        table[Opcode.PUSH30.index] = { (_ m: Machine) in StackInstructions.push(machine: m, n: 30) }
+        table[Opcode.PUSH31.index] = { (_ m: Machine) in StackInstructions.push(machine: m, n: 31) }
+        table[Opcode.PUSH32.index] = { (_ m: Machine) in StackInstructions.push(machine: m, n: 32) }
 
-        table[Opcode.SWAP1.index] = { (_ m: inout Self) in StackInstructions.swap(machine: &m, n: 1) }
-        table[Opcode.SWAP2.index] = { (_ m: inout Self) in StackInstructions.swap(machine: &m, n: 2) }
-        table[Opcode.SWAP3.index] = { (_ m: inout Self) in StackInstructions.swap(machine: &m, n: 3) }
-        table[Opcode.SWAP4.index] = { (_ m: inout Self) in StackInstructions.swap(machine: &m, n: 4) }
-        table[Opcode.SWAP5.index] = { (_ m: inout Self) in StackInstructions.swap(machine: &m, n: 5) }
-        table[Opcode.SWAP6.index] = { (_ m: inout Self) in StackInstructions.swap(machine: &m, n: 6) }
-        table[Opcode.SWAP7.index] = { (_ m: inout Self) in StackInstructions.swap(machine: &m, n: 7) }
-        table[Opcode.SWAP8.index] = { (_ m: inout Self) in StackInstructions.swap(machine: &m, n: 8) }
-        table[Opcode.SWAP9.index] = { (_ m: inout Self) in StackInstructions.swap(machine: &m, n: 9) }
-        table[Opcode.SWAP10.index] = { (_ m: inout Self) in StackInstructions.swap(machine: &m, n: 10) }
-        table[Opcode.SWAP11.index] = { (_ m: inout Self) in StackInstructions.swap(machine: &m, n: 11) }
-        table[Opcode.SWAP12.index] = { (_ m: inout Self) in StackInstructions.swap(machine: &m, n: 12) }
-        table[Opcode.SWAP13.index] = { (_ m: inout Self) in StackInstructions.swap(machine: &m, n: 13) }
-        table[Opcode.SWAP14.index] = { (_ m: inout Self) in StackInstructions.swap(machine: &m, n: 14) }
-        table[Opcode.SWAP15.index] = { (_ m: inout Self) in StackInstructions.swap(machine: &m, n: 15) }
-        table[Opcode.SWAP16.index] = { (_ m: inout Self) in StackInstructions.swap(machine: &m, n: 16) }
+        table[Opcode.SWAP1.index] = { (_ m: Machine) in StackInstructions.swap(machine: m, n: 1) }
+        table[Opcode.SWAP2.index] = { (_ m: Machine) in StackInstructions.swap(machine: m, n: 2) }
+        table[Opcode.SWAP3.index] = { (_ m: Machine) in StackInstructions.swap(machine: m, n: 3) }
+        table[Opcode.SWAP4.index] = { (_ m: Machine) in StackInstructions.swap(machine: m, n: 4) }
+        table[Opcode.SWAP5.index] = { (_ m: Machine) in StackInstructions.swap(machine: m, n: 5) }
+        table[Opcode.SWAP6.index] = { (_ m: Machine) in StackInstructions.swap(machine: m, n: 6) }
+        table[Opcode.SWAP7.index] = { (_ m: Machine) in StackInstructions.swap(machine: m, n: 7) }
+        table[Opcode.SWAP8.index] = { (_ m: Machine) in StackInstructions.swap(machine: m, n: 8) }
+        table[Opcode.SWAP9.index] = { (_ m: Machine) in StackInstructions.swap(machine: m, n: 9) }
+        table[Opcode.SWAP10.index] = { (_ m: Machine) in StackInstructions.swap(machine: m, n: 10) }
+        table[Opcode.SWAP11.index] = { (_ m: Machine) in StackInstructions.swap(machine: m, n: 11) }
+        table[Opcode.SWAP12.index] = { (_ m: Machine) in StackInstructions.swap(machine: m, n: 12) }
+        table[Opcode.SWAP13.index] = { (_ m: Machine) in StackInstructions.swap(machine: m, n: 13) }
+        table[Opcode.SWAP14.index] = { (_ m: Machine) in StackInstructions.swap(machine: m, n: 14) }
+        table[Opcode.SWAP15.index] = { (_ m: Machine) in StackInstructions.swap(machine: m, n: 15) }
+        table[Opcode.SWAP16.index] = { (_ m: Machine) in StackInstructions.swap(machine: m, n: 16) }
 
-        table[Opcode.DUP1.index] = { (_ m: inout Self) in StackInstructions.dup(machine: &m, n: 1) }
-        table[Opcode.DUP2.index] = { (_ m: inout Self) in StackInstructions.dup(machine: &m, n: 2) }
-        table[Opcode.DUP3.index] = { (_ m: inout Self) in StackInstructions.dup(machine: &m, n: 3) }
-        table[Opcode.DUP4.index] = { (_ m: inout Self) in StackInstructions.dup(machine: &m, n: 4) }
-        table[Opcode.DUP5.index] = { (_ m: inout Self) in StackInstructions.dup(machine: &m, n: 5) }
-        table[Opcode.DUP6.index] = { (_ m: inout Self) in StackInstructions.dup(machine: &m, n: 6) }
-        table[Opcode.DUP7.index] = { (_ m: inout Self) in StackInstructions.dup(machine: &m, n: 7) }
-        table[Opcode.DUP8.index] = { (_ m: inout Self) in StackInstructions.dup(machine: &m, n: 8) }
-        table[Opcode.DUP9.index] = { (_ m: inout Self) in StackInstructions.dup(machine: &m, n: 9) }
-        table[Opcode.DUP10.index] = { (_ m: inout Self) in StackInstructions.dup(machine: &m, n: 10) }
-        table[Opcode.DUP11.index] = { (_ m: inout Self) in StackInstructions.dup(machine: &m, n: 11) }
-        table[Opcode.DUP12.index] = { (_ m: inout Self) in StackInstructions.dup(machine: &m, n: 12) }
-        table[Opcode.DUP13.index] = { (_ m: inout Self) in StackInstructions.dup(machine: &m, n: 13) }
-        table[Opcode.DUP14.index] = { (_ m: inout Self) in StackInstructions.dup(machine: &m, n: 14) }
-        table[Opcode.DUP15.index] = { (_ m: inout Self) in StackInstructions.dup(machine: &m, n: 15) }
-        table[Opcode.DUP16.index] = { (_ m: inout Self) in StackInstructions.dup(machine: &m, n: 16) }
+        table[Opcode.DUP1.index] = { (_ m: Machine) in StackInstructions.dup(machine: m, n: 1) }
+        table[Opcode.DUP2.index] = { (_ m: Machine) in StackInstructions.dup(machine: m, n: 2) }
+        table[Opcode.DUP3.index] = { (_ m: Machine) in StackInstructions.dup(machine: m, n: 3) }
+        table[Opcode.DUP4.index] = { (_ m: Machine) in StackInstructions.dup(machine: m, n: 4) }
+        table[Opcode.DUP5.index] = { (_ m: Machine) in StackInstructions.dup(machine: m, n: 5) }
+        table[Opcode.DUP6.index] = { (_ m: Machine) in StackInstructions.dup(machine: m, n: 6) }
+        table[Opcode.DUP7.index] = { (_ m: Machine) in StackInstructions.dup(machine: m, n: 7) }
+        table[Opcode.DUP8.index] = { (_ m: Machine) in StackInstructions.dup(machine: m, n: 8) }
+        table[Opcode.DUP9.index] = { (_ m: Machine) in StackInstructions.dup(machine: m, n: 9) }
+        table[Opcode.DUP10.index] = { (_ m: Machine) in StackInstructions.dup(machine: m, n: 10) }
+        table[Opcode.DUP11.index] = { (_ m: Machine) in StackInstructions.dup(machine: m, n: 11) }
+        table[Opcode.DUP12.index] = { (_ m: Machine) in StackInstructions.dup(machine: m, n: 12) }
+        table[Opcode.DUP13.index] = { (_ m: Machine) in StackInstructions.dup(machine: m, n: 13) }
+        table[Opcode.DUP14.index] = { (_ m: Machine) in StackInstructions.dup(machine: m, n: 14) }
+        table[Opcode.DUP15.index] = { (_ m: Machine) in StackInstructions.dup(machine: m, n: 15) }
+        table[Opcode.DUP16.index] = { (_ m: Machine) in StackInstructions.dup(machine: m, n: 16) }
 
         // Memory
         table[Opcode.MLOAD.index] = MemoryInstructions.mload
@@ -281,7 +281,7 @@ public struct Machine {
     /// Especially:
     /// - `PC` - program counter for next execution. It can just incremented or set to jump index. PC range: `0..<self.code.count`. When `step` is completed PC incremented (or changed with jump destitations) for the next step opcode processing.
     /// - `machineStatus` - during evaluation can be changed, for example contain result of `ExitReason`
-    mutating func step() {
+    func step() {
         // Ensure that `PC` in code range, otherwise indicate `sTOP` execution.
         if self.pc >= self.code.count {
             self.machineStatus = .Exit(.Success(.Stop))
@@ -300,7 +300,7 @@ public struct Machine {
 
         // Run evaluation function for Opcode.
         // NOTE: It can change `MachineStatus` or `PC`
-        evalFunc(&self)
+        evalFunc(self)
 
         // Change `PC` for the next step
         switch self.machineStatus {
@@ -322,7 +322,7 @@ public struct Machine {
 
     /// Evaluation loop for `Machine` code.
     /// Return status of evaluation.
-    mutating func evalLoop() {
+    func evalLoop() {
         // Set `MachineStatus` to `Continue` to start evaluation.
         self.machineStatus = MachineStatus.Continue
         // Evaluation loop
@@ -336,7 +336,7 @@ public struct Machine {
     ///
     /// ## Return
     /// Optional value
-    mutating func stackPop() -> U256? {
+    func stackPop() -> U256? {
         switch self.stack.pop() {
         case .success(let value):
             return value
@@ -349,7 +349,7 @@ public struct Machine {
     /// Wrapper for `MachineStack` push operation. If `push` operation fails, set
     /// `machineStatus` exit error status.
 
-    mutating func stackPush(value: U256) {
+    func stackPush(value: U256) {
         switch self.stack.push(value: value) {
         case .success:
             return
@@ -364,7 +364,7 @@ public struct Machine {
     ///
     /// ## Return
     /// Boolean value is operation success or not
-    mutating func stackPeek(indexFromTop: Int) -> U256? {
+    func stackPeek(indexFromTop: Int) -> U256? {
         switch self.stack.peek(indexFromTop: indexFromTop) {
         case .success(let val):
             return val
@@ -379,7 +379,7 @@ public struct Machine {
     ///
     /// ## Return
     /// Boolean value is operation success or not
-    mutating func gasRecordCost(cost: UInt64) -> Bool {
+    func gasRecordCost(cost: UInt64) -> Bool {
         if !self.gas.recordCost(cost: cost) {
             self.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.OutOfGas))
             return false
@@ -397,7 +397,7 @@ public struct Machine {
     ///   - offset: The starting offset from which the memory should be resized.
     ///   - size: The new size to which the memory should be resized.
     /// - Returns: A Boolean value indicating whether the memory was successfully resized and the gas cost recorded.
-    mutating func resizeMemoryAndRecordGas(offset: Int, size: Int) -> Bool {
+    func resizeMemoryAndRecordGas(offset: Int, size: Int) -> Bool {
         // Calculate the gas cost for resizing memory.
         let resizeMemoryCost = self.gas.memoryGas.resize(end: offset, length: size)
         switch resizeMemoryCost {
@@ -431,7 +431,7 @@ public struct Machine {
     /// - Parameters:
     ///   - value: `U256` for converting
     /// - Returns: optional `UInt` value
-    mutating func getIntOrFail(_ value: U256) -> Int? {
+    func getIntOrFail(_ value: U256) -> Int? {
         guard let intValue = value.getInt else {
             self.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.IntOverflow))
             return nil

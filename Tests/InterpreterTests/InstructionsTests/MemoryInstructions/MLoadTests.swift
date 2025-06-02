@@ -5,13 +5,10 @@ import PrimitiveTypes
 import Quick
 
 final class MLoadSpec: QuickSpec {
-    @MainActor
-    static let machineLowGas = TestMachine.machine(opcode: Opcode.MLOAD, gasLimit: 1)
-
     override class func spec() {
         describe("Instruction MLOAD") {
             it("with OutOfGas result for size=1") {
-                var m = Self.machineLowGas
+                 let m = TestMachine.machine(opcode: Opcode.MLOAD, gasLimit: 1)
 
                 let _ = m.stack.push(value: U256(from: 1))
                 m.evalLoop()
@@ -25,7 +22,7 @@ final class MLoadSpec: QuickSpec {
         }
 
         it("check stack underflow errors is as expected") {
-            var m = TestMachine.machine(opcode: Opcode.MLOAD, gasLimit: 10)
+             let m = TestMachine.machine(opcode: Opcode.MLOAD, gasLimit: 10)
             m.evalLoop()
             expect(m.machineStatus).to(equal(.Exit(.Error(.StackUnderflow))))
             expect(m.gas.remaining).to(equal(7))
@@ -34,7 +31,7 @@ final class MLoadSpec: QuickSpec {
         }
 
         it("gas overflow for resized memoryGasCost") {
-            var m = TestMachine.machine(opcode: Opcode.MLOAD, gasLimit: 10)
+             let m = TestMachine.machine(opcode: Opcode.MLOAD, gasLimit: 10)
             let _ = m.stack.push(value: U256(from: 97))
             m.evalLoop()
 
@@ -46,7 +43,7 @@ final class MLoadSpec: QuickSpec {
         }
 
         it("check stack Int failure is as expected") {
-            var m = TestMachine.machine(opcode: Opcode.MLOAD, gasLimit: 100)
+             let m = TestMachine.machine(opcode: Opcode.MLOAD, gasLimit: 100)
             let res = m.memory.set(offset: 31, value: [UInt8](repeating: 3, count: 14), size: 14)
             expect(res).to(beSuccess())
             let _ = m.stack.push(value: U256(from: [1, 1, 0, 0]))
@@ -60,7 +57,7 @@ final class MLoadSpec: QuickSpec {
         }
 
         it("success") {
-            var m = TestMachine.machine(opcode: Opcode.MLOAD, gasLimit: 100)
+             let m = TestMachine.machine(opcode: Opcode.MLOAD, gasLimit: 100)
             let res = m.memory.set(offset: 31, value: [UInt8](repeating: 3, count: 14), size: 14)
             expect(res).to(beSuccess())
 

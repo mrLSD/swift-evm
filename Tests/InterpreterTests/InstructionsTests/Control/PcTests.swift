@@ -10,7 +10,7 @@ final class InstructionPcSpec: QuickSpec {
     override class func spec() {
         describe("Instruction PC") {
             it("PC = 1") {
-                var m = TestMachine.machine(opcode: Opcode.PC, gasLimit: 10)
+                 let m = TestMachine.machine(opcode: Opcode.PC, gasLimit: 10)
 
                 m.evalLoop()
 
@@ -27,7 +27,7 @@ final class InstructionPcSpec: QuickSpec {
             }
 
             it("PC = 4") {
-                var m = TestMachine.machine(opcodes: [Opcode.PC, Opcode.PC, Opcode.PC, Opcode.PC], gasLimit: 10)
+                 let m = TestMachine.machine(opcodes: [Opcode.PC, Opcode.PC, Opcode.PC, Opcode.PC], gasLimit: 10)
 
                 m.evalLoop()
 
@@ -46,7 +46,7 @@ final class InstructionPcSpec: QuickSpec {
             }
 
             it("with OutOfGas result") {
-                var m = Self.machineLowGas
+                 let m = Self.machineLowGas
 
                 m.evalLoop()
 
@@ -56,7 +56,7 @@ final class InstructionPcSpec: QuickSpec {
             }
 
             it("check stack overflow") {
-                var m = TestMachine.machine(opcode: Opcode.PC, gasLimit: 10)
+                 let m = TestMachine.machine(opcode: Opcode.PC, gasLimit: 10)
                 for _ in 0 ..< m.stack.limit {
                     let _ = m.stack.push(value: U256(from: 5))
                 }

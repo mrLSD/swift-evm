@@ -4,13 +4,10 @@ import PrimitiveTypes
 import Quick
 
 final class InstructionPush0Spec: QuickSpec {
-    @MainActor
-    static let machineLowGas = TestMachine.machine(opcode: Opcode.PUSH0, gasLimit: 1)
-
     override class func spec() {
         describe("Instruction PUSH0") {
             it("PUSH 0") {
-                var m = TestMachine.machine(opcode: Opcode.PUSH0, gasLimit: 10)
+                 let m = TestMachine.machine(opcode: Opcode.PUSH0, gasLimit: 10)
 
                 m.evalLoop()
                 let result = m.stack.pop()
@@ -24,7 +21,7 @@ final class InstructionPush0Spec: QuickSpec {
             }
 
             it("with OutOfGas result") {
-                var m = Self.machineLowGas
+                 let m = TestMachine.machine(opcode: Opcode.PUSH0, gasLimit: 1)
 
                 m.evalLoop()
 
@@ -34,7 +31,7 @@ final class InstructionPush0Spec: QuickSpec {
             }
 
             it("check stack overflow") {
-                var m = TestMachine.machine(opcode: Opcode.PUSH0, gasLimit: 10)
+                 let m = TestMachine.machine(opcode: Opcode.PUSH0, gasLimit: 10)
                 for _ in 0 ..< m.stack.limit {
                     let _ = m.stack.push(value: U256(from: 5))
                 }
@@ -47,4 +44,3 @@ final class InstructionPush0Spec: QuickSpec {
         }
     }
 }
-

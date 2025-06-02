@@ -5,14 +5,11 @@ import PrimitiveTypes
 import Quick
 
 final class InstructionDupSpec: QuickSpec {
-    @MainActor
-    static let machineLowGas = TestMachine.machine(opcode: Opcode.DUP1, gasLimit: 1)
-
     override class func spec() {
         describe("Instruction DUP") {
             it("correct dup for DUP1..DUP16") {
                 for n in 0 ... UInt8(15) {
-                    var m = TestMachine.machine(rawCode: [Opcode.DUP1.rawValue + n], gasLimit: 10)
+                    let m = TestMachine.machine(rawCode: [Opcode.DUP1.rawValue + n], gasLimit: 10)
 
                     for i in (1 ... UInt64(n + 1)).reversed() {
                         let _ = m.stack.push(value: U256(from: i))
@@ -32,7 +29,7 @@ final class InstructionDupSpec: QuickSpec {
             }
 
             it("with OutOfGas result") {
-                var m = Self.machineLowGas
+                 let m = TestMachine.machine(opcode: Opcode.DUP1, gasLimit: 1)
 
                 for i in (1 ... UInt64(16)).reversed() {
                     let _ = m.stack.push(value: U256(from: i))
@@ -47,7 +44,7 @@ final class InstructionDupSpec: QuickSpec {
         }
 
         it("check stack underflow for empty stack") {
-            var m = TestMachine.machine(opcode: Opcode.DUP1, gasLimit: 10)
+             let m = TestMachine.machine(opcode: Opcode.DUP1, gasLimit: 10)
 
             m.evalLoop()
             expect(m.machineStatus).to(equal(.Exit(.Error(.StackUnderflow))))
@@ -57,7 +54,7 @@ final class InstructionDupSpec: QuickSpec {
 
         it("check stack underflow for DUP1..DUP16") {
             for n in 0 ... UInt8(15) {
-                var m = TestMachine.machine(rawCode: [Opcode.DUP1.rawValue + n], gasLimit: 10)
+                 let m = TestMachine.machine(rawCode: [Opcode.DUP1.rawValue + n], gasLimit: 10)
                 if n > 0 {
                     for i in (1 ... UInt64(n)).reversed() {
                         let _ = m.stack.push(value: U256(from: i))
@@ -73,7 +70,7 @@ final class InstructionDupSpec: QuickSpec {
 
         it("check stack overflow for DUP1..DUP16") {
             for n in 0 ... UInt8(15) {
-                var m = TestMachine.machine(rawCode: [Opcode.DUP1.rawValue + n], gasLimit: 10)
+                 let m = TestMachine.machine(rawCode: [Opcode.DUP1.rawValue + n], gasLimit: 10)
                 for i in 1 ... UInt64(m.stack.limit) {
                     let _ = m.stack.push(value: U256(from: i))
                 }
