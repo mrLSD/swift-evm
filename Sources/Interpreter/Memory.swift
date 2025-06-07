@@ -1,7 +1,7 @@
-#if os(Linux)
-import Glibc
-#else
+#if os(macOS) || os(iOS) || os(watchOS) || os(tvOS) || os(visionOS)
 import Darwin
+#elseif os(Linux)
+import Glibc
 #endif
 
 /// Machine Memory with  specific limit.
@@ -35,9 +35,13 @@ public class Memory {
     /// This deinitializer is automatically called when the instance is about to be deallocated.
     /// If a memory buffer has been allocated, its memory is released using `free(_:)` to prevent memory leaks.
     deinit {
+        #if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(visionOS) || os(Linux)
         if let buf = buffer {
             free(buf)
         }
+        #else
+        buffer?.deallocate()
+        #endif
     }
 
     /// Resizes the internal buffer to accommodate a range defined by a starting offset and a length.
@@ -84,17 +88,37 @@ public class Memory {
         }
 
         let newSize = Memory.ceil32(end)
+        #if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(visionOS) || os(Linux)
         if let oldBuffer = self.buffer {
             guard let newBuffer = realloc(oldBuffer, newSize) else { return false }
             let offset = self.effectiveLength
             // Set resized `newSize` with zero
-            memset(newBuffer.advanced(by: offset), 0, newSize - offset)
+            Self.memSet(dstPtr: newBuffer.advanced(by: offset), value: 0, count: newSize - offset)
             self.buffer = newBuffer
         } else {
             guard let newBuffer = malloc(newSize) else { return false }
-            memset(newBuffer, 0, newSize)
+            Self.memSet(dstPtr: newBuffer, value: 0, count: newSize)
             self.buffer = newBuffer
         }
+        #else
+        let newBuffer: UnsafeMutableRawPointer
+        let alignment = MemoryLayout<UInt8>.alignment
+
+        if let oldBuffer = self.buffer {
+            newBuffer = UnsafeMutableRawPointer.allocate(byteCount: newSize, alignment: alignment)
+            let offset = self.effectiveLength
+            // Copy all memory from old to new buffer
+            newBuffer.copyMemory(from: oldBuffer, byteCount: offset)
+            // Fill newBuffer data with Zero after offset
+            Self.memSet(dstPtr: newBuffer.advanced(by: offset), value: 0, count: newSize - offset)
+            // We must deallocate old buffer to avoid memory leaks
+            oldBuffer.deallocate()
+        } else {
+            newBuffer = UnsafeMutableRawPointer.allocate(byteCount: newSize, alignment: alignment)
+            Self.memSet(dstPtr: newBuffer, value: 0, count: newSize)
+        }
+        self.buffer = newBuffer
+        #endif
 
         self.effectiveLength = newSize
 
@@ -123,8 +147,8 @@ public class Memory {
         let copySize = min(offset + size, self.effectiveLength) - offset
 
         // After all validation check we can guaranty that copySize is non zero
-        _ = result.withUnsafeMutableBytes { dest in
-            memcpy(dest.baseAddress!, buf.advanced(by: offset), copySize)
+        result.withUnsafeMutableBytes { dest in
+            Self.memCpy(dstPtr: dest.baseAddress!, srcPtr: buf.advanced(by: offset), count: copySize)
         }
         return result
     }
@@ -167,10 +191,13 @@ public class Memory {
         return value.withUnsafeBytes { src in
             // Get correct range for copy
             let copyCount = min(size, value.count)
-            memcpy(buf.advanced(by: offset), src.baseAddress!, copyCount)
+            let dstPtr = buf.advanced(by: offset)
+            let srcPtr = src.baseAddress!
+
+            Self.memCpy(dstPtr: dstPtr, srcPtr: srcPtr, count: copyCount)
 
             if size > value.count {
-                memset(buf.advanced(by: offset + value.count), 0, size - value.count)
+                Self.memSet(dstPtr: buf.advanced(by: offset + value.count), value: 0, count: size - value.count)
             }
 
             return .success(())
@@ -219,8 +246,16 @@ public class Memory {
         let srcPtr = buf.advanced(by: srcOffset)
         let dstPtr = buf.advanced(by: dstOffset)
 
+        #if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(visionOS) || os(Linux)
         // Correct copy for cross ranges with `memmove`
         memmove(dstPtr, srcPtr, size)
+        #else
+        let tempBuffer = UnsafeMutableRawPointer.allocate(byteCount: size, alignment: MemoryLayout<UInt8>.alignment)
+        tempBuffer.copyMemory(from: srcPtr, byteCount: size)
+        dstPtr.copyMemory(from: tempBuffer, byteCount: size)
+        tempBuffer.deallocate()
+        #endif
+
         return .success(())
     }
 
@@ -273,11 +308,11 @@ public class Memory {
             // SAFTY: As we validated data length, we can unwrap `rawBuffer.baseAddress`
             let srcPtr = rawBuffer.baseAddress!.advanced(by: dataOffset)
             let dstPtr = buf.advanced(by: memoryOffset)
-            memcpy(dstPtr, srcPtr, copyLength)
+            Self.memCpy(dstPtr: dstPtr, srcPtr: srcPtr, count: copyLength)
 
             // If the requested length exceeds the available data, zero-fill the remainder.
             if size > copyLength {
-                memset(dstPtr.advanced(by: copyLength), 0, size - copyLength)
+                Self.memSet(dstPtr: dstPtr.advanced(by: copyLength), value: 0, count: size - copyLength)
             }
             return .success(())
         }
@@ -308,5 +343,26 @@ public class Memory {
     public static func numWords(_ value: Int) -> Int {
         let val = value.addingReportingOverflow(31)
         return (val.overflow ? Int.max : val.partialValue) >> 5
+    }
+
+    private static func memCpy(
+        dstPtr: UnsafeMutableRawPointer,
+        srcPtr: UnsafeRawPointer,
+        count: Int
+    ) {
+        #if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(visionOS) || os(Linux)
+        memcpy(dstPtr, srcPtr, count)
+        #else
+        dstPtr.copyMemory(from: srcPtr, byteCount: count)
+        #endif
+    }
+
+    @inline(__always)
+    private static func memSet(dstPtr: UnsafeMutableRawPointer, value: UInt8, count: Int) {
+        #if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(visionOS) || os(Linux)
+        memset(dstPtr, Int32(value), count)
+        #else
+        dstPtr.initializeMemory(as: UInt8.self, repeating: value, count: count)
+        #endif
     }
 }

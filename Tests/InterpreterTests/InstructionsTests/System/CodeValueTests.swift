@@ -49,7 +49,7 @@ final class InstructionCallValueSpec: QuickSpec {
             }
 
             it("value = MAX") {
-                var ctx = Machine.Context(target: H160.ZERO, sender: H160.ZERO, value: U256.MAX)
+                let ctx = Machine.Context(target: H160.ZERO, sender: H160.ZERO, value: U256.MAX)
                 let m = TestMachine.machineWithContext(opcode: Opcode.CALLVALUE, gasLimit: 10, context: ctx)
 
                 m.evalLoop()
