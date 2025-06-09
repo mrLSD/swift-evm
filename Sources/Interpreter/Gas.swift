@@ -126,6 +126,8 @@ enum GasConstant {
     static let EXP: UInt64 = 10
     static let MEMORY: UInt64 = 3
     static let COPY: UInt64 = 3
+    static let COLD_ACCOUNT_ACCESS_COST: UInt64 = 2600
+    static let WARM_STORAGE_READ_COST: UInt64 = 100
 }
 
 /// Gas cost calculations
@@ -175,6 +177,19 @@ enum GasCost {
         return overflow ? nil : UInt64(numWords)
     }
 
+    /// Calculates the gas cost for the EXP opcode based on the hard fork and exponent value.
+    ///
+    /// The gas cost varies depending on the hard fork version and the size of the exponent:
+    /// - For zero exponent: returns base EXP gas constant
+    /// - For non-zero exponent: applies EIP-160 cost increase based on exponent byte size
+    ///
+    /// - Parameters:
+    ///   - hardFork: The Ethereum hard fork version that determines gas pricing rules
+    ///   - power: The exponent value (U256) used in the exponential operation
+    /// - Returns: The calculated gas cost as UInt64
+    ///
+    /// - Note: EIP-160 (Spurious Dragon hard fork) increased the per-byte cost from 10 to 50 gas
+    /// - Note: Overflow is impossible as the maximum value is `gasByte * (256/8 + 1)`
     static func expCost(hardFork: HardFork, power: U256) -> UInt64 {
         if power.isZero {
             return GasConstant.EXP
@@ -188,6 +203,18 @@ enum GasCost {
         }
     }
 
+    /// Calculates the floor of the base-2 logarithm of a 256-bit unsigned integer (For EXP opcode).
+    ///
+    /// This function computes log₂(val) rounded down to the nearest integer by finding
+    /// the position of the most significant bit. It iterates through the bytes of the
+    /// U256 value from most significant to least significant, counting leading zero bits
+    /// to determine the highest set bit position.
+    ///
+    /// - Parameter val: The 256-bit unsigned integer to calculate the log₂ floor for
+    /// - Returns: The floor of log₂(val) as a UInt64. Returns 256 if val is 0.
+    ///
+    /// - Note: The result is the zero-based index of the most significant set bit,
+    ///   effectively computing floor(log₂(val)) for positive values.
     static func log2floor(_ val: U256) -> UInt64 {
         var l: UInt64 = 256
         for i in (0 ..< 4).reversed() {
@@ -199,5 +226,22 @@ enum GasCost {
             }
         }
         return l
+    }
+
+    /// Calculates the gas cost for account access based on whether the account is cold or warm.
+    ///
+    /// This function implements EIP-2929 gas cost calculation for account access operations.
+    /// Cold accounts require higher gas costs on first access, while warm accounts (already accessed
+    /// in the current transaction) have reduced costs for subsequent operations.
+    ///
+    /// - Parameter isCold: A boolean indicating whether the account is cold (not previously accessed)
+    /// - Returns: The gas cost as a UInt64 value - either COLD_ACCOUNT_ACCESS_COST for cold accounts
+    ///           or WARM_STORAGE_READ_COST for warm accounts
+    static func warmOrColdCost(isCold: Bool) -> UInt64 {
+        if isCold {
+            GasConstant.COLD_ACCOUNT_ACCESS_COST
+        } else {
+            GasConstant.WARM_STORAGE_READ_COST
+        }
     }
 }

@@ -45,12 +45,12 @@ final class InterpreterHardForkSpec: QuickSpec {
 
             context("HardFork in Machine") {
                 it("validate Machine hard fork") {
-                    let m = Machine(data: [], code: [], gasLimit: 100, memoryLimit: 1024, context: TestMachine.defaultContext(), handler: TestHandler(), hardFork: HardFork.London)
+                    let m = Machine(data: [], code: [], gasLimit: 100, memoryLimit: 1024, context: TestMachine.defaultContext(), state: ExecutionState(), handler: TestHandler(), hardFork: HardFork.London)
                     expect(m.hardFork).to(equal(HardFork.London))
                 }
 
                 it("validate Machine hard fork has latest hard fork") {
-                    let m = Machine(data: [], code: [], gasLimit: 100, context: TestMachine.defaultContext(), handler: TestHandler())
+                    let m = Machine(data: [], code: [], gasLimit: 100, context: TestMachine.defaultContext(), state: ExecutionState(), handler: TestHandler())
                     expect(m.hardFork).to(equal(HardFork.latest()))
                 }
             }

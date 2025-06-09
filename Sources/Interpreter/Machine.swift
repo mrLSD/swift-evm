@@ -1,13 +1,5 @@
 import PrimitiveTypes
 
-/// Interpreter handler used to pass Handler functions to Interpreter to
-/// extend functionality for specific needs
-public protocol InterpreterHandler {
-    /// Run function before `Opcode` execution in evaluation stage in Machine
-    func beforeOpcodeExecution(machine: Machine, opcode: Opcode, address: H160) -> Machine
-        .ExitError?
-}
-
 /// Machine represents EVM core execution layer
 public final class Machine {
     /// Program input data
@@ -34,6 +26,8 @@ public final class Machine {
     var returnData: ReturnData
     /// EVM execution context
     var context: Context
+    /// EVM execution state
+    var state: ExecutionState
 
     #if TRACING
     /// Tracing data
@@ -44,7 +38,7 @@ public final class Machine {
     var machineStatus: MachineStatus = .NotStarted
 
     /// Machine Interpreter handler. User to extend evaluation functinality
-    private let handler: InterpreterHandler
+    let handler: InterpreterHandler
 
     /// Machine return data
     public struct ReturnData {
@@ -240,16 +234,20 @@ public final class Machine {
         table[Opcode.MSTORE8.index] = MemoryInstructions.mstore8
         table[Opcode.MSIZE.index] = MemoryInstructions.msize
 
+        // Host
+        table[Opcode.BALANCE.index] = HostInstructions.balance
+
         return table
     }()
 
-    init(data: [UInt8], code: [UInt8], gasLimit: UInt64, context: Context, handler: InterpreterHandler) {
+    init(data: [UInt8], code: [UInt8], gasLimit: UInt64, context: Context, state: ExecutionState, handler: InterpreterHandler) {
         self.data = data
         self.code = code
         self.jumpTable = Self.analyzeJumpTable(code: code)
         self.context = context
         self.returnData = ReturnData(buffer: [], length: 0, offset: 0)
         self.handler = handler
+        self.state = state
         self.gas = Gas(limit: gasLimit)
         self.hardFork = HardFork.latest()
         #if TRACING
@@ -257,13 +255,14 @@ public final class Machine {
         #endif
     }
 
-    init(data: [UInt8], code: [UInt8], gasLimit: UInt64, memoryLimit: Int, context: Context, handler: InterpreterHandler, hardFork: HardFork) {
+    init(data: [UInt8], code: [UInt8], gasLimit: UInt64, memoryLimit: Int, context: Context, state: ExecutionState, handler: InterpreterHandler, hardFork: HardFork) {
         self.data = data
         self.code = code
         self.jumpTable = Self.analyzeJumpTable(code: code)
         self.context = context
         self.returnData = ReturnData(buffer: [], length: 0, offset: 0)
         self.handler = handler
+        self.state = state
         self.gas = Gas(limit: gasLimit)
         self.memory = Memory(limit: memoryLimit)
         self.hardFork = hardFork
@@ -315,7 +314,18 @@ public final class Machine {
         }
         // Get Opcode
         let opcodeNum = self.code[self.pc]
-        guard let op = Opcode(rawValue: opcodeNum), let evalFunc = self.instructionsEvalTable[op.index] else {
+        let rawOp = Opcode(rawValue: opcodeNum)
+
+        // Handler before code execution from the host environment.
+        // Pre-processing of opcodes before their execution. This allows for injecting custom logic
+        // into the behavior of opcodes and the EVM as a whole
+        if let err = self.handler.beforeOpcodeExecution(machine: self, opcode: rawOp) {
+            self.machineStatus = MachineStatus.Exit(ExitReason.Error(err))
+            return
+        }
+
+        // Evaluate opcode instruction
+        guard let op = rawOp, let evalFunc = self.instructionsEvalTable[op.index] else {
             self.machineStatus = MachineStatus.Exit(ExitReason.Error(ExitError.InvalidOpcode(opcodeNum)))
             return
         }
@@ -364,6 +374,21 @@ public final class Machine {
     /// Optional value
     func stackPop() -> U256? {
         switch self.stack.pop() {
+        case .success(let value):
+            return value
+        case .failure(let err):
+            self.machineStatus = .Exit(.Error(err))
+            return nil
+        }
+    }
+
+    /// Wrapper for `MachineStack` pop H256 operation. If `popH256` operation fails, set
+    /// `machineStatus` exit error status.
+    ///
+    /// ## Return
+    /// Optional value
+    func stackPopH256() -> H256? {
+        switch self.stack.popH256() {
         case .success(let value):
             return value
         case .failure(let err):
