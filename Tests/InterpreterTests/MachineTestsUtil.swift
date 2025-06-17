@@ -67,4 +67,12 @@ enum TestMachine {
     static func machineWithContext(opcode: Opcode, gasLimit: UInt64, context: Machine.Context) -> Machine {
         Machine(data: [], code: [opcode.rawValue], gasLimit: gasLimit, context: context, state: ExecutionState(), handler: TestHandler())
     }
+
+    static func machine(opcode: Opcode, gasLimit: UInt64, context: Machine.Context, hardFork: HardFork) -> Machine {
+        Machine(data: [], code: [opcode.rawValue], gasLimit: gasLimit, memoryLimit: 32000, context: context, state: ExecutionState(), handler: TestHandler(), hardFork: hardFork)
+    }
+
+    static func machine(opcodes code: [Opcode], gasLimit: UInt64, context: Machine.Context, hardFork: HardFork) -> Machine {
+        Machine(data: [], code: code.map(\.rawValue), gasLimit: gasLimit, memoryLimit: 32000, context: context, state: ExecutionState(), handler: TestHandler(), hardFork: hardFork)
+    }
 }
