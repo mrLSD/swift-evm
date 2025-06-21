@@ -41,4 +41,14 @@ enum HostInstructions {
 
         m.stackPush(value: m.handler.balance(address: m.context.target))
     }
+
+    static func address(machine m: Machine) {
+        if !m.gasRecordCost(cost: GasConstant.BASE) {
+            return
+        }
+
+        // Push the address of the current contract onto the stack
+        let newValue = H256(from: m.context.target).BYTES
+        m.stackPush(value: U256.fromBigEndian(from: newValue))
+    }
 }
