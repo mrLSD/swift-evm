@@ -22,6 +22,10 @@ class TestHandler: InterpreterHandler {
             return U256.ZERO
         }
     }
+
+    func gasPrice() -> U256 {
+        U256(from: 123)
+    }
 }
 
 enum TestMachine {
