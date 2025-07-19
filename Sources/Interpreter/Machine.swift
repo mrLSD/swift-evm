@@ -236,9 +236,10 @@ public final class Machine {
 
         // Host
         table[Opcode.BALANCE.index] = HostInstructions.balance
-        table[Opcode.SELFBALANCE.index] = HostInstructions.selfbalance
+        table[Opcode.SELFBALANCE.index] = HostInstructions.selfBalance
         table[Opcode.ADDRESS.index] = HostInstructions.address
         table[Opcode.GASPRICE.index] = HostInstructions.gasPrice
+        table[Opcode.ORIGIN.index] = HostInstructions.origin
 
         return table
     }()

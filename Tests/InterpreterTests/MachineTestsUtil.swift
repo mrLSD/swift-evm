@@ -26,6 +26,10 @@ class TestHandler: InterpreterHandler {
     func gasPrice() -> U256 {
         U256(from: 123)
     }
+
+    func origin() -> H160 {
+        Self.address1
+    }
 }
 
 enum TestMachine {
