@@ -7,6 +7,7 @@ import PrimitiveTypes
 class TestHandler: InterpreterHandler {
     static let address1: H160 = .fromString(hex: "9A6402EEa6d967dBd7609346c11A1702Db4E5001")
     static let address2: H160 = .fromString(hex: "9A6402EEa6d967dBd7609346c11A1702Db4E5002")
+    static let testGasPrice: U256 = U256(from: 123)
 
     func beforeOpcodeExecution(machine: Machine, opcode: Opcode?) -> Machine.ExitError? {
         return nil
@@ -24,7 +25,7 @@ class TestHandler: InterpreterHandler {
     }
 
     func gasPrice() -> U256 {
-        U256(from: 123)
+        Self.testGasPrice
     }
 }
 

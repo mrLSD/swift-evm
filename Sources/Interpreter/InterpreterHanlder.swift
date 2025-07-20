@@ -3,7 +3,7 @@ import PrimitiveTypes
 /// Interpreter handler used to pass Handler functions to Interpreter to
 /// extend functionality for specific needs
 public protocol InterpreterHandler {
-    /// Run function before `Opcode` execution `evaluation` in `Machine`
+    /// Run function before `Opcode` execution during evaluation stage in `Machine`
     func beforeOpcodeExecution(machine: Machine, opcode: Opcode?) -> Machine
         .ExitError?
 
