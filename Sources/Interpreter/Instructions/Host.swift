@@ -51,4 +51,13 @@ enum HostInstructions {
         let newValue = H256(from: m.context.target).BYTES
         m.stackPush(value: U256.fromBigEndian(from: newValue))
     }
+
+    static func gasPrice(machine m: Machine) {
+        if !m.gasRecordCost(cost: GasConstant.BASE) {
+            return
+        }
+
+        m.stackPush(value: m.handler.gasPrice())
+    }
+
 }
