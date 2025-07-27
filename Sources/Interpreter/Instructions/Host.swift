@@ -28,7 +28,7 @@ enum HostInstructions {
         m.stackPush(value: m.handler.balance(address: address))
     }
 
-    static func selfbalance(machine m: Machine) {
+    static func selfBalance(machine m: Machine) {
         // Check hardfork
         guard m.hardFork.isIstanbul() else {
             m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.HardForkNotActive))
@@ -50,5 +50,37 @@ enum HostInstructions {
         // Push the address of the current contract onto the stack
         let newValue = H256(from: m.context.target).BYTES
         m.stackPush(value: U256.fromBigEndian(from: newValue))
+    }
+
+    static func gasPrice(machine m: Machine) {
+        if !m.gasRecordCost(cost: GasConstant.BASE) {
+            return
+        }
+
+        m.stackPush(value: m.handler.gasPrice())
+    }
+
+    static func origin(machine m: Machine) {
+        if !m.gasRecordCost(cost: GasConstant.BASE) {
+            return
+        }
+
+        let newValue = H256(from: m.handler.origin()).BYTES
+        m.stackPush(value: U256.fromBigEndian(from: newValue))
+    }
+
+    /// EIP-1344: ChainID opcode
+    static func chainId(machine m: Machine) {
+        // Check hardfork
+        guard m.hardFork.isIstanbul() else {
+            m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.HardForkNotActive))
+            return
+        }
+
+        if !m.gasRecordCost(cost: GasConstant.BASE) {
+            return
+        }
+
+        m.stackPush(value: m.handler.chainId())
     }
 }
