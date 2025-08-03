@@ -3,9 +3,14 @@ import PrimitiveTypes
 /// Interpreter handler used to pass Handler functions to Interpreter to
 /// extend functionality for specific needs
 public protocol InterpreterHandler {
-    /// Run function before `Opcode` execution ay evaluation stage in Machine
+    /// Run function before `Opcode` execution during evaluation stage in `Machine`
     func beforeOpcodeExecution(machine: Machine, opcode: Opcode?) -> Machine
         .ExitError?
 
     func balance(address: H160) -> U256
+    func gasPrice() -> U256
+    func origin() -> H160
+    func chainId() -> U256
+    func coinbase() -> H160
+
 }
