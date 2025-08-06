@@ -12,5 +12,4 @@ public protocol InterpreterHandler {
     func origin() -> H160
     func chainId() -> U256
     func coinbase() -> H160
-
 }
