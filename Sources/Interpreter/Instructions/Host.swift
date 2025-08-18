@@ -68,4 +68,19 @@ enum HostInstructions {
         let newValue = H256(from: m.handler.origin()).BYTES
         m.stackPush(value: U256.fromBigEndian(from: newValue))
     }
+
+    /// EIP-1344: ChainID opcode
+    static func chainId(machine m: Machine) {
+        // Check hardfork
+        guard m.hardFork.isIstanbul() else {
+            m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.HardForkNotActive))
+            return
+        }
+
+        if !m.gasRecordCost(cost: GasConstant.BASE) {
+            return
+        }
+
+        m.stackPush(value: m.handler.chainId())
+    }
 }

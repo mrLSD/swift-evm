@@ -31,6 +31,10 @@ class TestHandler: InterpreterHandler {
     func origin() -> H160 {
         Self.address1
     }
+
+    func chainId() -> U256 {
+        U256(from: 33)
+    }
 }
 
 enum TestMachine {

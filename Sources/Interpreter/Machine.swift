@@ -240,6 +240,7 @@ public final class Machine {
         table[Opcode.ADDRESS.index] = HostInstructions.address
         table[Opcode.GASPRICE.index] = HostInstructions.gasPrice
         table[Opcode.ORIGIN.index] = HostInstructions.origin
+        table[Opcode.CHAINID.index] = HostInstructions.chainId
 
         return table
     }()
