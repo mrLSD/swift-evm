@@ -11,4 +11,5 @@ public protocol InterpreterHandler {
     func gasPrice() -> U256
     func origin() -> H160
     func chainId() -> U256
+    func coinbase() -> H160
 }

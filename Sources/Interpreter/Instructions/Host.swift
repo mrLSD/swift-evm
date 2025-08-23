@@ -83,4 +83,13 @@ enum HostInstructions {
 
         m.stackPush(value: m.handler.chainId())
     }
+
+    static func coinbase(machine m: Machine) {
+        if !m.gasRecordCost(cost: GasConstant.BASE) {
+            return
+        }
+
+        let newValue = H256(from: m.handler.coinbase()).BYTES
+        m.stackPush(value: U256.fromBigEndian(from: newValue))
+    }
 }

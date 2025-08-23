@@ -241,6 +241,7 @@ public final class Machine {
         table[Opcode.GASPRICE.index] = HostInstructions.gasPrice
         table[Opcode.ORIGIN.index] = HostInstructions.origin
         table[Opcode.CHAINID.index] = HostInstructions.chainId
+        table[Opcode.COINBASE.index] = HostInstructions.coinbase
 
         return table
     }()

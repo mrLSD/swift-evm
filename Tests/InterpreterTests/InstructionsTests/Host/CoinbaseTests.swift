@@ -3,9 +3,9 @@ import Nimble
 import PrimitiveTypes
 import Quick
 
-final class InstructionOriginSpec: QuickSpec {
+final class InstructionCoinbaseSpec: QuickSpec {
     @MainActor
-    static let machineLowGas = TestMachine.machine(opcode: Opcode.ORIGIN, gasLimit: 1)
+    static let machineLowGas = TestMachine.machine(opcode: Opcode.COINBASE, gasLimit: 1)
 
     override class func spec() {
         describe("Instruction ORIGIN") {
@@ -20,7 +20,7 @@ final class InstructionOriginSpec: QuickSpec {
             }
 
             it("check stack overflow") {
-                let m = TestMachine.machine(opcode: Opcode.ORIGIN, gasLimit: 10)
+                let m = TestMachine.machine(opcode: Opcode.COINBASE, gasLimit: 10)
                 for _ in 0 ..< m.stack.limit {
                     let _ = m.stack.push(value: U256(from: 5))
                 }
@@ -35,7 +35,7 @@ final class InstructionOriginSpec: QuickSpec {
                 let context = Machine.Context(target: TestHandler.address1,
                                               sender: TestHandler.address2,
                                               value: U256.ZERO)
-                let m = TestMachine.machine(opcode: Opcode.ORIGIN, gasLimit: 10, context: context, hardFork: .latest())
+                let m = TestMachine.machine(opcode: Opcode.COINBASE, gasLimit: 10, context: context, hardFork: .latest())
 
                 m.evalLoop()
 
@@ -44,7 +44,7 @@ final class InstructionOriginSpec: QuickSpec {
                 let result = m.stack.popH256()
                 expect(result).to(beSuccess { value in
                     let address = value.toH160()
-                    expect(address).to(equal(TestHandler.address1))
+                    expect(address).to(equal(TestHandler.address2))
                 })
 
                 expect(m.stack.length).to(equal(0))
@@ -53,3 +53,4 @@ final class InstructionOriginSpec: QuickSpec {
         }
     }
 }
+
