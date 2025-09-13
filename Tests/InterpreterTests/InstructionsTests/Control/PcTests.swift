@@ -4,13 +4,10 @@ import PrimitiveTypes
 import Quick
 
 final class InstructionPcSpec: QuickSpec {
-    @MainActor
-    static let machineLowGas = TestMachine.machine(opcode: Opcode.PC, gasLimit: 1)
-
     override class func spec() {
         describe("Instruction PC") {
             it("PC = 1") {
-                 let m = TestMachine.machine(opcode: Opcode.PC, gasLimit: 10)
+                let m = TestMachine.machine(opcode: Opcode.PC, gasLimit: 10)
 
                 m.evalLoop()
 
@@ -27,7 +24,7 @@ final class InstructionPcSpec: QuickSpec {
             }
 
             it("PC = 4") {
-                 let m = TestMachine.machine(opcodes: [Opcode.PC, Opcode.PC, Opcode.PC, Opcode.PC], gasLimit: 10)
+                let m = TestMachine.machine(opcodes: [Opcode.PC, Opcode.PC, Opcode.PC, Opcode.PC], gasLimit: 10)
 
                 m.evalLoop()
 
@@ -46,7 +43,7 @@ final class InstructionPcSpec: QuickSpec {
             }
 
             it("with OutOfGas result") {
-                 let m = Self.machineLowGas
+                let m = TestMachine.machine(opcode: Opcode.PC, gasLimit: 1)
 
                 m.evalLoop()
 
@@ -56,9 +53,9 @@ final class InstructionPcSpec: QuickSpec {
             }
 
             it("check stack overflow") {
-                 let m = TestMachine.machine(opcode: Opcode.PC, gasLimit: 10)
+                let m = TestMachine.machine(opcode: Opcode.PC, gasLimit: 10)
                 for _ in 0 ..< m.stack.limit {
-                    let _ = m.stack.push(value: U256(from: 5))
+                    _ = m.stack.push(value: U256(from: 5))
                 }
 
                 m.evalLoop()

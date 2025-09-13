@@ -5,13 +5,10 @@ import PrimitiveTypes
 import Quick
 
 final class InstructionJumpSpec: QuickSpec {
-    @MainActor
-    static let machineLowGas = TestMachine.machine(opcode: Opcode.JUMP, gasLimit: 1)
-
     override class func spec() {
         describe("Instruction JUMP") {
             it("Correct JUMP") {
-                 let m = TestMachine.machine(rawCode: [Opcode.PUSH1.rawValue, 0x4, Opcode.JUMP.rawValue, Opcode.PC.rawValue, Opcode.JUMPDEST.rawValue], gasLimit: 20)
+                let m = TestMachine.machine(rawCode: [Opcode.PUSH1.rawValue, 0x4, Opcode.JUMP.rawValue, Opcode.PC.rawValue, Opcode.JUMPDEST.rawValue], gasLimit: 20)
 
                 m.evalLoop()
 
@@ -22,7 +19,7 @@ final class InstructionJumpSpec: QuickSpec {
             }
 
             it("Invalid JUMP to PUSH1 range") {
-                 let m = TestMachine.machine(rawCode: [Opcode.PUSH1.rawValue, 0x1, Opcode.JUMP.rawValue, Opcode.PC.rawValue, Opcode.JUMPDEST.rawValue], gasLimit: 20)
+                let m = TestMachine.machine(rawCode: [Opcode.PUSH1.rawValue, 0x1, Opcode.JUMP.rawValue, Opcode.PC.rawValue, Opcode.JUMPDEST.rawValue], gasLimit: 20)
 
                 m.evalLoop()
 
@@ -33,7 +30,7 @@ final class InstructionJumpSpec: QuickSpec {
             }
 
             it("Invalid JUMP to non JUMPDEST opcode") {
-                 let m = TestMachine.machine(rawCode: [Opcode.PUSH1.rawValue, 0x3, Opcode.JUMP.rawValue, Opcode.PC.rawValue, Opcode.JUMPDEST.rawValue], gasLimit: 20)
+                let m = TestMachine.machine(rawCode: [Opcode.PUSH1.rawValue, 0x3, Opcode.JUMP.rawValue, Opcode.PC.rawValue, Opcode.JUMPDEST.rawValue], gasLimit: 20)
 
                 m.evalLoop()
 
@@ -44,7 +41,7 @@ final class InstructionJumpSpec: QuickSpec {
             }
 
             it("JUMPDEST too large") {
-                 let m = TestMachine.machine(rawCode: [Opcode.PUSH8.rawValue, 0x80, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, Opcode.JUMP.rawValue, Opcode.PC.rawValue, Opcode.JUMPDEST.rawValue], gasLimit: 20)
+                let m = TestMachine.machine(rawCode: [Opcode.PUSH8.rawValue, 0x80, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, Opcode.JUMP.rawValue, Opcode.PC.rawValue, Opcode.JUMPDEST.rawValue], gasLimit: 20)
 
                 m.evalLoop()
 
@@ -55,7 +52,7 @@ final class InstructionJumpSpec: QuickSpec {
             }
 
             it("with OutOfGas result") {
-                 let m = Self.machineLowGas
+                let m = TestMachine.machine(opcode: Opcode.JUMP, gasLimit: 1)
 
                 m.evalLoop()
 
@@ -65,7 +62,7 @@ final class InstructionJumpSpec: QuickSpec {
             }
 
             it("with OutOfGas result for JUMPDEST") {
-                 let m = TestMachine.machine(rawCode: [Opcode.PUSH1.rawValue, 0x4, Opcode.JUMP.rawValue, Opcode.PC.rawValue, Opcode.JUMPDEST.rawValue], gasLimit: 11)
+                let m = TestMachine.machine(rawCode: [Opcode.PUSH1.rawValue, 0x4, Opcode.JUMP.rawValue, Opcode.PC.rawValue, Opcode.JUMPDEST.rawValue], gasLimit: 11)
 
                 m.evalLoop()
 
@@ -78,7 +75,7 @@ final class InstructionJumpSpec: QuickSpec {
             }
 
             it("check stack underflow for empty stack") {
-                 let m = TestMachine.machine(opcode: Opcode.JUMP, gasLimit: 10)
+                let m = TestMachine.machine(opcode: Opcode.JUMP, gasLimit: 10)
 
                 m.evalLoop()
                 expect(m.machineStatus).to(equal(.Exit(.Error(.StackUnderflow))))

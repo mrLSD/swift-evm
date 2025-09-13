@@ -2,7 +2,7 @@
 [![Swift CI](https://github.com/mrLSD/evm-swift/actions/workflows/swift.yaml/badge.svg)](https://github.com/mrLSD/swift-evm/actions/workflows/swift.yaml)
 [![codecov](https://codecov.io/gh/mrLSD/swift-evm/graph/badge.svg?token=1uc0niBI3c)](https://codecov.io/gh/mrLSD/swift-evm)
 [![SwiftLint CI](https://img.shields.io/badge/SwiftLint-CI-blue.svg)](https://github.com/mrLSD/swift-evm/actions/workflows/swift.yaml)
-[![](https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2FmrLSD%2Fswift-evm%2Fbadge%3Ftype%3Dswift-versions)](https://swiftpackageindex.com/mrLSD/swift-evm)
+[![Swift versions badge](https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2FmrLSD%2Fswift-evm%2Fbadge%3Ftype%3Dswift-versions)](https://swiftpackageindex.com/mrLSD/swift-evm)
 
 
 <div align="center">
@@ -72,9 +72,9 @@ It’s designed and optimized for the unique demands of the `EVM`.
 This is due the new capabilities of `Swift 6`, including support for the `UInt128` type.
 
 Use as dependency:
-```
+```swift
     dependencies: [
-        .package(url: "https://github.com/mrLSD/evm-swift.git"
+        .package(url: "https://github.com/mrLSD/swift-evm.git", from: "0.5.0")
     ]
 ```
 
@@ -89,7 +89,7 @@ Use as dependency:
 
 You can run:
 - `swift test`
-- `./Tests/cli-test-runner` - simple but yet powerful tool to show tests errors
+- `./Tests/cli-test-runner` - simple yet powerful tool to show tests errors
 - `swift test | xcbeautify` - swift tests xcbeautify
 
 ### LICENSE: [MIT](LICENSE)

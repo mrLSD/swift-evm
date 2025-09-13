@@ -34,11 +34,13 @@ jobs:
     - name: Generate Coverage Report
       run: |
         mkdir -p coverage
-        xcrun llvm-cov export -format="lcov"  .build/debug/SwiftEVMPackageTests.xctest/Contents/MacOS/SwiftEVMPackageTests -instr-profile=.build/debug/codecov/default.profdata > coverage/lcov.info
+        BINARY_PATH=$(swift test --show-test-binary-path)
+        xcrun llvm-cov export -format="lcov" "$BINARY_PATH" -instr-profile=.build/debug/codecov/default.profdata > coverage/lcov.info
+        # xcrun llvm-cov export -format="lcov"  .build/debug/SwiftEVMPackageTests.xctest/Contents/MacOS/SwiftEVMPackageTests -instr-profile=.build/debug/codecov/default.profdata > coverage/lcov.info
         ls -la coverage/lcov.info
 
     - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v4
       env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}      
       with:

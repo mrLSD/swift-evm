@@ -108,7 +108,7 @@ struct MemoryGas {
             return .failure(.OutOfGas)
         }
 
-        // As we checked `numWords`, substraction can't overflow
+        // As we checked `numWords`, subtraction can't overflow
         let cost = newGasCost - self.gasCost
         self.gasCost = newGasCost
         return .success(.Resized(cost))
@@ -133,23 +133,41 @@ enum GasConstant {
 /// Gas cost calculations
 enum GasCost {
     /// Calculates the memory gas cost for a given number of words.
+    /// Formula: `3 * N + (N * N) / 512`
     ///
-    /// - Parameters:
-    ///   - numWords: The number of words for which the gas cost is calculated.
+    /// - Parameter numWords: The number of 32-byte words (N).
     /// - Returns: A tuple containing:
-    ///   - `UInt64`: The computed gas cost (0 if an overflow occurs).
-    ///   - `Bool`: A flag indicating the success of the calculation (true if no overflow occurred, false otherwise).
+    ///   - `cost`: The computed gas cost.
+    ///   - `overflow`: True if the calculation exceeds UInt64 capacity.
     static func memoryGas(numWords: Int) -> (cost: UInt64, overflow: Bool) {
-        let uintNumWords = UInt64(numWords)
-        let mul1 = GasConstant.MEMORY * uintNumWords
+        let wordCount = UInt64(numWords)
+        let quadraticDivisor: UInt64 = 512
 
-        let (mul2, overflow) = uintNumWords.multipliedReportingOverflow(by: uintNumWords)
-        if overflow {
+        // 1. Calculate the Square (N * N)
+        // This is the critical check. If N * N fits into UInt64, then N is guaranteed to be < 2^32.
+        // If this overflows, the calculation is impossible within 64-bit bounds.
+        let (square, squareOverflow) = wordCount.multipliedReportingOverflow(by: wordCount)
+        if squareOverflow {
             return (0, true)
         }
-        // It's impossible to overflow
-        let result = mul1 + mul2
-        return (result, false)
+
+        // 2. Calculate Linear Cost (3 * N)
+        // We do not need an overflow check here.
+        // Reasoning: Since step 1 passed, we know N < 2^32.
+        // Therefore, 3 * N is roughly 3 * 2^32, which is drastically smaller than UInt64.max (2^64).
+        let linearCost = GasConstant.MEMORY * wordCount
+
+        // 3. Calculate Quadratic Cost Part (N^2 / 512)
+        let quadraticCost = square / quadraticDivisor
+
+        // 4. Final Summation
+        // We do not need an overflow check here.
+        // Reasoning: The maximum possible value of `quadraticCost` is (UInt64.max / 512).
+        // The `linearCost` (approx 1.2 * 10^10) is negligible compared to the remaining space in UInt64.
+        // The sum is mathematically guaranteed to fit.
+        let totalGas = linearCost + quadraticCost
+
+        return (totalGas, false)
     }
 
     /// Calculates the gas cost for a "very low" and copy operation on a memory segment of a given size.
