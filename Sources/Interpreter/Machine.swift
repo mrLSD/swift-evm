@@ -111,7 +111,7 @@ public final class Machine {
     /// It represent evaluation functions for each existed opcodes. Table initialized with 255 `nil` instructions and filled for each specific `EVM` opcode.
     /// For non-existed opcode the evaluation functions is `nil`.
     private let instructionsEvalTable: [EvalFunction?] = {
-        var table = [EvalFunction?](repeating: nil, count: 255)
+        var table = [EvalFunction?](repeating: nil, count: 256)
         // Arithmetic
         table[Opcode.ADD.index] = ArithmeticInstructions.add
         table[Opcode.SUB.index] = ArithmeticInstructions.sub

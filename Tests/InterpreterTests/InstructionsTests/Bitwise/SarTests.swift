@@ -90,11 +90,13 @@ final class InstructionSarSpec: QuickSpec {
                 expect(result).to(beSuccess { value in
                     expect(value).to(equal(U256.ZERO))
                 })
+                expect(m.stack.length).to(equal(0))
+                expect(m.gas.remaining).to(equal(7))
             }
 
             it("-a >>> 255 (negative boundary)") {
                 let m = Self.machine
-                let negativeOne = I256(from: [1, 0, 0, 0], signExtend: true).toU256 // или U256.max
+                let negativeOne = I256(from: [1, 0, 0, 0], signExtend: true).toU256
 
                 _ = m.stack.push(value: negativeOne)
                 _ = m.stack.push(value: U256(from: 255))
@@ -103,7 +105,6 @@ final class InstructionSarSpec: QuickSpec {
 
                 expect(m.machineStatus).to(equal(.Exit(.Success(.Stop))))
                 expect(result).to(beSuccess { value in
-                    // Должно остаться -1 (все единицы)
                     expect(value).to(equal(negativeOne))
                 })
             }

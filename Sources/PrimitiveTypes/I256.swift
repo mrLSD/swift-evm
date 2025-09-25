@@ -76,7 +76,8 @@ public struct I256: BigUInt {
             return Self.ZERO
         }
 
-        if self == Self.minValue, rhs == Self(from: 1) {
+        // MIN_VALUE / 1  == MIN_VALUE
+        if self == Self.minValue, rhs.BYTES == [1, 0, 0, 0] {
             return Self.minValue
         }
 

@@ -8,10 +8,6 @@ final class InstructionSDivSpec: QuickSpec {
         return TestMachine.machine(opcode: Opcode.SDIV, gasLimit: 10)
     }
 
-    static var machineLowGas: Machine {
-        return TestMachine.machine(opcode: Opcode.SDIV, gasLimit: 2)
-    }
-
     override class func spec() {
         describe("Instruction SDiv") {
             it("5/2") {
@@ -70,14 +66,62 @@ final class InstructionSDivSpec: QuickSpec {
 
                 expect(m.machineStatus).to(equal(.Exit(.Error(.StackUnderflow))))
                 expect(m.stack.length).to(equal(0))
-                expect(m.gas.remaining).to(equal(5))
+                expect(m.gas.remaining).to(equal(10))
             }
 
             it("max-1 values composition") {
                 let m = Self.machine
 
-                _ = m.stack.push(value: U256(from: [UInt64.max-1, UInt64.max-1, UInt64.max-1, UInt64.max-1]))
-                _ = m.stack.push(value: U256(from: [UInt64.max-1, 0, 0, 0]))
+                // 1. Divisor (Denominator): Pushed first (Bottom of stack).
+                // Value: [max-1, max-1, max-1, max-1].
+                // In SDIV (Two's Complement), this is a NEGATIVE number with a HUGE magnitude (~2^192).
+                // NOTE: This is NOT -2. (-2 would be [max-1, max, max, max]).
+                _ = m.stack.push(value: U256(from: [UInt64.max - 1, UInt64.max - 1, UInt64.max - 1, UInt64.max - 1]))
+
+                // 2. Dividend (Numerator): Pushed second (Top of stack).
+                // Value: [max-1, 0, 0, 0].
+                // This is a POSITIVE number with magnitude ~2^64.
+                _ = m.stack.push(value: U256(from: [UInt64.max - 1, 0, 0, 0]))
+
+                m.evalLoop()
+                let result = m.stack.pop()
+
+                expect(m.machineStatus).to(equal(.Exit(.Success(.Stop))))
+                expect(result).to(beSuccess { value in
+                    // Since |Dividend| (~2^64) < |Divisor| (~2^192), the result is 0.
+                    expect(value).to(equal(U256.ZERO))
+                })
+                expect(m.stack.length).to(equal(0))
+                expect(m.gas.remaining).to(equal(GasConstant.LOW))
+            }
+
+            it("divides large positive by -2 (SDIV)") {
+                let m = Self.machine
+
+                // op2 = -2 = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFE
+                _ = m.stack.push(value: U256(from: [UInt64.max - 1, UInt64.max, UInt64.max, UInt64.max]))
+
+                // op1 = 2^64 - 2
+                _ = m.stack.push(value: U256(from: [UInt64.max - 1, 0, 0, 0]))
+
+                m.evalLoop()
+                let result = m.stack.pop()
+
+                let expectedLow: UInt64 = 0x8000000000000001
+                let expectedHigh = UInt64.max
+                let expectedValue = U256(from: [expectedLow, expectedHigh, expectedHigh, expectedHigh])
+
+                expect(result).to(beSuccess { value in
+                    expect(value).to(equal(expectedValue))
+                })
+            }
+
+            it("returns zero when dividend is smaller than divisor (SDIV)") {
+                let m = Self.machine
+
+                _ = m.stack.push(value: U256(from: 20))
+                _ = m.stack.push(value: U256(from: 10))
+
                 m.evalLoop()
                 let result = m.stack.pop()
 
@@ -106,14 +150,14 @@ final class InstructionSDivSpec: QuickSpec {
             }
 
             it("with OutOfGas result") {
-                let m = Self.machineLowGas
+                let m = TestMachine.machine(opcode: Opcode.SDIV, gasLimit: 2)
 
                 _ = m.stack.push(value: U256(from: 5))
                 _ = m.stack.push(value: U256(from: 2))
                 m.evalLoop()
 
                 expect(m.machineStatus).to(equal(.Exit(.Error(.OutOfGas))))
-                expect(m.stack.length).to(equal(2))
+                expect(m.stack.length).to(equal(0))
                 expect(m.gas.remaining).to(equal(2))
             }
 

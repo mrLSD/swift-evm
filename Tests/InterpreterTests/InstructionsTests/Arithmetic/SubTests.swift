@@ -8,17 +8,13 @@ final class InstructionSubSpec: QuickSpec {
         return TestMachine.machine(opcode: Opcode.SUB, gasLimit: 10)
     }
 
-    static var machineLowGas: Machine {
-        return TestMachine.machine(opcode: Opcode.SUB, gasLimit: 2)
-    }
-
     override class func spec() {
         describe("Instruction Sub") {
             it("3 - 2") {
                 let m = Self.machine
 
-                let _ = m.stack.push(value: U256(from: 2))
-                let _ = m.stack.push(value: U256(from: 3))
+                _ = m.stack.push(value: U256(from: 2))
+                _ = m.stack.push(value: U256(from: 3))
                 m.evalLoop()
                 let result = m.stack.pop()
 
@@ -33,8 +29,8 @@ final class InstructionSubSpec: QuickSpec {
             it("5 - 10 with overflow") {
                 let m = Self.machine
 
-                let _ = m.stack.push(value: U256(from: 10))
-                let _ = m.stack.push(value: U256(from: 5))
+                _ = m.stack.push(value: U256(from: 10))
+                _ = m.stack.push(value: U256(from: 5))
                 m.evalLoop()
                 let result = m.stack.pop()
 
@@ -49,7 +45,7 @@ final class InstructionSubSpec: QuickSpec {
             it("`a - b`, when `b` not in the stack") {
                 let m = Self.machine
 
-                let _ = m.stack.push(value: U256(from: 3))
+                _ = m.stack.push(value: U256(from: 3))
                 m.evalLoop()
 
                 expect(m.machineStatus).to(equal(.Exit(.Error(.StackUnderflow))))
@@ -60,8 +56,8 @@ final class InstructionSubSpec: QuickSpec {
             it("max values") {
                 let m = Self.machine
 
-                let _ = m.stack.push(value: U256(from: [UInt64.max-9, UInt64.max-6, UInt64.max-4, UInt64.max-2]))
-                let _ = m.stack.push(value: U256(from: [UInt64.max-5, UInt64.max-3, UInt64.max-2, UInt64.max-1]))
+                _ = m.stack.push(value: U256(from: [UInt64.max-9, UInt64.max-6, UInt64.max-4, UInt64.max-2]))
+                _ = m.stack.push(value: U256(from: [UInt64.max-5, UInt64.max-3, UInt64.max-2, UInt64.max-1]))
                 m.evalLoop()
                 let result = m.stack.pop()
 
@@ -74,10 +70,10 @@ final class InstructionSubSpec: QuickSpec {
             }
 
             it("with OutOfGas result") {
-                let m = Self.machineLowGas
+                let m = TestMachine.machine(opcode: Opcode.SUB, gasLimit: 2)
 
-                let _ = m.stack.push(value: U256(from: 3))
-                let _ = m.stack.push(value: U256(from: 2))
+                _ = m.stack.push(value: U256(from: 3))
+                _ = m.stack.push(value: U256(from: 2))
                 m.evalLoop()
 
                 expect(m.machineStatus).to(equal(.Exit(.Error(.OutOfGas))))
@@ -91,13 +87,13 @@ final class InstructionSubSpec: QuickSpec {
                 expect(m.machineStatus).to(equal(.Exit(.Error(.StackUnderflow))))
 
                 let m1 = Self.machine
-                let _ = m1.stack.push(value: U256(from: 5))
+                _ = m1.stack.push(value: U256(from: 5))
                 m1.evalLoop()
                 expect(m1.machineStatus).to(equal(.Exit(.Error(.StackUnderflow))))
 
                 let m2 = Self.machine
-                let _ = m2.stack.push(value: U256(from: 2))
-                let _ = m2.stack.push(value: U256(from: 2))
+                _ = m2.stack.push(value: U256(from: 2))
+                _ = m2.stack.push(value: U256(from: 2))
                 m2.evalLoop()
                 expect(m2.machineStatus).to(equal(.Exit(.Success(.Stop))))
             }

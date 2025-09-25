@@ -41,7 +41,7 @@ final class InstructionJumpiSpec: QuickSpec {
                 expect(m.gas.remaining).to(equal(4))
             }
 
-            it("Invalid JUMP to non JUMPDEST opcode") {
+            it("Invalid JUMPI to non JUMPDEST opcode") {
                 let m = TestMachine.machine(rawCode: [Opcode.PUSH1.rawValue, 0x1, Opcode.PUSH1.rawValue, 0x4, Opcode.JUMPI.rawValue, Opcode.PC.rawValue, Opcode.JUMPDEST.rawValue], gasLimit: 20)
 
                 m.evalLoop()
@@ -75,8 +75,6 @@ final class InstructionJumpiSpec: QuickSpec {
 
             it("with OutOfGas result for JUMPDEST") {
                 let m = TestMachine.machine(rawCode: [Opcode.PUSH1.rawValue, 0x1, Opcode.PUSH1.rawValue, 0x6, Opcode.JUMPI.rawValue, Opcode.PC.rawValue, Opcode.JUMPDEST.rawValue], gasLimit: 16)
-
-                m.evalLoop()
 
                 m.evalLoop()
 

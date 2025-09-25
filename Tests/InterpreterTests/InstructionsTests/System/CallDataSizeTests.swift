@@ -4,13 +4,10 @@ import PrimitiveTypes
 import Quick
 
 final class InstructionCallDataSizeSpec: QuickSpec {
-    @MainActor
-    static let machineLowGas = TestMachine.machine(opcode: Opcode.CALLDATASIZE, gasLimit: 1)
-
     override class func spec() {
         describe("Instruction CALLDATASIZE") {
             it("data size = 0") {
-                 let m = TestMachine.machine(data: [], opcode: Opcode.CALLDATASIZE, gasLimit: 10)
+                let m = TestMachine.machine(data: [], opcode: Opcode.CALLDATASIZE, gasLimit: 10)
 
                 m.evalLoop()
 
@@ -27,7 +24,7 @@ final class InstructionCallDataSizeSpec: QuickSpec {
 
             it("data size = 5") {
                 let callData: [UInt8] = [0x01, 0x02, 0x03, 0x04, 0x05]
-                 let m = TestMachine.machine(data: callData, opcode: Opcode.CALLDATASIZE, gasLimit: 10)
+                let m = TestMachine.machine(data: callData, opcode: Opcode.CALLDATASIZE, gasLimit: 10)
 
                 m.evalLoop()
 
@@ -43,7 +40,7 @@ final class InstructionCallDataSizeSpec: QuickSpec {
             }
 
             it("with OutOfGas result") {
-                 let m = Self.machineLowGas
+                let m = TestMachine.machine(opcode: Opcode.CALLDATASIZE, gasLimit: 1)
 
                 m.evalLoop()
 
@@ -54,9 +51,9 @@ final class InstructionCallDataSizeSpec: QuickSpec {
 
             it("check stack overflow") {
                 let callData: [UInt8] = [0x01, 0x02, 0x03, 0x04, 0x05]
-                 let m = TestMachine.machine(data: callData, opcode: Opcode.CALLDATASIZE, gasLimit: 10)
+                let m = TestMachine.machine(data: callData, opcode: Opcode.CALLDATASIZE, gasLimit: 10)
                 for _ in 0 ..< m.stack.limit {
-                    let _ = m.stack.push(value: U256(from: 5))
+                    _ = m.stack.push(value: U256(from: 5))
                 }
 
                 m.evalLoop()

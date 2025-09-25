@@ -603,8 +603,15 @@ final class I256Spec: QuickSpec {
                     expect(result.BYTES).to(equal(expected.BYTES))
                 }
 
-                it("by minValue") {
+                it("I256.minValue / 1") {
                     let result = I256.minValue / I256(from: 1)
+                    let expected = I256.minValue
+
+                    expect(result.BYTES).to(equal(expected.BYTES))
+                }
+
+                it("I256.minValue / -1") {
+                    let result = I256.minValue / I256(from: [1, 0, 0, 0], signExtend: true)
                     let expected = I256.minValue
 
                     expect(result.BYTES).to(equal(expected.BYTES))

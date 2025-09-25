@@ -3,16 +3,13 @@ import Nimble
 import PrimitiveTypes
 import Quick
 
-final class InstructionBalanceSpec: QuickSpec {
-    @MainActor
-    static let machineLowGas = TestMachine.machine(opcode: Opcode.BALANCE, gasLimit: 1)
-
+class InstructionBalanceSpec: QuickSpec {
     override class func spec() {
         describe("Instruction BALANCE") {
             it("with OutOfGas result") {
-                let m = Self.machineLowGas
+                let m = TestMachine.machine(opcode: Opcode.BALANCE, gasLimit: 1)
                 let val1 = U256.fromBigEndian(from: H256(from: TestHandler.address1).BYTES)
-                let _ = m.stack.push(value: val1)
+                _ = m.stack.push(value: val1)
 
                 m.evalLoop()
 
@@ -28,7 +25,7 @@ final class InstructionBalanceSpec: QuickSpec {
 
                 let m1 = TestMachine.machine(opcode: Opcode.BALANCE, gasLimit: 3000)
                 let val1 = U256.fromBigEndian(from: H256(from: TestHandler.address1).BYTES)
-                let _ = m1.stack.push(value: val1)
+                _ = m1.stack.push(value: val1)
 
                 m1.evalLoop()
                 expect(m1.machineStatus).to(equal(.Exit(.Success(.Stop))))
@@ -36,7 +33,7 @@ final class InstructionBalanceSpec: QuickSpec {
 
             it("get not existed address") {
                 let m = TestMachine.machine(opcode: Opcode.BALANCE, gasLimit: 3000)
-                let _ = m.stack.push(value: U256(from: 1))
+                _ = m.stack.push(value: U256(from: 1))
 
                 m.evalLoop()
 
@@ -54,8 +51,8 @@ final class InstructionBalanceSpec: QuickSpec {
             it("cold and warm address") {
                 let m = TestMachine.machine(opcodes: [Opcode.BALANCE, Opcode.POP, Opcode.BALANCE], gasLimit: 3000)
                 let val1 = U256.fromBigEndian(from: H256(from: TestHandler.address1).BYTES)
-                let _ = m.stack.push(value: val1)
-                let _ = m.stack.push(value: val1)
+                _ = m.stack.push(value: val1)
+                _ = m.stack.push(value: val1)
 
                 m.evalLoop()
 
@@ -74,7 +71,7 @@ final class InstructionBalanceSpec: QuickSpec {
             it("Istanbul hard fork") {
                 let m = TestMachine.machine(opcodes: [Opcode.BALANCE], gasLimit: 3000, memoryLimit: 1024, hardFork: .Istanbul)
                 let val1 = U256.fromBigEndian(from: H256(from: TestHandler.address1).BYTES)
-                let _ = m.stack.push(value: val1)
+                _ = m.stack.push(value: val1)
 
                 m.evalLoop()
 
@@ -92,7 +89,7 @@ final class InstructionBalanceSpec: QuickSpec {
             it("Tangerine hard fork") {
                 let m = TestMachine.machine(opcodes: [Opcode.BALANCE], gasLimit: 3000, memoryLimit: 1024, hardFork: .Tangerine)
                 let val1 = U256.fromBigEndian(from: H256(from: TestHandler.address1).BYTES)
-                let _ = m.stack.push(value: val1)
+                _ = m.stack.push(value: val1)
 
                 m.evalLoop()
 
@@ -110,7 +107,7 @@ final class InstructionBalanceSpec: QuickSpec {
             it("Homestead hard fork") {
                 let m = TestMachine.machine(opcodes: [Opcode.BALANCE], gasLimit: 3000, memoryLimit: 1024, hardFork: .Homestead)
                 let val1 = U256.fromBigEndian(from: H256(from: TestHandler.address1).BYTES)
-                let _ = m.stack.push(value: val1)
+                _ = m.stack.push(value: val1)
 
                 m.evalLoop()
 

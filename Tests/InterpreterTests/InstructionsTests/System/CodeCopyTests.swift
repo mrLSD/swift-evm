@@ -4,13 +4,10 @@ import PrimitiveTypes
 import Quick
 
 final class InstructionCodeCopySpec: QuickSpec {
-    @MainActor
-    static let machineLowGas = TestMachine.machine(opcode: Opcode.CODECOPY, gasLimit: 1)
-
     override class func spec() {
         describe("Instruction CODECOPY") {
             it("with OutOfGas result for size=1") {
-                let m = Self.machineLowGas
+                let m = TestMachine.machine(opcode: Opcode.CODECOPY, gasLimit: 1)
 
                 _ = m.stack.push(value: U256(from: 1))
                 _ = m.stack.push(value: U256(from: 2))
