@@ -34,9 +34,15 @@ jobs:
     - name: Generate Coverage Report
       run: |
         mkdir -p coverage
-        BINARY_PATH=$(swift test --show-test-binary-path)
-        xcrun llvm-cov export -format="lcov" "$BINARY_PATH" -instr-profile=.build/debug/codecov/default.profdata > coverage/lcov.info
-        # xcrun llvm-cov export -format="lcov"  .build/debug/SwiftEVMPackageTests.xctest/Contents/MacOS/SwiftEVMPackageTests -instr-profile=.build/debug/codecov/default.profdata > coverage/lcov.info
+        BIN_PATH=$(swift build --show-bin-path)
+        TEST_BUNDLE=$(find "$BIN_PATH" -name "*.xctest" | head -n 1)
+        BINARY_NAME=$(basename "$TEST_BUNDLE" .xctest)
+        BINARY_PATH="$TEST_BUNDLE/Contents/MacOS/$BINARY_NAME"
+        echo "Binary path found: $BINARY_PATH"
+        xcrun llvm-cov export -format="lcov" "$BINARY_PATH" \
+          -instr-profile="$BIN_PATH/codecov/default.profdata" \
+          -ignore-filename-regex=".build|Tests" \
+          > coverage/lcov.info
         ls -la coverage/lcov.info
 
     - name: Upload coverage to Codecov

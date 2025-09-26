@@ -47,7 +47,7 @@ public extension FixedArray {
             if let byte = UInt8(byteString, radix: 16) {
                 byteArray.append(byte)
             } else {
-                assertionFailure("Invalid hex string byte character: \(byteString)")
+                fatalError("Invalid hex string byte character: \(byteString)")
             }
             index = nextIndex
         }

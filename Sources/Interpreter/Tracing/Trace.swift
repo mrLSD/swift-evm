@@ -217,8 +217,10 @@ public class Trace {
         for trace in self.data {
             print("{ PC: \(trace.pc), ", terminator: "")
             print("\(trace.opcode), ", terminator: "")
-            print("\(trace.tracedGas!)", terminator: "")
-            if self.config.hideStack {
+            if let tracedGas = trace.tracedGas {
+                print("GAS: \(tracedGas)", terminator: "")
+            }
+            if !self.config.hideStack {
                 print(", Stack: ", terminator: "")
                 if let stackValues = trace.stack {
                     let s = stackValues.data.map { value -> String in

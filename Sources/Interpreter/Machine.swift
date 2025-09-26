@@ -108,7 +108,7 @@ public final class Machine {
     typealias EvalFunction = (_ m: Machine) -> Void
 
     /// Instructions evaluation table. Used to evaluate specific opcodes.
-    /// It represent evaluation functions for each existed opcodes. Table initialized with 255 `nil` instructions and filled for each specific `EVM` opcode.
+    /// It represent evaluation functions for each existed opcodes. Table initialized with 256 `nil` instructions and filled for each specific `EVM` opcode.
     /// For non-existed opcode the evaluation functions is `nil`.
     private let instructionsEvalTable: [EvalFunction?] = {
         var table = [EvalFunction?](repeating: nil, count: 256)
