@@ -242,7 +242,7 @@ public class Memory {
         guard self.resize(end: requiredLength) else { return .failure(.Fatal(.ReadMemory)) }
         guard let buf = self.buffer else { return .failure(.Fatal(.ReadMemory)) }
 
-        // SAFTY: We guaranty that buffer is not nil
+        // SAFETY: We guaranty that buffer is not nil
         let srcPtr = buf.advanced(by: srcOffset)
         let dstPtr = buf.advanced(by: dstOffset)
 
@@ -285,8 +285,8 @@ public class Memory {
             return .success(())
         }
 
-        // Ensure the dataOffset is within bounds.
-        guard dataOffset < data.count else {
+        // Ensure the dataOffset is within bounds (allow dataOffset == data.count when size == 0 is already handled above).
+        guard dataOffset >= 0, dataOffset < data.count else {
             return .failure(.Error(.MemoryOperation(.CopyDataOffsetOutOfBounds)))
         }
 
@@ -305,7 +305,7 @@ public class Memory {
         guard let buf = self.buffer else { return .failure(.Fatal(.ReadMemory)) }
 
         return data.withUnsafeBytes { rawBuffer in
-            // SAFTY: As we validated data length, we can unwrap `rawBuffer.baseAddress`
+            // SAFETY: As we validated data length, we can unwrap `rawBuffer.baseAddress`
             let srcPtr = rawBuffer.baseAddress!.advanced(by: dataOffset)
             let dstPtr = buf.advanced(by: memoryOffset)
             Self.memCpy(dstPtr: dstPtr, srcPtr: srcPtr, count: copyLength)

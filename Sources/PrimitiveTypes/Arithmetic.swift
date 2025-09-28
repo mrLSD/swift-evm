@@ -71,7 +71,7 @@ public extension BigUInt {
     /// Algorithm base on `mac` (multiply-accumulate) operation. It's optimised to avoid
     /// redundant operations with matrix. In common cases multiplication `2*Width`. For
     /// 256-bit in common cases result will be 512-bit - `high` and `low` part. `Low` contains
-    /// result itself, `high` contains overflowed number. We're optimised algorithm to return only `Width`,
+    /// result itself, `high` contains overflowed number. We're optimized algorithm to return only `Width`,
     /// itself, to avoid redundant calculations, but for that we can't correclty calculate overflow status (for that
     /// we should perform full multiplication).
     ///
@@ -409,7 +409,7 @@ public extension BigUInt {
         return result
     }
 
-    /// Performs `subtracts`  and updates the left-hand side with the result.
+    /// Performs subtraction and updates the left-hand side with the result.
     ///
     /// - Parameters:
     ///   - lhs: The left-hand side value to be modified.
@@ -458,7 +458,7 @@ public extension BigUInt {
         lhs = lhs / rhs
     }
 
-    /// Reminder of two values of the same type.
+    /// Remainder of two values of the same type.
     static func % (lhs: Self, rhs: Self) -> Self {
         let (_, result) = lhs.divRem(divisor: rhs)
         return result
@@ -472,5 +472,4 @@ public extension BigUInt {
     static func %= (lhs: inout Self, rhs: Self) {
         lhs = lhs % rhs
     }
-
 }

@@ -95,7 +95,7 @@ final class InstructionSignextendSpec: QuickSpec {
                 expect(m.gas.remaining).to(equal(5))
             }
 
-            it("`a exp b`, when `b` not in the stack") {
+            it("`signextend(a, b)`, when `b` not in the stack") {
                 let m = Self.machine
 
                 _ = m.stack.push(value: U256(from: 1))
@@ -106,7 +106,7 @@ final class InstructionSignextendSpec: QuickSpec {
                 expect(m.gas.remaining).to(equal(10))
             }
 
-            it("(a exp 0)") {
+            it("signextend with byte position 0") {
                 let m = Self.machine
 
                 _ = m.stack.push(value: U256(from: 0))

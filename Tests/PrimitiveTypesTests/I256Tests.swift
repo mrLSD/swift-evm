@@ -25,7 +25,7 @@ final class I256Spec: QuickSpec {
                     it("is Empty") {
                         expectFailInit(array: [])
                     }
-                    it("is 3") {
+                    it("is 1") {
                         expectFailInit(array: [0])
                     }
                     it("is 5") {
@@ -101,7 +101,7 @@ final class I256Spec: QuickSpec {
                 it("correct transformed to Little Endian array") {
                     expect(val.toLittleEndian).to(equal([UInt8](repeating: 0xFF, count: 32)))
                 }
-                it("correct transformed to Bit Endian array") {
+                it("correct transformed to Big Endian array") {
                     expect(val.toBigEndian).to(equal([UInt8](repeating: 0xFF, count: 32)))
                 }
                 it("correct transformed from Little Endian") {
@@ -117,7 +117,7 @@ final class I256Spec: QuickSpec {
                 it("correct bytes") {
                     expect(val.BYTES).to(equal([0, 0, 0, 0]))
                 }
-                it("not Zero value") {
+                it("is Zero value") {
                     expect(val.isZero).to(beTrue())
                 }
                 it("not u64 MAX") {
@@ -132,7 +132,7 @@ final class I256Spec: QuickSpec {
                 it("correct transformed to Little Endian array") {
                     expect(val.toLittleEndian).to(equal([UInt8](repeating: 0, count: 32)))
                 }
-                it("correct transformed to Bit Endian array") {
+                it("correct transformed to Big Endian array") {
                     expect(val.toBigEndian).to(equal([UInt8](repeating: 0, count: 32)))
                 }
                 it("correct transformed from Little Endian") {
@@ -172,18 +172,18 @@ final class I256Spec: QuickSpec {
                     ])
                     expect(val.getUInt).to(beNil())
 
-                    let val2 = U256(from: [0xFFFF, 0, 0, 0])
+                    let val2 = I256(from: [0xFFFF, 0, 0, 0])
                     expect(0xFFFF).to(equal(val2.getUInt))
                 }
 
                 it("getInt") {
-                    let val = U256.fromLittleEndian(from: [
+                    let val = I256.fromLittleEndian(from: [
                         0xF, 1, 2, 3, 0xC1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                         0, 0xAC, 2,
                     ])
                     expect(val.getInt).to(beNil())
 
-                    let val2 = U256(from: [0xFFFF, 0, 0, 0])
+                    let val2 = I256(from: [0xFFFF, 0, 0, 0])
                     expect(0xFFFF).to(equal(val2.getInt))
                 }
             }
@@ -598,7 +598,7 @@ final class I256Spec: QuickSpec {
                 it("by zero") {
                     let i256Value = I256(from: [0, 0, 0, 1], signExtend: false)
                     let result = i256Value / I256.ZERO
-                    let expected = U256.ZERO
+                    let expected = I256.ZERO
 
                     expect(result.BYTES).to(equal(expected.BYTES))
                 }
