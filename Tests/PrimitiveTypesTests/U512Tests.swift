@@ -57,7 +57,7 @@ final class U512Spec: QuickSpec {
                             }.to(throwAssertion())
                         }).to(contain("Invalid hex string for 64 bytes"))
                     }
-                    it("String length to compared to `mod 2`") {
+                    it("String length compared to `mod 2`") {
                         expect(captureStandardError {
                             expect {
                                 _ = U512.fromString(hex: String(repeating: "A", count: 1))

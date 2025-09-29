@@ -105,7 +105,7 @@ struct Stack {
     }
 
     /// Peeks a value at a given index from the top of the stack and converts it to `Int`.
-    /// If the value is larger than `Int.max`, `ExitError.outOfGas` is returned (`outOfGas` error possible only for 32-bit context like `wasm32`).
+    /// If the value is larger than `UInt.max`, `ExitError.OutOfOffset` is returned (possible only for 32-bit context like `wasm32`).
     ///
     /// - Parameter indexFromTop: The index from the top of the stack.
     /// - Returns: A `Result` containing the `Int` value if successful, or an `ExitError` if an error occurs.

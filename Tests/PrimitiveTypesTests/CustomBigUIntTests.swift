@@ -62,7 +62,7 @@ final class BigUintSpec: QuickSpec {
                             }.to(throwAssertion())
                         }).to(contain("Invalid hex string for 16 bytes"))
                     }
-                    it("String length to compared to `mod 2`") {
+                    it("String length compared to `mod 2`") {
                         expect(captureStandardError {
                             expect {
                                 _ = TestUint128.fromString(hex: String(repeating: "A", count: 1))
