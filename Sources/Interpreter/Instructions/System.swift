@@ -1,3 +1,4 @@
+import CryptoSwift
 import PrimitiveTypes
 
 /// EVM System instructions
@@ -145,5 +146,45 @@ enum SystemInstructions {
             return
         }
         m.stackPush(value: m.context.value)
+    }
+
+    static func keccak256(machine m: Machine) {
+        // Pop the required values from the stack: memory offset and size.
+        guard let rawMemoryOffset = m.stackPop() else {
+            return
+        }
+        guard let rawSize = m.stackPop() else {
+            return
+        }
+
+        // This situation possible only for 32-bit context (for example wasm32)
+        guard let size = m.getIntOrFail(rawSize) else {
+            return
+        }
+
+        // Calculate the gas cost for Keccak256 operation.
+        guard let cost = GasCost.keccak256Cost(size: size) else {
+            return
+        }
+
+        // Record the gas cost for the copy operation.
+        if !m.gasRecordCost(cost: cost) {
+            return
+        }
+
+        // This situation possible only for 32-bit context (for example wasm32)
+        guard let memoryOffset = m.getIntOrFail(rawMemoryOffset) else {
+            return
+        }
+
+        guard m.resizeMemoryAndRecordGas(offset: memoryOffset, size: size) else {
+            return
+        }
+
+        let data = m.memory.get(offset: memoryOffset, size: size)
+
+        let keccakHashBytes = data.sha3(.keccak256)
+        let newValue = U256.fromBigEndian(from: keccakHashBytes)
+        m.stackPush(value: newValue)
     }
 }
