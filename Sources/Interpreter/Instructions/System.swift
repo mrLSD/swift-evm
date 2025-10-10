@@ -2,7 +2,10 @@ import CryptoSwift
 import PrimitiveTypes
 
 /// EVM System instructions
+///
+/// This enum provides static functions for EVM system-level opcodes such as CODECOPY, CALLDATACOPY, CALLVALUE, KECCAK256, etc.
 enum SystemInstructions {
+    /// Pushes the size of the current code onto the stack.
     static func codeSize(machine m: Machine) {
         if !m.gasRecordCost(cost: GasConstant.BASE) {
             return
@@ -62,6 +65,7 @@ enum SystemInstructions {
         }
     }
 
+    /// Pushes the size of the call data onto the stack.
     static func callDataSize(machine m: Machine) {
         if !m.gasRecordCost(cost: GasConstant.BASE) {
             return
@@ -71,6 +75,7 @@ enum SystemInstructions {
         m.stackPush(value: U256(from: newValue))
     }
 
+    /// Copies call data into memory at the specified offset and size.
     static func callDataCopy(machine m: Machine) {
         // Pop the required values from the stack: memory offset, code offset, and size.
         guard let rawMemoryOffset = m.stackPop() else {
@@ -119,6 +124,7 @@ enum SystemInstructions {
         }
     }
 
+    /// Loads 32 bytes from call data at the specified index and pushes it onto the stack.
     static func callDataLoad(machine m: Machine) {
         if !m.gasRecordCost(cost: GasConstant.VERYLOW) {
             return
@@ -141,6 +147,7 @@ enum SystemInstructions {
         m.stackPush(value: newValue)
     }
 
+    /// Pushes the call value onto the stack.
     static func callValue(machine m: Machine) {
         if !m.gasRecordCost(cost: GasConstant.BASE) {
             return
@@ -148,6 +155,7 @@ enum SystemInstructions {
         m.stackPush(value: m.context.value)
     }
 
+    /// Computes the Keccak-256 hash of a memory region and pushes the result onto the stack.
     static func keccak256(machine m: Machine) {
         // Pop the required values from the stack: memory offset and size.
         guard let rawMemoryOffset = m.stackPop() else {
@@ -164,6 +172,7 @@ enum SystemInstructions {
 
         // Calculate the gas cost for Keccak256 operation.
         guard let cost = GasCost.keccak256Cost(size: size) else {
+                        m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.OutOfGas))
             return
         }
 
