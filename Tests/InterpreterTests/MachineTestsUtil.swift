@@ -44,7 +44,7 @@ class TestHandler: InterpreterHandler {
 
 enum TestMachine {
     static func defaultContext() -> Machine.Context {
-        Machine.Context(target: H160.ZERO, sender: H160.ZERO, value: U256.ZERO)
+        Machine.Context(targetAddress: H160.ZERO, callerAddress: H160.ZERO, callValue: U256.ZERO)
     }
 
     /// Init simple Machine

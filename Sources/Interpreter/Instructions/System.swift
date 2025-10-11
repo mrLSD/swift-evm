@@ -152,7 +152,29 @@ enum SystemInstructions {
         if !m.gasRecordCost(cost: GasConstant.BASE) {
             return
         }
-        m.stackPush(value: m.context.value)
+        m.stackPush(value: m.context.callValue)
+    }
+
+    /// Pushes the address of the currently executing account onto the stack.
+    static func address(machine m: Machine) {
+        if !m.gasRecordCost(cost: GasConstant.BASE) {
+            return
+        }
+
+        // Push the address of the current contract onto the stack
+        let newValue = H256(from: m.context.targetAddress).BYTES
+        m.stackPush(value: U256.fromBigEndian(from: newValue))
+    }
+
+    /// Pushes the caller address onto the stack.
+    static func caller(machine m: Machine) {
+        if !m.gasRecordCost(cost: GasConstant.BASE) {
+            return
+        }
+
+        // Push the caller address onto the stack
+        let newValue = H256(from: m.context.callerAddress).BYTES
+        m.stackPush(value: U256.fromBigEndian(from: newValue))
     }
 
     /// Computes the Keccak-256 hash of a memory region and pushes the result onto the stack.

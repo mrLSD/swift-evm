@@ -31,9 +31,9 @@ final class InstructionGasPriceSpec: QuickSpec {
             }
 
             it("Successful execution") {
-                let context = Machine.Context(target: TestHandler.address1,
-                                              sender: TestHandler.address2,
-                                              value: U256.ZERO)
+                let context = Machine.Context(targetAddress: TestHandler.address1,
+                                              callerAddress: TestHandler.address2,
+                                              callValue: U256.ZERO)
                 let m = TestMachine.machine(opcode: Opcode.GASPRICE, gasLimit: 10, context: context, hardFork: .latest())
 
                 m.evalLoop()

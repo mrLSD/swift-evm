@@ -237,6 +237,7 @@ public extension BigUInt {
 
 /// Implementation of `Equatable`
 public extension BigUInt {
+    /// Compare if `lhs` is less than `rhs`
     static func cmpLess(lhs: Self, rhs: Self) -> Bool {
         // Reversed iteration
         for i in stride(from: Int(self.numberBase) - 1, through: 0, by: -1) {
@@ -250,6 +251,7 @@ public extension BigUInt {
         return false
     }
 
+    /// Operator `==`: Check if two `BigUInt` values are equal
     static func == (lhs: Self, rhs: Self) -> Bool {
         lhs.BYTES == rhs.BYTES
     }

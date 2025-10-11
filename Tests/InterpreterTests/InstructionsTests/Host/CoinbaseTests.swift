@@ -29,9 +29,9 @@ final class InstructionCoinbaseSpec: QuickSpec {
             }
 
             it("Successful execution") {
-                let context = Machine.Context(target: TestHandler.address1,
-                                              sender: TestHandler.address3,
-                                              value: U256.ZERO)
+                let context = Machine.Context(targetAddress: TestHandler.address1,
+                                              callerAddress: TestHandler.address3,
+                                              callValue: U256.ZERO)
                 let m = TestMachine.machine(opcode: Opcode.COINBASE, gasLimit: 10, context: context, hardFork: .latest())
 
                 m.evalLoop()
