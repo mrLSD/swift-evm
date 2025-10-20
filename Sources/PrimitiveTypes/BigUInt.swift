@@ -156,23 +156,34 @@ public extension BigUInt {
     ///   - `value.count` value must be ` mod 2`.
     ///   - `hex` value of the `String` must be  equal `1 byte (8 bit)`.
     static func fromString(hex value: String) -> Self {
-        precondition(value.count <= numberBytes * 2, "Invalid hex string for \(numberBytes) bytes.")
-        precondition(value.count % 2 == 0, "Invalid hex string for `mod 2`")
+        let hex = value.hasPrefix("0x") || value.hasPrefix("0X")
+            ? String(value.dropFirst(2))
+            : value
+
+        precondition(hex.count <= numberBytes * 2, "Invalid hex string for \(numberBytes) bytes.")
+        precondition(hex.count % 2 == 0, "Invalid hex string for `mod 2`")
 
         var byteArray: [UInt8] = []
-        var index = value.startIndex
-        while index < value.endIndex {
-            let nextIndex = value.index(index, offsetBy: 2)
-            let byteString = String(value[index ..< nextIndex])
-            if let byte = UInt8(byteString, radix: 16) {
-                byteArray.append(byte)
-            } else {
-                fatalError("Invalid hex string byte character: \(byteString)")
+        byteArray.reserveCapacity(hex.count / 2)
+
+        var index = hex.startIndex
+        while index < hex.endIndex {
+            let nextIndex = hex.index(index, offsetBy: 2)
+            let byteString = String(hex[index ..< nextIndex])
+            guard let byte = UInt8(byteString, radix: 16) else {
+                fatalError("Invalid hex byte: \(byteString)")
             }
+            byteArray.append(byte)
             index = nextIndex
         }
 
-        return Self.fromLittleEndian(from: byteArray)
+        if byteArray.count > numberBytes {
+            let overflow = byteArray.prefix(byteArray.count - Int(numberBytes))
+            precondition(overflow.allSatisfy { $0 == 0 }, "BigUInt overflow")
+            byteArray = Array(byteArray.suffix(Int(numberBytes)))
+        }
+
+        return Self.fromBigEndian(from: byteArray)
     }
 }
 
