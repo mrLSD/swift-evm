@@ -46,21 +46,21 @@ final class U128Spec: QuickSpec {
                             expect {
                                 _ = U128.fromString(hex: String(repeating: "A", count: 33))
                             }.to(throwAssertion())
-                        }).to(contain("Invalid hex string for 16 bytes"))
+                        }).to(contain("Invalid hex string for `mod 2`"))
                     }
                     it("String length compared to `mod 2`") {
                         expect(captureStandardError {
                             expect {
                                 _ = U128.fromString(hex: String(repeating: "A", count: 1))
                             }.to(throwAssertion())
-                        }).to(contain("Invalid hex string for `mod 2"))
+                        }).to(contain("Invalid hex string for `mod 2`"))
                     }
                     it("String contains wrong character G") {
                         expect(captureStandardError {
                             expect {
                                 _ = U128.fromString(hex: "0G")
                             }.to(throwAssertion())
-                        }).to(contain("Invalid hex string byte character: 0G"))
+                        }).to(contain("Invalid hex byte: 0G"))
                     }
                 }
             }
@@ -117,7 +117,7 @@ final class U128Spec: QuickSpec {
                     expect(val).toNot(equal(U128(from: UInt64.max)))
                 }
                 it("correct transformed to String") {
-                    expect("\(val)").to(equal("00000000000000000000000000000000"))
+                    expect("\(val)").to(equal("0"))
                 }
                 it("correct transformed from String") {
                     expect(U128.fromString(hex: "00000000000000000000000000000000")).to(equal(val))

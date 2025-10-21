@@ -160,7 +160,6 @@ public extension BigUInt {
             ? String(value.dropFirst(2))
             : value
 
-        precondition(hex.count <= numberBytes * 2, "Invalid hex string for \(numberBytes) bytes.")
         precondition(hex.count % 2 == 0, "Invalid hex string for `mod 2`")
 
         var byteArray: [UInt8] = []
@@ -190,7 +189,13 @@ public extension BigUInt {
 /// Implementation of `CustomStringConvertible`
 public extension BigUInt {
     var description: String {
-        self.BYTES.map { String(format: "%016lX", $0) }.joined()
+        let bytes = self.toBigEndian
+        let hex = bytes
+            .drop { $0 == 0 }
+            .map { String(format: "%02X", $0) }
+            .joined()
+
+        return hex.isEmpty ? "0" : hex
     }
 }
 

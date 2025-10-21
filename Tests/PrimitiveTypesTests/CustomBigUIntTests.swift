@@ -60,21 +60,21 @@ final class BigUintSpec: QuickSpec {
                             expect {
                                 _ = TestUint128.fromString(hex: String(repeating: "A", count: 33))
                             }.to(throwAssertion())
-                        }).to(contain("Invalid hex string for 16 bytes"))
+                        }).to(contain("Invalid hex string for `mod 2`"))
                     }
                     it("String length compared to `mod 2`") {
                         expect(captureStandardError {
                             expect {
                                 _ = TestUint128.fromString(hex: String(repeating: "A", count: 1))
                             }.to(throwAssertion())
-                        }).to(contain("Invalid hex string for `mod 2"))
+                        }).to(contain("Invalid hex string for `mod 2`"))
                     }
                     it("String contains wrong character G") {
                         expect(captureStandardError {
                             expect {
                                 _ = TestUint128.fromString(hex: "0G")
                             }.to(throwAssertion())
-                        }).to(contain("Invalid hex string byte character: 0G"))
+                        }).to(contain("Invalid hex byte: 0G"))
                     }
                 }
             }
@@ -131,7 +131,7 @@ final class BigUintSpec: QuickSpec {
                     expect(val).toNot(equal(TestUint128(from: UInt64.max)))
                 }
                 it("correct transformed to String") {
-                    expect("\(val)").to(equal("00000000000000000000000000000000"))
+                    expect("\(val)").to(equal("0"))
                 }
                 it("correct transformed from String") {
                     expect(TestUint128.fromString(hex: "00000000000000000000000000000000")).to(equal(val))
@@ -148,6 +148,29 @@ final class BigUintSpec: QuickSpec {
                 }
                 it("correct transformed from Big Endian") {
                     expect(TestUint128.fromBigEndian(from: val.toBigEndian)).to(equal(val))
+                }
+            }
+
+            context("wrong String number overflow") {
+                it("too big String with overflow") {
+                    expect(captureStandardError {
+                        expect {
+                            _ = TestUint128.fromString(hex: String(repeating: "A", count: 34))
+                        }.to(throwAssertion())
+                    }).to(contain("BigUInt overflow"))
+                }
+
+                it("leading zeros + 32 'A' characters should parse to U128 of all 'A's") {
+                    // Prepend 4 hex zeros (2 bytes) to a 32-'A' hex string.
+                    let trimmed = String(repeating: "A", count: 32)
+                    let hex = "0000" + trimmed
+
+                    // Expected: 32 hex 'A' -> 16 bytes 0xAA
+                    let expectedBytes = [UInt8](repeating: 0xAA, count: 16)
+                    let expected = TestUint128.fromBigEndian(from: expectedBytes)
+
+                    // Parsing must succeed and equal the expected U128 value.
+                    expect(TestUint128.fromString(hex: hex)).to(equal(expected))
                 }
             }
         }
