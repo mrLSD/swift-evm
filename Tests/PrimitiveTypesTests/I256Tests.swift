@@ -62,12 +62,11 @@ final class I256Spec: QuickSpec {
                             }.to(throwAssertion())
                         }).to(contain("Invalid hex string for `mod 2"))
                     }
-                    it("Invalid hex byte: 0G") {
-                        expect(captureStandardError {
-                            expect {
-                                _ = I256.fromString(hex: "0G")
-                            }.to(throwAssertion())
-                        }).to(contain("Invalid hex byte: 0G"))
+                    it("String contains wrong character G") {
+                        let res = I256.fromString(hex: "0G")
+                        expect(res).to(beFailure { error in
+                            expect(error).to(matchError(HexStringError.InvalidHexCharacter("G")))
+                        })
                     }
                 }
             }
@@ -96,7 +95,8 @@ final class I256Spec: QuickSpec {
                     expect("\(val)").to(equal("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"))
                 }
                 it("correct transformed from String") {
-                    expect(I256.fromString(hex: "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF")).to(equal(val))
+                    let res = I256.fromString(hex: "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF")
+                    expect(res).to(beSuccess(val))
                 }
                 it("correct transformed to Little Endian array") {
                     expect(val.toLittleEndian).to(equal([UInt8](repeating: 0xFF, count: 32)))

@@ -56,11 +56,10 @@ final class U128Spec: QuickSpec {
                         }).to(contain("Invalid hex string for `mod 2`"))
                     }
                     it("String contains wrong character G") {
-                        expect(captureStandardError {
-                            expect {
-                                _ = U128.fromString(hex: "0G")
-                            }.to(throwAssertion())
-                        }).to(contain("Invalid hex byte: 0G"))
+                        let res = U128.fromString(hex: "0G")
+                        expect(res).to(beFailure { error in
+                            expect(error).to(matchError(HexStringError.InvalidHexCharacter("G")))
+                        })
                     }
                 }
             }
