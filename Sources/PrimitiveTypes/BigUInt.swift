@@ -201,7 +201,7 @@ public extension BigUInt {
 public extension BigUInt {
     /// Canonical string representation (Lower case hex, stripped leading zeros)
     var description: String {
-        self.encodeHexUpper()
+        self.encodeHexLower()
     }
 
     /// Encode to hex string with uppercase characters.

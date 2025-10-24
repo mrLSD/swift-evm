@@ -68,7 +68,7 @@ final class BigUintSpec: QuickSpec {
                     it("String contains wrong character G") {
                         let res = TestUint128.fromString(hex: "0G")
                         expect(res).to(beFailure { error in
-                            expect(error).to(matchError(HexStringError.InvalidHexCharacter("G")))
+                            expect(error).to(matchError(HexStringError.InvalidHexCharacter("0G")))
                         })
                     }
                 }
@@ -95,7 +95,7 @@ final class BigUintSpec: QuickSpec {
                     expect(val).toNot(equal(TestUint128(from: UInt64.max)))
                 }
                 it("correct transformed to String") {
-                    expect("\(val)").to(equal("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"))
+                    expect("\(val)").to(equal("ffffffffffffffffffffffffffffffff"))
                 }
                 it("correct transformed from String") {
                     let res = TestUint128.fromString(hex: "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF")
@@ -169,6 +169,28 @@ final class BigUintSpec: QuickSpec {
                     expect(res).to(beFailure { error in
                         expect(error).to(matchError(HexStringError.InvalidStringLength))
                     })
+                }
+
+                context("Different hex variants") {
+                    it("String with 0x prefix") {
+                        let hex = "0xAC"
+                        let res = TestUint128.fromString(hex: hex)
+                        expect(res).to(beSuccess(TestUint128(from: 0xAC)))
+                    }
+
+                    it("Empty string") {
+                        let res1 = TestUint128.fromString(hex: "0x")
+                        let res2 = TestUint128.fromString(hex: "")
+                        expect(res1).to(beSuccess(TestUint128.ZERO))
+                        expect(res2).to(beSuccess(TestUint128.ZERO))
+                    }
+
+                    it("Encode gex to upper case") {
+                        let res = TestUint128(from: 0xAC).encodeHexUpper()
+                        let res2 = TestUint128(from: 0xAC).encodeHexLower()
+                        expect(res).to(equal("AC"))
+                        expect(res2.uppercased()).to(equal(res))
+                    }
                 }
             }
         }

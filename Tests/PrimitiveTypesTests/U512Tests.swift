@@ -63,7 +63,7 @@ final class U512Spec: QuickSpec {
                     it("String contains wrong character G") {
                         let res = U512.fromString(hex: "0G")
                         expect(res).to(beFailure { error in
-                            expect(error).to(matchError(HexStringError.InvalidHexCharacter("G")))
+                            expect(error).to(matchError(HexStringError.InvalidHexCharacter("0G")))
                         })
                     }
                 }
@@ -90,7 +90,7 @@ final class U512Spec: QuickSpec {
                     expect(val).toNot(equal(U512(from: UInt64.max)))
                 }
                 it("correct transformed to String") {
-                    expect("\(val)").to(equal("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"))
+                    expect("\(val)").to(equal("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"))
                 }
                 it("correct transformed from String") {
                     let res = U512.fromString(hex: "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF")

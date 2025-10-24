@@ -42,23 +42,19 @@ final class U128Spec: QuickSpec {
 
                 context("wrong String for conversion") {
                     it("too big String") {
-                        expect(captureStandardError {
-                            expect {
-                                _ = U128.fromString(hex: String(repeating: "A", count: 33))
-                            }.to(throwAssertion())
-                        }).to(contain("Invalid hex string for `mod 2`"))
+                        let res = U128.fromString(hex: String(repeating: "A", count: 33))
+                        expect(res).to(beFailure { error in
+                            expect(error).to(matchError(HexStringError.InvalidStringLength))
+                        })
                     }
                     it("String length compared to `mod 2`") {
-                        expect(captureStandardError {
-                            expect {
-                                _ = U128.fromString(hex: String(repeating: "A", count: 1))
-                            }.to(throwAssertion())
-                        }).to(contain("Invalid hex string for `mod 2`"))
+                        let res = U128.fromString(hex: String(repeating: "A", count: 1))
+                        expect(res).to(beSuccess(U128(from: 0xa)))
                     }
                     it("String contains wrong character G") {
                         let res = U128.fromString(hex: "0G")
                         expect(res).to(beFailure { error in
-                            expect(error).to(matchError(HexStringError.InvalidHexCharacter("G")))
+                            expect(error).to(matchError(HexStringError.InvalidHexCharacter("0G")))
                         })
                     }
                 }
@@ -85,10 +81,11 @@ final class U128Spec: QuickSpec {
                     expect(val).toNot(equal(U128(from: UInt64.max)))
                 }
                 it("correct transformed to String") {
-                    expect("\(val)").to(equal("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"))
+                    expect("\(val)").to(equal("ffffffffffffffffffffffffffffffff"))
                 }
                 it("correct transformed from String") {
-                    expect(U128.fromString(hex: "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF")).to(equal(val))
+                    let res = U128.fromString(hex: "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF")
+                    expect(res).to(beSuccess(val))
                 }
                 it("correct transformed to Little Endian array") {
                     expect(val.toLittleEndian).to(equal([UInt8](repeating: 0xff, count: 16)))
@@ -119,7 +116,8 @@ final class U128Spec: QuickSpec {
                     expect("\(val)").to(equal("0"))
                 }
                 it("correct transformed from String") {
-                    expect(U128.fromString(hex: "00000000000000000000000000000000")).to(equal(val))
+                    let res = U128.fromString(hex: "00000000000000000000000000000000")
+                    expect(res).to(beSuccess(val))
                 }
                 it("correct transformed to Little Endian array") {
                     expect(val.toLittleEndian).to(equal([UInt8](repeating: 0, count: 16)))

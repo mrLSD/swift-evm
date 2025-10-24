@@ -49,23 +49,19 @@ final class I256Spec: QuickSpec {
 
                 context("wrong String for conversion") {
                     it("too big String") {
-                        expect(captureStandardError {
-                            expect {
-                                _ = I256.fromString(hex: String(repeating: "A", count: 65))
-                            }.to(throwAssertion())
-                        }).to(contain("Invalid hex string for `mod 2`"))
+                        let res = I256.fromString(hex: String(repeating: "A", count: 65))
+                        expect(res).to(beFailure { error in
+                            expect(error).to(matchError(HexStringError.InvalidStringLength))
+                        })
                     }
                     it("String length compared to `mod 2`") {
-                        expect(captureStandardError {
-                            expect {
-                                _ = I256.fromString(hex: String(repeating: "A", count: 1))
-                            }.to(throwAssertion())
-                        }).to(contain("Invalid hex string for `mod 2"))
+                        let res = I256.fromString(hex: String(repeating: "A", count: 1))
+                        expect(res).to(beSuccess(I256(from: 0xA)))
                     }
                     it("String contains wrong character G") {
                         let res = I256.fromString(hex: "0G")
                         expect(res).to(beFailure { error in
-                            expect(error).to(matchError(HexStringError.InvalidHexCharacter("G")))
+                            expect(error).to(matchError(HexStringError.InvalidHexCharacter("0G")))
                         })
                     }
                 }
@@ -92,7 +88,7 @@ final class I256Spec: QuickSpec {
                     expect(val).toNot(equal(I256(from: UInt64.max)))
                 }
                 it("correct transformed to String") {
-                    expect("\(val)").to(equal("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"))
+                    expect("\(val)").to(equal("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"))
                 }
                 it("correct transformed from String") {
                     let res = I256.fromString(hex: "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF")
@@ -127,7 +123,8 @@ final class I256Spec: QuickSpec {
                     expect("\(val)").to(equal("0"))
                 }
                 it("correct transformed from String") {
-                    expect(I256.fromString(hex: "0000000000000000000000000000000000000000000000000000000000000000")).to(equal(val))
+                    let res = I256.fromString(hex: "0000000000000000000000000000000000000000000000000000000000000000")
+                    expect(res).to(beSuccess(val))
                 }
                 it("correct transformed to Little Endian array") {
                     expect(val.toLittleEndian).to(equal([UInt8](repeating: 0, count: 32)))
