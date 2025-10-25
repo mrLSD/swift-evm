@@ -58,7 +58,7 @@ final class BigUintSpec: QuickSpec {
                     it("too big String") {
                         let res = TestUint128.fromString(hex: String(repeating: "A", count: 33))
                         expect(res).to(beFailure { error in
-                            expect(error).to(matchError(HexStringError.InvalidStringLength))
+                            expect(error).to(matchError(HexStringError.invalidStringLength))
                         })
                     }
                     it("String length compared to `mod 2`") {
@@ -68,7 +68,7 @@ final class BigUintSpec: QuickSpec {
                     it("String contains wrong character G") {
                         let res = TestUint128.fromString(hex: "0G")
                         expect(res).to(beFailure { error in
-                            expect(error).to(matchError(HexStringError.InvalidHexCharacter("0G")))
+                            expect(error).to(matchError(HexStringError.invalidHexCharacter("0G")))
                         })
                     }
                 }
@@ -99,9 +99,7 @@ final class BigUintSpec: QuickSpec {
                 }
                 it("correct transformed from String") {
                     let res = TestUint128.fromString(hex: "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF")
-                    expect(res).to(beSuccess { value in
-                        expect(value).to(equal(val))
-                    })
+                    expect(res).to(beSuccess(val))
                 }
                 it("correct transformed to Little Endian array") {
                     expect(val.toLittleEndian).to(equal([UInt8](repeating: 0xFF, count: 16)))
@@ -155,7 +153,7 @@ final class BigUintSpec: QuickSpec {
                     let hex = String(repeating: "A", count: 34)
                     let res = TestUint128.fromString(hex: hex)
                     expect(res).to(beFailure { error in
-                        expect(error).to(matchError(HexStringError.InvalidStringLength))
+                        expect(error).to(matchError(HexStringError.invalidStringLength))
                     })
                 }
 
@@ -167,7 +165,7 @@ final class BigUintSpec: QuickSpec {
                     // Parsing must fail due to invalid length.
                     let res = TestUint128.fromString(hex: hex)
                     expect(res).to(beFailure { error in
-                        expect(error).to(matchError(HexStringError.InvalidStringLength))
+                        expect(error).to(matchError(HexStringError.invalidStringLength))
                     })
                 }
 
@@ -185,7 +183,7 @@ final class BigUintSpec: QuickSpec {
                         expect(res2).to(beSuccess(TestUint128.ZERO))
                     }
 
-                    it("Encode gex to upper case") {
+                    it("Encode hex to upper case") {
                         let res = TestUint128(from: 0xAC).encodeHexUpper()
                         let res2 = TestUint128(from: 0xAC).encodeHexLower()
                         expect(res).to(equal("AC"))

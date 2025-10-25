@@ -44,7 +44,7 @@ final class U128Spec: QuickSpec {
                     it("too big String") {
                         let res = U128.fromString(hex: String(repeating: "A", count: 33))
                         expect(res).to(beFailure { error in
-                            expect(error).to(matchError(HexStringError.InvalidStringLength))
+                            expect(error).to(matchError(HexStringError.invalidStringLength))
                         })
                     }
                     it("String length compared to `mod 2`") {
@@ -54,7 +54,7 @@ final class U128Spec: QuickSpec {
                     it("String contains wrong character G") {
                         let res = U128.fromString(hex: "0G")
                         expect(res).to(beFailure { error in
-                            expect(error).to(matchError(HexStringError.InvalidHexCharacter("0G")))
+                            expect(error).to(matchError(HexStringError.invalidHexCharacter("0G")))
                         })
                     }
                 }

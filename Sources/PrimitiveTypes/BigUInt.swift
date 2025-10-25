@@ -171,7 +171,7 @@ public extension BigUInt {
 
         // Validate Length
         if hex.count > Int(numberBytes) * 2 {
-            return .failure(.InvalidStringLength)
+            return .failure(.invalidStringLength)
         }
 
         // Handle Odd Length (Rust implicitly prepends '0')
@@ -187,7 +187,7 @@ public extension BigUInt {
             let nextIndex = hex.index(index, offsetBy: 2)
             let byteString = String(hex[index ..< nextIndex])
             guard let byte = UInt8(byteString, radix: 16) else {
-                return .failure(.InvalidHexCharacter(byteString))
+                return .failure(.invalidHexCharacter(byteString))
             }
             byteArray.append(byte)
             index = nextIndex
@@ -204,7 +204,7 @@ public extension BigUInt {
         self.encodeHexLower()
     }
 
-    /// Encode to hex string with uppercase characters.
+    /// Encode to hex string with lowercase characters.
     func encodeHexLower() -> String {
         return self.hexString(uppercase: false)
     }
