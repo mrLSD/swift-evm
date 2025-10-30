@@ -4,14 +4,10 @@ public enum HexStringError: Error, Equatable {
     /// or `A...F`.
     /// The associated `String` contains the invalid character or the two-character
     /// hex substring that couldn't be parsed (e.g. "0G").
-    case invalidHexCharacter(String)
-
-    /// A hex string's length needs to be even, as two digits correspond to
-    /// one byte.
-    case oddLength
+    case InvalidHexCharacter(String)
 
     /// If the hex string is decoded into a fixed sized container, such as an
     /// array, the hex string's length * 2 has to match the container's
     /// length.
-    case invalidStringLength
+    case InvalidStringLength
 }

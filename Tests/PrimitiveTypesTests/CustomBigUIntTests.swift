@@ -58,7 +58,7 @@ final class BigUintSpec: QuickSpec {
                     it("too big String") {
                         let res = TestUint128.fromString(hex: String(repeating: "A", count: 33))
                         expect(res).to(beFailure { error in
-                            expect(error).to(matchError(HexStringError.invalidStringLength))
+                            expect(error).to(matchError(HexStringError.InvalidStringLength))
                         })
                     }
                     it("String length compared to `mod 2`") {
@@ -68,7 +68,7 @@ final class BigUintSpec: QuickSpec {
                     it("String contains wrong character G") {
                         let res = TestUint128.fromString(hex: "0G")
                         expect(res).to(beFailure { error in
-                            expect(error).to(matchError(HexStringError.invalidHexCharacter("0G")))
+                            expect(error).to(matchError(HexStringError.InvalidHexCharacter("0G")))
                         })
                     }
                 }
@@ -153,7 +153,7 @@ final class BigUintSpec: QuickSpec {
                     let hex = String(repeating: "A", count: 34)
                     let res = TestUint128.fromString(hex: hex)
                     expect(res).to(beFailure { error in
-                        expect(error).to(matchError(HexStringError.invalidStringLength))
+                        expect(error).to(matchError(HexStringError.InvalidStringLength))
                     })
                 }
 
@@ -165,7 +165,7 @@ final class BigUintSpec: QuickSpec {
                     // Parsing must fail due to invalid length.
                     let res = TestUint128.fromString(hex: hex)
                     expect(res).to(beFailure { error in
-                        expect(error).to(matchError(HexStringError.invalidStringLength))
+                        expect(error).to(matchError(HexStringError.InvalidStringLength))
                     })
                 }
 

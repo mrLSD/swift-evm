@@ -51,7 +51,7 @@ final class I256Spec: QuickSpec {
                     it("too big String") {
                         let res = I256.fromString(hex: String(repeating: "A", count: 65))
                         expect(res).to(beFailure { error in
-                            expect(error).to(matchError(HexStringError.invalidStringLength))
+                            expect(error).to(matchError(HexStringError.InvalidStringLength))
                         })
                     }
                     it("String length compared to `mod 2`") {
@@ -61,7 +61,7 @@ final class I256Spec: QuickSpec {
                     it("String contains wrong character G") {
                         let res = I256.fromString(hex: "0G")
                         expect(res).to(beFailure { error in
-                            expect(error).to(matchError(HexStringError.invalidHexCharacter("0G")))
+                            expect(error).to(matchError(HexStringError.InvalidHexCharacter("0G")))
                         })
                     }
                 }

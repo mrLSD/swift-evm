@@ -28,25 +28,22 @@ final class H256Spec: QuickSpec {
 
                 context("wrong String for conversion") {
                     it("too big String") {
-                        expect(captureStandardError {
-                            expect {
-                                _ = H256.fromString(hex: String(repeating: "A", count: 65))
-                            }.to(throwAssertion())
-                        }).to(contain("Invalid hex string for 32 bytes"))
+                        let res = H256.fromString(hex: String(repeating: "A", count: 65))
+                        expect(res).to(beFailure { error in
+                            expect(error).to(matchError(HexStringError.InvalidStringLength))
+                        })
                     }
                     it("String length compared to `mod 2`") {
-                        expect(captureStandardError {
-                            expect {
-                                _ = H256.fromString(hex: String(repeating: "A", count: 1))
-                            }.to(throwAssertion())
-                        }).to(contain("Invalid hex string for `mod 2"))
+                        let res = H256.fromString(hex: String(repeating: "A", count: 1))
+                        expect(res).to(beFailure { error in
+                            expect(error).to(matchError(HexStringError.InvalidStringLength))
+                        })
                     }
                     it("String contains wrong character G") {
-                        expect(captureStandardError {
-                            expect {
-                                _ = H256.fromString(hex: "0G")
-                            }.to(throwAssertion())
-                        }).to(contain("Invalid hex string byte character: 0G"))
+                        let res = H256.fromString(hex: "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF0G")
+                        expect(res).to(beFailure { error in
+                            expect(error).to(matchError(HexStringError.InvalidHexCharacter("0G")))
+                        })
                     }
                 }
             }
@@ -60,10 +57,11 @@ final class H256Spec: QuickSpec {
                     expect(val.isZero).to(beFalse())
                 }
                 it("correct transformed to String") {
-                    expect("\(val)").to(equal("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"))
+                    expect("\(val)").to(equal("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"))
                 }
                 it("correct transformed from String") {
-                    expect(H256.fromString(hex: "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF")).to(equal(val))
+                    let res = H256.fromString(hex: "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF")
+                    expect(res).to(beSuccess(val))
                 }
             }
 
@@ -79,7 +77,8 @@ final class H256Spec: QuickSpec {
                     expect("\(val)").to(equal("0000000000000000000000000000000000000000000000000000000000000000"))
                 }
                 it("correct transformed from String") {
-                    expect(H256.fromString(hex: "0000000000000000000000000000000000000000000000000000000000000000")).to(equal(val))
+                    let res = H256.fromString(hex: "0000000000000000000000000000000000000000000000000000000000000000")
+                    expect(res).to(beSuccess(val))
                 }
             }
 
