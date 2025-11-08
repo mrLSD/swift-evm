@@ -15,7 +15,7 @@ public protocol FixedArray: CustomStringConvertible, Equatable, Sendable {
     /// Init from bytes array.
     init(from value: [UInt8])
 
-    /// Create `FixedArray` from hex `String`
+    /// Create `FixedArray` from hex `String`. Returns Result type matching Rust's implementation.igUInt` from hex `String`. Returns Result type matching Rust's implementation.
     static func fromString(hex value: String) -> Result<Self, HexStringError>
 
     /// Encode to hex string with lowercase characters.
@@ -45,7 +45,7 @@ public extension FixedArray {
         return BYTES.allSatisfy { $0 == 0 }
     }
 
-    /// Create `BigUInt` from hex `String`. Returns Result type matching Rust's implementation.
+    /// Create `FixedArray` from hex `String`. Returns Result type matching Rust's implementation.igUInt` from hex `String`. Returns Result type matching Rust's implementation.
     static func fromString(hex value: String) -> Result<Self, HexStringError> {
         let hex = value.hasPrefix("0x") || value.hasPrefix("0X")
             ? String(value.dropFirst(2))
@@ -57,7 +57,7 @@ public extension FixedArray {
         let expectedLength = Int(numberBytes) * 2
 
         if hex.count != expectedLength {
-            return .failure(.InvalidStringLength) // Или .invalidHexLength, если хотите детализировать
+            return .failure(.InvalidStringLength)
         }
 
         var byteArray: [UInt8] = []
@@ -80,7 +80,7 @@ public extension FixedArray {
 
 /// Implementation of `CustomStringConvertible`
 public extension FixedArray {
-    /// Canonical string representation (Lower case hex, stripped leading zeros)
+    /// Canonical string representation (lowercase hex, full length with leading zeros)
     var description: String {
         self.encodeHexLower()
     }
