@@ -7,7 +7,6 @@ public enum HexStringError: Error, Equatable {
     case InvalidHexCharacter(String)
 
     /// If the hex string is decoded into a fixed sized container, such as an
-    /// array, the hex string's length * 2 has to match the container's
-    /// length.
+    /// array, the hex string's length has to match the container's length * 2.
     case InvalidStringLength
 }

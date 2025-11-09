@@ -29,7 +29,7 @@ public protocol BigUInt: CustomStringConvertible, Equatable, Sendable, Hashable 
     /// Create `BitUInt` from `big-endian` array
     static func fromBigEndian(from val: [UInt8]) -> Self
 
-    /// Create `BigUInt` from hex `String`. Returns Result type matching Rust's implementation.
+    /// Create `BigUInt` from hex `String`. Returns Result type
     static func fromString(hex value: String) -> Result<Self, HexStringError>
 
     /// Encode to hex string with lowercase characters.
@@ -159,7 +159,7 @@ public extension BigUInt {
         return byteArray
     }
 
-    /// Create `BigUInt` from hex `String`. Returns Result type matching Rust's implementation.
+    /// Create `BigUInt` from hex `String`. Returns Result type
     static func fromString(hex value: String) -> Result<Self, HexStringError> {
         var hex = value.hasPrefix("0x") || value.hasPrefix("0X")
             ? String(value.dropFirst(2))
@@ -174,7 +174,7 @@ public extension BigUInt {
             return .failure(.InvalidStringLength)
         }
 
-        // Handle Odd Length (Rust implicitly prepends '0')
+        // Handle Odd Length
         if hex.count % 2 != 0 {
             hex = "0" + hex
         }
@@ -199,7 +199,7 @@ public extension BigUInt {
 
 /// Implementation of `CustomStringConvertible` and Hex Encoding
 public extension BigUInt {
-    /// Canonical string representation (Lower case hex, stripped leading zeros)
+    /// Canonical string representation (Lowercase hex, stripped leading zeros)
     var description: String {
         self.encodeHexLower()
     }

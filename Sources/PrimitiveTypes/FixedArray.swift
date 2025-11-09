@@ -15,7 +15,7 @@ public protocol FixedArray: CustomStringConvertible, Equatable, Sendable {
     /// Init from bytes array.
     init(from value: [UInt8])
 
-    /// Create `FixedArray` from hex `String`. Returns Result type matching Rust's implementation.igUInt` from hex `String`. Returns Result type matching Rust's implementation.
+    /// Create `FixedArray` from hex `String`. Returns Result type
     static func fromString(hex value: String) -> Result<Self, HexStringError>
 
     /// Encode to hex string with lowercase characters.
@@ -45,13 +45,13 @@ public extension FixedArray {
         return BYTES.allSatisfy { $0 == 0 }
     }
 
-    /// Create `FixedArray` from hex `String`. Returns Result type matching Rust's implementation.igUInt` from hex `String`. Returns Result type matching Rust's implementation.
+    /// Create `FixedArray` from hex `String`. Returns Result type
     static func fromString(hex value: String) -> Result<Self, HexStringError> {
         let hex = value.hasPrefix("0x") || value.hasPrefix("0X")
             ? String(value.dropFirst(2))
             : value
 
-        // Rust H160/H256 logic is STRICT.
+        // FixedArray (H160/H256) logic is STRICT.
         // It iterates exactly `numberBytes` times consuming 2 chars.
         // If string is shorter or longer, it fails.
         let expectedLength = Int(numberBytes) * 2
