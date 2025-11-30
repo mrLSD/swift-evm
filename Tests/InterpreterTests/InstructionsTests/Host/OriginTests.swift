@@ -4,13 +4,10 @@ import PrimitiveTypes
 import Quick
 
 final class InstructionOriginSpec: QuickSpec {
-    @MainActor
-    static let machineLowGas = TestMachine.machine(opcode: Opcode.ORIGIN, gasLimit: 1)
-
     override class func spec() {
         describe("Instruction ORIGIN") {
             it("with OutOfGas result") {
-                let m = Self.machineLowGas
+                let m = TestMachine.machine(opcode: Opcode.ORIGIN, gasLimit: 1)
 
                 m.evalLoop()
 
@@ -22,7 +19,7 @@ final class InstructionOriginSpec: QuickSpec {
             it("check stack overflow") {
                 let m = TestMachine.machine(opcode: Opcode.ORIGIN, gasLimit: 10)
                 for _ in 0 ..< m.stack.limit {
-                    let _ = m.stack.push(value: U256(from: 5))
+                    _ = m.stack.push(value: U256(from: 5))
                 }
 
                 m.evalLoop()

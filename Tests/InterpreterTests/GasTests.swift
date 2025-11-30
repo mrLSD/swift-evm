@@ -336,16 +336,44 @@ final class InterpreterGasSpec: QuickSpec {
 
             context("memoryGas") {
                 it("success") {
-                    let numWords = 3
+                    let numWords = 30
                     // Gas.Memory numWords + numWords * numWords
-                    let expected = 3 * numWords + numWords * numWords
+                    let expected = 3 * numWords + numWords * numWords / 512
 
                     let (res, overflow) = GasCost.memoryGas(numWords: numWords)
                     expect(overflow).to(beFalse())
                     expect(res).to(equal(UInt64(expected)))
                 }
 
-                it("overflow") {
+                it("calculates correctly for small values") {
+                    let numWords = 10
+                    let expected: UInt64 = 30
+
+                    let (res, overflow) = GasCost.memoryGas(numWords: numWords)
+
+                    expect(overflow).to(beFalse())
+                    expect(res).to(equal(expected))
+                }
+
+                it("does not overflow at the maximum valid input (UInt32.max)") {
+                    let maxSafeWords = Int(UInt32.max) // 4,294,967,295
+
+                    let (res, overflow) = GasCost.memoryGas(numWords: maxSafeWords)
+
+                    expect(overflow).to(beFalse())
+                    expect(res).to(beGreaterThan(0))
+                }
+
+                it("overflows exactly when N^2 exceeds UInt64 (at 2^32)") {
+                    let firstUnsafeWords = Int(UInt32.max) + 1 // 4,294,967,296
+
+                    let (res, overflow) = GasCost.memoryGas(numWords: firstUnsafeWords)
+
+                    expect(overflow).to(beTrue())
+                    expect(res).to(equal(0))
+                }
+
+                it("overflows for Int.max") {
                     let numWords: Int = Memory.numWords(Int.max)
 
                     let (res, overflow) = GasCost.memoryGas(numWords: numWords)
@@ -373,7 +401,7 @@ final class InterpreterGasSpec: QuickSpec {
 
                 it("overflow for numWords") {
                     var gas = Gas(limit: 1024)
-                    let res = gas.memoryGas.resize(end: Int.max/2 - 1, length: Int.max/2 - 1)
+                    let res = gas.memoryGas.resize(end: Int.max / 2 - 1, length: Int.max / 2 - 1)
                     expect(res).to(beFailure { error in
                         expect(error).to(matchError(Machine.ExitError.OutOfGas))
                     })
@@ -382,28 +410,28 @@ final class InterpreterGasSpec: QuickSpec {
                 it("success") {
                     var gas = Gas(limit: 1024)
                     let res = gas.memoryGas.resize(end: 31, length: 66)
-                    expect(res).to(beSuccess(.Resized(28)))
+                    expect(res).to(beSuccess(.Resized(12)))
                 }
 
                 it("numWords unchanged") {
                     var gas = Gas(limit: 1024)
                     let res1 = gas.memoryGas.resize(end: 31, length: 66)
-                    expect(res1).to(beSuccess(.Resized(28)))
+                    expect(res1).to(beSuccess(.Resized(12)))
 
                     let res2 = gas.memoryGas.resize(end: 10, length: 20)
                     expect(res2).to(beSuccess(.Unchanged))
-                    expect(gas.memoryGas.gasCost).to(equal(28))
+                    expect(gas.memoryGas.gasCost).to(equal(12))
                 }
 
                 it("numWords changed twice") {
                     var gas = Gas(limit: 1024)
                     let res1 = gas.memoryGas.resize(end: 12, length: 21)
-                    expect(res1).to(beSuccess(.Resized(10)))
-                    expect(gas.memoryGas.gasCost).to(equal(10))
+                    expect(res1).to(beSuccess(.Resized(6)))
+                    expect(gas.memoryGas.gasCost).to(equal(6))
 
                     let res2 = gas.memoryGas.resize(end: 31, length: 66)
-                    expect(res2).to(beSuccess(.Resized(18)))
-                    expect(gas.memoryGas.gasCost).to(equal(28))
+                    expect(res2).to(beSuccess(.Resized(6)))
+                    expect(gas.memoryGas.gasCost).to(equal(12))
                 }
             }
 

@@ -3,13 +3,14 @@ import PrimitiveTypes
 /// EVM Arithmetic instructions
 enum ArithmeticInstructions {
     static func add(machine m: Machine) {
-        if !m.gasRecordCost(cost: GasConstant.VERYLOW) {
-            return
-        }
         guard let op1 = m.stackPop() else {
             return
         }
         guard let op2 = m.stackPop() else {
+            return
+        }
+
+        if !m.gasRecordCost(cost: GasConstant.VERYLOW) {
             return
         }
 
@@ -33,13 +34,14 @@ enum ArithmeticInstructions {
     }
 
     static func mul(machine m: Machine) {
-        if !m.gasRecordCost(cost: GasConstant.LOW) {
-            return
-        }
         guard let op1 = m.stackPop() else {
             return
         }
         guard let op2 = m.stackPop() else {
+            return
+        }
+
+        if !m.gasRecordCost(cost: GasConstant.LOW) {
             return
         }
 
@@ -48,43 +50,46 @@ enum ArithmeticInstructions {
     }
 
     static func div(machine m: Machine) {
-        if !m.gasRecordCost(cost: GasConstant.LOW) {
-            return
-        }
         guard let op1 = m.stackPop() else {
             return
         }
         guard let op2 = m.stackPop() else {
+            return
+        }
+
+        if !m.gasRecordCost(cost: GasConstant.LOW) {
             return
         }
 
         let newValue = op2.isZero ? op2 : op1 / op2
-        _ = m.stack.push(value: newValue)
+        m.stackPush(value: newValue)
     }
 
     static func rem(machine m: Machine) {
-        if !m.gasRecordCost(cost: GasConstant.LOW) {
-            return
-        }
         guard let op1 = m.stackPop() else {
             return
         }
         guard let op2 = m.stackPop() else {
+            return
+        }
+
+        if !m.gasRecordCost(cost: GasConstant.LOW) {
             return
         }
 
         let newValue = op2.isZero ? op2 : op1 % op2
-        _ = m.stack.push(value: newValue)
+        m.stackPush(value: newValue)
     }
 
     static func sdiv(machine m: Machine) {
-        if !m.gasRecordCost(cost: GasConstant.LOW) {
-            return
-        }
         guard let op1 = m.stackPop() else {
             return
         }
         guard let op2 = m.stackPop() else {
+            return
+        }
+
+        if !m.gasRecordCost(cost: GasConstant.LOW) {
             return
         }
 
@@ -95,13 +100,14 @@ enum ArithmeticInstructions {
     }
 
     static func smod(machine m: Machine) {
-        if !m.gasRecordCost(cost: GasConstant.LOW) {
-            return
-        }
         guard let op1 = m.stackPop() else {
             return
         }
         guard let op2 = m.stackPop() else {
+            return
+        }
+
+        if !m.gasRecordCost(cost: GasConstant.LOW) {
             return
         }
 
@@ -112,9 +118,6 @@ enum ArithmeticInstructions {
     }
 
     static func addMod(machine m: Machine) {
-        if !m.gasRecordCost(cost: GasConstant.MID) {
-            return
-        }
         guard let op1 = m.stackPop() else {
             return
         }
@@ -122,6 +125,10 @@ enum ArithmeticInstructions {
             return
         }
         guard let op3 = m.stackPop() else {
+            return
+        }
+
+        if !m.gasRecordCost(cost: GasConstant.MID) {
             return
         }
 
@@ -141,9 +148,6 @@ enum ArithmeticInstructions {
     }
 
     static func mulMod(machine m: Machine) {
-        if !m.gasRecordCost(cost: GasConstant.MID) {
-            return
-        }
         guard let op1 = m.stackPop() else {
             return
         }
@@ -151,6 +155,10 @@ enum ArithmeticInstructions {
             return
         }
         guard let op3 = m.stackPop() else {
+            return
+        }
+
+        if !m.gasRecordCost(cost: GasConstant.MID) {
             return
         }
 
@@ -170,7 +178,6 @@ enum ArithmeticInstructions {
     }
 
     static func exp(machine m: Machine) {
-        // Pop from stack before Gas cost charge for gas cost calculation
         guard var op1 = m.stackPop() else {
             return
         }
@@ -213,13 +220,14 @@ enum ArithmeticInstructions {
     /// `b == 0` then the yellow paper says the output should start with all zeros, then end with
     /// bits from `b`; this is equal to `y & mask` where `&` is bitwise `AND`.
     static func signextend(machine m: Machine) {
-        if !m.gasRecordCost(cost: GasConstant.LOW) {
-            return
-        }
         guard let op1 = m.stackPop() else {
             return
         }
         guard let op2 = m.stackPop() else {
+            return
+        }
+
+        if !m.gasRecordCost(cost: GasConstant.LOW) {
             return
         }
 
@@ -231,6 +239,6 @@ enum ArithmeticInstructions {
             newValue = bit ? op2 | ~mask : op2 & mask
         }
 
-        _ = m.stack.push(value: newValue)
+        m.stackPush(value: newValue)
     }
 }

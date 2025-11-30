@@ -4,13 +4,10 @@ import PrimitiveTypes
 import Quick
 
 final class InstructionCoinbaseSpec: QuickSpec {
-    @MainActor
-    static let machineLowGas = TestMachine.machine(opcode: Opcode.COINBASE, gasLimit: 1)
-
     override class func spec() {
-        describe("Instruction ORIGIN") {
+        describe("Instruction COINBASE") {
             it("with OutOfGas result") {
-                let m = Self.machineLowGas
+                let m = TestMachine.machine(opcode: Opcode.COINBASE, gasLimit: 1)
 
                 m.evalLoop()
 
@@ -22,7 +19,7 @@ final class InstructionCoinbaseSpec: QuickSpec {
             it("check stack overflow") {
                 let m = TestMachine.machine(opcode: Opcode.COINBASE, gasLimit: 10)
                 for _ in 0 ..< m.stack.limit {
-                    let _ = m.stack.push(value: U256(from: 5))
+                    _ = m.stack.push(value: U256(from: 5))
                 }
 
                 m.evalLoop()
@@ -33,7 +30,7 @@ final class InstructionCoinbaseSpec: QuickSpec {
 
             it("Successful execution") {
                 let context = Machine.Context(target: TestHandler.address1,
-                                              sender: TestHandler.address2,
+                                              sender: TestHandler.address3,
                                               value: U256.ZERO)
                 let m = TestMachine.machine(opcode: Opcode.COINBASE, gasLimit: 10, context: context, hardFork: .latest())
 
@@ -44,6 +41,7 @@ final class InstructionCoinbaseSpec: QuickSpec {
                 let result = m.stack.popH256()
                 expect(result).to(beSuccess { value in
                     let address = value.toH160()
+                    // Value from the Handler's coinbase()
                     expect(address).to(equal(TestHandler.address2))
                 })
 
@@ -53,4 +51,3 @@ final class InstructionCoinbaseSpec: QuickSpec {
         }
     }
 }
-

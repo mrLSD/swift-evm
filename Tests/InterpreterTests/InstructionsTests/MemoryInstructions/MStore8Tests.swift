@@ -10,7 +10,7 @@ final class MStore8Spec: QuickSpec {
             it("with OutOfGas result for index=0") {
                 let m = TestMachine.machine(opcode: Opcode.MSTORE8, gasLimit: 1)
 
-                let _ = m.stack.push(value: U256(from: 0))
+                _ = m.stack.push(value: U256(from: 0))
                 m.evalLoop()
 
                 expect(m.machineStatus).to(equal(.Exit(.Error(.OutOfGas))))
@@ -29,9 +29,8 @@ final class MStore8Spec: QuickSpec {
                 expect(m1.gas.memoryGas.gasCost).to(equal(0))
 
                 let m2 = TestMachine.machine(opcode: Opcode.MSTORE8, gasLimit: 10)
-                let _ = m2.stack.push(value: U256(from: 0))
+                _ = m2.stack.push(value: U256(from: 0))
                 m2.evalLoop()
-                expect(m2.machineStatus).to(equal(.Exit(.Error(.StackUnderflow))))
                 expect(m2.machineStatus).to(equal(.Exit(.Error(.StackUnderflow))))
                 expect(m2.gas.remaining).to(equal(7))
                 expect(m2.gas.memoryGas.numWords).to(equal(0))
@@ -41,38 +40,38 @@ final class MStore8Spec: QuickSpec {
             it("gas overflow for resized memoryGasCost") {
                 let m = TestMachine.machine(opcode: Opcode.MSTORE8, gasLimit: 10)
                 // Value
-                let _ = m.stack.push(value: U256(from: 1))
+                _ = m.stack.push(value: U256(from: 1))
                 // Index
-                let _ = m.stack.push(value: U256(from: 97))
+                _ = m.stack.push(value: U256(from: 97))
                 m.evalLoop()
 
                 expect(m.machineStatus).to(equal(.Exit(.Error(.OutOfGas))))
                 expect(m.stack.length).to(equal(0))
                 expect(m.gas.remaining).to(equal(7))
                 expect(m.gas.memoryGas.numWords).to(equal(4))
-                expect(m.gas.memoryGas.gasCost).to(equal(28))
+                expect(m.gas.memoryGas.gasCost).to(equal(12))
             }
 
             it("error MemoryOperation copyLimitExceeded") {
                 let m = TestMachine.machine(opcodes: [Opcode.MSTORE8], gasLimit: 100, memoryLimit: 100)
 
-                let _ = m.stack.push(value: U256(from: 1))
-                let _ = m.stack.push(value: U256(from: 100))
+                _ = m.stack.push(value: U256(from: 1))
+                _ = m.stack.push(value: U256(from: 100))
                 m.evalLoop()
 
                 expect(m.machineStatus)
                     .to(equal(Machine.MachineStatus.Exit(.Error(.MemoryOperation(.SetLimitExceeded)))))
 
                 expect(m.stack.length).to(equal(0))
-                expect(m.gas.remaining).to(equal(69))
+                expect(m.gas.remaining).to(equal(85))
                 expect(m.gas.memoryGas.numWords).to(equal(4))
-                expect(m.gas.memoryGas.gasCost).to(equal(28))
+                expect(m.gas.memoryGas.gasCost).to(equal(12))
             }
 
             it("check stack Int failure is as expected") {
                 let m = TestMachine.machine(opcodes: [Opcode.MSTORE8], gasLimit: 100, memoryLimit: 100)
-                let _ = m.stack.push(value: U256(from: 1))
-                let _ = m.stack.push(value: U256(from: [1, 1, 0, 0]))
+                _ = m.stack.push(value: U256(from: 1))
+                _ = m.stack.push(value: U256(from: [1, 1, 0, 0]))
                 m.evalLoop()
 
                 expect(m.machineStatus).to(equal(.Exit(.Error(.IntOverflow))))
@@ -85,8 +84,8 @@ final class MStore8Spec: QuickSpec {
             it("success") {
                 let m = TestMachine.machine(opcode: Opcode.MSTORE8, gasLimit: 100)
 
-                let _ = m.stack.push(value: U256(from: 3))
-                let _ = m.stack.push(value: U256(from: 33))
+                _ = m.stack.push(value: U256(from: 3))
+                _ = m.stack.push(value: U256(from: 33))
                 m.evalLoop()
 
                 expect(m.machineStatus).to(equal(.Exit(.Success(.Stop))))
@@ -95,9 +94,9 @@ final class MStore8Spec: QuickSpec {
                 expect(resVal).to(equal([0, 3, 0]))
 
                 expect(m.stack.length).to(equal(0))
-                expect(m.gas.remaining).to(equal(87))
+                expect(m.gas.remaining).to(equal(91))
                 expect(m.gas.memoryGas.numWords).to(equal(2))
-                expect(m.gas.memoryGas.gasCost).to(equal(10))
+                expect(m.gas.memoryGas.gasCost).to(equal(6))
             }
         }
     }

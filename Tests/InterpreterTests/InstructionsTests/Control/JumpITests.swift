@@ -6,13 +6,10 @@ import PrimitiveTypes
 import Quick
 
 final class InstructionJumpiSpec: QuickSpec {
-    @MainActor
-    static let machineLowGas = TestMachine.machine(opcode: Opcode.JUMPI, gasLimit: 1)
-
     override class func spec() {
         describe("Instruction JUMPI") {
             it("Correct JUMPI") {
-                 let m = TestMachine.machine(rawCode: [Opcode.PUSH1.rawValue, 0x1, Opcode.PUSH1.rawValue, 0x6, Opcode.JUMPI.rawValue, Opcode.PC.rawValue, Opcode.JUMPDEST.rawValue], gasLimit: 20)
+                let m = TestMachine.machine(rawCode: [Opcode.PUSH1.rawValue, 0x1, Opcode.PUSH1.rawValue, 0x6, Opcode.JUMPI.rawValue, Opcode.PC.rawValue, Opcode.JUMPDEST.rawValue], gasLimit: 20)
 
                 m.evalLoop()
 
@@ -23,7 +20,7 @@ final class InstructionJumpiSpec: QuickSpec {
             }
 
             it("zero value") {
-                 let m = TestMachine.machine(rawCode: [Opcode.PUSH1.rawValue, 0x0, Opcode.PUSH1.rawValue, 0x6, Opcode.JUMPI.rawValue, Opcode.JUMPDEST.rawValue, Opcode.JUMPDEST.rawValue, Opcode.JUMPDEST.rawValue], gasLimit: 21)
+                let m = TestMachine.machine(rawCode: [Opcode.PUSH1.rawValue, 0x0, Opcode.PUSH1.rawValue, 0x6, Opcode.JUMPI.rawValue, Opcode.JUMPDEST.rawValue, Opcode.JUMPDEST.rawValue, Opcode.JUMPDEST.rawValue], gasLimit: 21)
 
                 m.evalLoop()
 
@@ -34,7 +31,7 @@ final class InstructionJumpiSpec: QuickSpec {
             }
 
             it("Invalid JUMPI to PUSH1 range") {
-                 let m = TestMachine.machine(rawCode: [Opcode.PUSH1.rawValue, 0x1, Opcode.PUSH1.rawValue, 0x3, Opcode.JUMPI.rawValue, Opcode.PC.rawValue, Opcode.JUMPDEST.rawValue], gasLimit: 20)
+                let m = TestMachine.machine(rawCode: [Opcode.PUSH1.rawValue, 0x1, Opcode.PUSH1.rawValue, 0x3, Opcode.JUMPI.rawValue, Opcode.PC.rawValue, Opcode.JUMPDEST.rawValue], gasLimit: 20)
 
                 m.evalLoop()
 
@@ -44,8 +41,8 @@ final class InstructionJumpiSpec: QuickSpec {
                 expect(m.gas.remaining).to(equal(4))
             }
 
-            it("Invalid JUMP to non JUMPDEST opcode") {
-                 let m = TestMachine.machine(rawCode: [Opcode.PUSH1.rawValue, 0x1, Opcode.PUSH1.rawValue, 0x4, Opcode.JUMPI.rawValue, Opcode.PC.rawValue, Opcode.JUMPDEST.rawValue], gasLimit: 20)
+            it("Invalid JUMPI to non JUMPDEST opcode") {
+                let m = TestMachine.machine(rawCode: [Opcode.PUSH1.rawValue, 0x1, Opcode.PUSH1.rawValue, 0x4, Opcode.JUMPI.rawValue, Opcode.PC.rawValue, Opcode.JUMPDEST.rawValue], gasLimit: 20)
 
                 m.evalLoop()
 
@@ -56,7 +53,7 @@ final class InstructionJumpiSpec: QuickSpec {
             }
 
             it("JUMPDEST too large") {
-                 let m = TestMachine.machine(rawCode: [Opcode.PUSH1.rawValue, 0x1, Opcode.PUSH8.rawValue, 0x80, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, Opcode.JUMPI.rawValue, Opcode.PC.rawValue, Opcode.JUMPDEST.rawValue], gasLimit: 20)
+                let m = TestMachine.machine(rawCode: [Opcode.PUSH1.rawValue, 0x1, Opcode.PUSH8.rawValue, 0x80, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, Opcode.JUMPI.rawValue, Opcode.PC.rawValue, Opcode.JUMPDEST.rawValue], gasLimit: 20)
 
                 m.evalLoop()
 
@@ -67,7 +64,7 @@ final class InstructionJumpiSpec: QuickSpec {
             }
 
             it("with OutOfGas result") {
-                 let m = Self.machineLowGas
+                let m = TestMachine.machine(opcode: Opcode.JUMPI, gasLimit: 1)
 
                 m.evalLoop()
 
@@ -77,9 +74,7 @@ final class InstructionJumpiSpec: QuickSpec {
             }
 
             it("with OutOfGas result for JUMPDEST") {
-                 let m = TestMachine.machine(rawCode: [Opcode.PUSH1.rawValue, 0x1, Opcode.PUSH1.rawValue, 0x6, Opcode.JUMPI.rawValue, Opcode.PC.rawValue, Opcode.JUMPDEST.rawValue], gasLimit: 16)
-
-                m.evalLoop()
+                let m = TestMachine.machine(rawCode: [Opcode.PUSH1.rawValue, 0x1, Opcode.PUSH1.rawValue, 0x6, Opcode.JUMPI.rawValue, Opcode.PC.rawValue, Opcode.JUMPDEST.rawValue], gasLimit: 16)
 
                 m.evalLoop()
 
@@ -90,7 +85,7 @@ final class InstructionJumpiSpec: QuickSpec {
             }
 
             it("check stack underflow for partly empty stack") {
-                 let m = TestMachine.machine(opcode: Opcode.JUMPI, gasLimit: 10)
+                let m = TestMachine.machine(opcode: Opcode.JUMPI, gasLimit: 10)
 
                 m.evalLoop()
 
@@ -100,7 +95,7 @@ final class InstructionJumpiSpec: QuickSpec {
             }
 
             it("check stack underflow for empty stack - empty target") {
-                 let m = TestMachine.machine(rawCode: [Opcode.PUSH1.rawValue, 0x1,  Opcode.JUMPI.rawValue, Opcode.PC.rawValue, Opcode.JUMPDEST.rawValue], gasLimit: 20)
+                let m = TestMachine.machine(rawCode: [Opcode.PUSH1.rawValue, 0x1, Opcode.JUMPI.rawValue, Opcode.PC.rawValue, Opcode.JUMPDEST.rawValue], gasLimit: 20)
 
                 m.evalLoop()
 
