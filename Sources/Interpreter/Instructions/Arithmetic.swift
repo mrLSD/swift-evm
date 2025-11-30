@@ -59,7 +59,7 @@ enum ArithmeticInstructions {
         }
 
         let newValue = op2.isZero ? op2 : op1 / op2
-        _ = m.stack.push(value: newValue)
+        m.stackPush(value: newValue)
     }
 
     static func rem(machine m: Machine) {
@@ -74,7 +74,7 @@ enum ArithmeticInstructions {
         }
 
         let newValue = op2.isZero ? op2 : op1 % op2
-        _ = m.stack.push(value: newValue)
+        m.stackPush(value: newValue)
     }
 
     static func sdiv(machine m: Machine) {
@@ -231,6 +231,6 @@ enum ArithmeticInstructions {
             newValue = bit ? op2 | ~mask : op2 & mask
         }
 
-        _ = m.stack.push(value: newValue)
+        m.stackPush(value: newValue)
     }
 }
