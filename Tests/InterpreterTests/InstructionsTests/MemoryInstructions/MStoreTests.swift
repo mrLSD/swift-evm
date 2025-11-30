@@ -50,7 +50,7 @@ final class MStoreSpec: QuickSpec {
                 expect(m.stack.length).to(equal(0))
                 expect(m.gas.remaining).to(equal(7))
                 expect(m.gas.memoryGas.numWords).to(equal(5))
-                expect(m.gas.memoryGas.gasCost).to(equal(40))
+                expect(m.gas.memoryGas.gasCost).to(equal(15))
             }
 
             it("error MemoryOperation copyLimitExceeded") {
@@ -64,9 +64,9 @@ final class MStoreSpec: QuickSpec {
                     .to(equal(Machine.MachineStatus.Exit(.Error(.MemoryOperation(.SetLimitExceeded)))))
 
                 expect(m.stack.length).to(equal(0))
-                expect(m.gas.remaining).to(equal(57))
+                expect(m.gas.remaining).to(equal(82))
                 expect(m.gas.memoryGas.numWords).to(equal(5))
-                expect(m.gas.memoryGas.gasCost).to(equal(40))
+                expect(m.gas.memoryGas.gasCost).to(equal(15))
             }
 
             it("check stack Int failure is as expected") {
@@ -99,9 +99,9 @@ final class MStoreSpec: QuickSpec {
                 expect(resVal).to(equal(expectedValue))
 
                 expect(m.stack.length).to(equal(0))
-                expect(m.gas.remaining).to(equal(79))
+                expect(m.gas.remaining).to(equal(88))
                 expect(m.gas.memoryGas.numWords).to(equal(3))
-                expect(m.gas.memoryGas.gasCost).to(equal(18))
+                expect(m.gas.memoryGas.gasCost).to(equal(9))
             }
         }
     }
