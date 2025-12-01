@@ -13,11 +13,18 @@ func captureStandardError(action: () -> Void) -> String {
     let pipe = Pipe()
     let writeHandle = pipe.fileHandleForWriting
     let readHandle = pipe.fileHandleForReading
-    withStandardErrorRedirected(to: writeHandle) {
-        action()
+
+    defer { readHandle.closeFile() }
+
+    do {
+        defer { writeHandle.closeFile() }
+
+        withStandardErrorRedirected(to: writeHandle) {
+            action()
+        }
     }
-    writeHandle.closeFile()
+
     let data = readHandle.readDataToEndOfFile()
-    readHandle.closeFile()
+
     return String(data: data, encoding: .utf8) ?? ""
 }

@@ -37,7 +37,7 @@ public final class Machine {
     /// Current Machine status
     var machineStatus: MachineStatus = .NotStarted
 
-    /// Machine Interpreter handler. User to extend evaluation functinality
+    /// Machine Interpreter handler. Used to extend evaluation functionality
     let handler: InterpreterHandler
 
     /// Machine return data
@@ -47,7 +47,7 @@ public final class Machine {
         let offset: Int
     }
 
-    /// Machine EVM Contextt
+    /// Machine EVM Context
     public struct Context {
         /// Execution target address
         let target: H160
@@ -108,10 +108,10 @@ public final class Machine {
     typealias EvalFunction = (_ m: Machine) -> Void
 
     /// Instructions evaluation table. Used to evaluate specific opcodes.
-    /// It represent evaluation functions for each existed opcodes. Table initialized with 255 `nil` instructions and filled for each specific `EVM` opcode.
+    /// It represent evaluation functions for each existed opcodes. Table initialized with 256 `nil` instructions and filled for each specific `EVM` opcode.
     /// For non-existed opcode the evaluation functions is `nil`.
     private let instructionsEvalTable: [EvalFunction?] = {
-        var table = [EvalFunction?](repeating: nil, count: 255)
+        var table = [EvalFunction?](repeating: nil, count: 256)
         // Arithmetic
         table[Opcode.ADD.index] = ArithmeticInstructions.add
         table[Opcode.SUB.index] = ArithmeticInstructions.sub
@@ -279,7 +279,7 @@ public final class Machine {
 
     /// # Analyze valid jumps
     /// Check is opcode `JUMPDEST` and set `JumpTable` index to  `true`.
-    /// For `PUSH` opcodes we increment jump index validation to push index, to avould get PUSH values itself.
+    /// For `PUSH` opcodes we increment jump index validation to push index, to avoid getting PUSH values themselves.
     private static func analyzeJumpTable(code: borrowing [UInt8]) -> [Bool] {
         var jumpTable = [Bool](repeating: false, count: code.count)
         var i = 0

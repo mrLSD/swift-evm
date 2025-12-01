@@ -6,13 +6,10 @@ import PrimitiveTypes
 import Quick
 
 final class InstructionChainIdSpec: QuickSpec {
-    @MainActor
-    static let machineLowGas = TestMachine.machine(opcode: Opcode.CHAINID, gasLimit: 1)
-
     override class func spec() {
         describe("Instruction CHAINID") {
             it("with OutOfGas result") {
-                let m = Self.machineLowGas
+                let m = TestMachine.machine(opcode: Opcode.CHAINID, gasLimit: 1)
 
                 m.evalLoop()
 
@@ -24,7 +21,7 @@ final class InstructionChainIdSpec: QuickSpec {
             it("check stack overflow") {
                 let m = TestMachine.machine(opcode: Opcode.CHAINID, gasLimit: 10)
                 for _ in 0 ..< m.stack.limit {
-                    let _ = m.stack.push(value: U256(from: 5))
+                    _ = m.stack.push(value: U256(from: 5))
                 }
 
                 m.evalLoop()
@@ -67,4 +64,3 @@ final class InstructionChainIdSpec: QuickSpec {
         }
     }
 }
-

@@ -94,7 +94,7 @@ final class InterpreterHardForkSpec: QuickSpec {
                 expect(HardFork.Homestead.isHomestead()).to(beTrue())
                 expect(HardFork.Tangerine.isTangerine()).to(beTrue())
                 expect(HardFork.SpuriousDragon.isSpuriousDragon()).to(beTrue())
-                expect(HardFork.Berlin.isByzantium()).to(beTrue())
+                expect(HardFork.Byzantium.isByzantium()).to(beTrue())
                 expect(HardFork.Constantinople.isConstantinople()).to(beTrue())
                 expect(HardFork.Istanbul.isIstanbul()).to(beTrue())
                 expect(HardFork.Berlin.isBerlin()).to(beTrue())

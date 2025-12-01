@@ -4,13 +4,10 @@ import PrimitiveTypes
 import Quick
 
 final class InstructionCodeSizeSpec: QuickSpec {
-    @MainActor
-    static let machineLowGas = TestMachine.machine(opcode: Opcode.CODESIZE, gasLimit: 1)
-
     override class func spec() {
         describe("Instruction CODESIZE") {
             it("size = 1") {
-                 let m = TestMachine.machine(opcode: Opcode.CODESIZE, gasLimit: 10)
+                let m = TestMachine.machine(opcode: Opcode.CODESIZE, gasLimit: 10)
 
                 m.evalLoop()
 
@@ -26,7 +23,7 @@ final class InstructionCodeSizeSpec: QuickSpec {
             }
 
             it("size = 4") {
-                 let m = TestMachine.machine(opcodes: [Opcode.CODESIZE, Opcode.CODESIZE, Opcode.CODESIZE, Opcode.CODESIZE], gasLimit: 10)
+                let m = TestMachine.machine(opcodes: [Opcode.CODESIZE, Opcode.CODESIZE, Opcode.CODESIZE, Opcode.CODESIZE], gasLimit: 10)
 
                 m.evalLoop()
 
@@ -44,7 +41,7 @@ final class InstructionCodeSizeSpec: QuickSpec {
             }
 
             it("with OutOfGas result") {
-                 let m = Self.machineLowGas
+                let m = TestMachine.machine(opcode: Opcode.CODESIZE, gasLimit: 1)
 
                 m.evalLoop()
 
@@ -54,9 +51,9 @@ final class InstructionCodeSizeSpec: QuickSpec {
             }
 
             it("check stack overflow") {
-                 let m = TestMachine.machine(opcode: Opcode.CODESIZE, gasLimit: 10)
+                let m = TestMachine.machine(opcode: Opcode.CODESIZE, gasLimit: 10)
                 for _ in 0 ..< m.stack.limit {
-                    let _ = m.stack.push(value: U256(from: 5))
+                    _ = m.stack.push(value: U256(from: 5))
                 }
 
                 m.evalLoop()

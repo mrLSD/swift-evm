@@ -2,7 +2,7 @@ import PrimitiveTypes
 
 /// EVM Machine Stack
 struct Stack {
-    public static let STACK_LIMIT: Int = 1024
+    static let STACK_LIMIT: Int = 1024
     /// Stack data
     private(set) var data: [U256] = []
     /// Stack limit
@@ -29,7 +29,7 @@ struct Stack {
 
     /// Push `U256` value to the Stack. Return error if it's reach limit.
     ///
-    /// - Parameter value: `U256` value that will be pushed to Stacl
+    /// - Parameter value: `U256` value that will be pushed to Stack.
     /// - Returns: A `Result` containing the `Void` value if successful, or an `ExitError.StackOverflow` if an error occurs.
     @inline(__always)
     mutating func push(value: U256) -> Result<Void, Machine.ExitError> {
@@ -46,7 +46,7 @@ struct Stack {
 
     /// Pop `U256` value from the Stack
     ///
-    /// - Returns: A `Result` containing the `H256` value if successful, or an `ExitError.StackUnderflow` if stack is empty.
+    /// - Returns: A `Result` containing the `U256` value if successful, or an `ExitError.StackUnderflow` if stack is empty.
     @inline(__always)
     mutating func pop() -> Result<U256, Machine.ExitError> {
         guard let value = self.data.popLast() else {

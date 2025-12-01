@@ -49,93 +49,93 @@ final class H256Spec: QuickSpec {
                         }).to(contain("Invalid hex string byte character: 0G"))
                     }
                 }
+            }
 
-                context("when init as MAX value") {
-                    let val = H256.MAX
-                    it("correct bytes") {
-                        expect(val.BYTES).to(equal([UInt8](repeating: UInt8.max, count: Int(H256.numberBytes))))
-                    }
-                    it("not Zero value") {
-                        expect(val.isZero).to(beFalse())
-                    }
-                    it("correct transformed to String") {
-                        expect("\(val)").to(equal("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"))
-                    }
-                    it("correct transformed from String") {
-                        expect(H256.fromString(hex: "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF")).to(equal(val))
-                    }
+            context("when init as MAX value") {
+                let val = H256.MAX
+                it("correct bytes") {
+                    expect(val.BYTES).to(equal([UInt8](repeating: UInt8.max, count: Int(H256.numberBytes))))
+                }
+                it("not Zero value") {
+                    expect(val.isZero).to(beFalse())
+                }
+                it("correct transformed to String") {
+                    expect("\(val)").to(equal("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"))
+                }
+                it("correct transformed from String") {
+                    expect(H256.fromString(hex: "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF")).to(equal(val))
+                }
+            }
+
+            context("when init as ZERO value") {
+                let val = H256.ZERO
+                it("correct bytes") {
+                    expect(val.BYTES).to(equal([UInt8](repeating: 0, count: 32)))
+                }
+                it("is Zero value") {
+                    expect(val.isZero).to(beTrue())
+                }
+                it("correct transformed to String") {
+                    expect("\(val)").to(equal("0000000000000000000000000000000000000000000000000000000000000000"))
+                }
+                it("correct transformed from String") {
+                    expect(H256.fromString(hex: "0000000000000000000000000000000000000000000000000000000000000000")).to(equal(val))
+                }
+            }
+
+            context("when init from H160 value") {
+                let valH160 = H160(from: [UInt8](repeating: 0xAC, count: 20))
+                let val = H256(from: valH160)
+
+                it("correct data") {
+                    expect(val.BYTES).to(equal([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC]))
                 }
 
-                context("when init as ZERO value") {
-                    let val = H256.ZERO
-                    it("correct bytes") {
-                        expect(val.BYTES).to(equal([UInt8](repeating: 0, count: 32)))
-                    }
-                    it("not Zero value") {
-                        expect(val.isZero).to(beTrue())
-                    }
-                    it("correct transformed to String") {
-                        expect("\(val)").to(equal("0000000000000000000000000000000000000000000000000000000000000000"))
-                    }
-                    it("correct transformed from String") {
-                        expect(H256.fromString(hex: "0000000000000000000000000000000000000000000000000000000000000000")).to(equal(val))
-                    }
+                it("correct leading zero") {
+                    expect(Array(val.BYTES[..<12]))
+                        .to(equal([UInt8](repeating: 0, count: 12)))
                 }
+            }
 
-                context("when init from H160 value") {
+            context("when converted to H160 value") {
+                it("correct data") {
                     let valH160 = H160(from: [UInt8](repeating: 0xAC, count: 20))
                     let val = H256(from: valH160)
 
-                    it("correct data") {
-                        expect(val.BYTES).to(equal([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC]))
-                    }
+                    expect(val.BYTES).to(equal([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC]))
+                    expect(val.toH160()).to(equal(valH160))
+                }
+            }
 
-                    it("correct leading zero") {
-                        expect(Array(val.BYTES[..<12]))
-                            .to(equal([UInt8](repeating: 0, count: 12)))
-                    }
+            context("when hashing H256") {
+                it("produces the same hash for equal values") {
+                    let bytes = [UInt8](repeating: 0xAB, count: 32)
+                    let h1 = H256(from: bytes)
+                    let h2 = H256(from: bytes)
+
+                    expect(h1.hashValue).to(equal(h2.hashValue))
                 }
 
-                context("when converted to H160 value") {
-                    it("correct data") {
-                        let valH160 = H160(from: [UInt8](repeating: 0xAC, count: 20))
-                        let val = H256(from: valH160)
+                it("produces different hash for different values") {
+                    let h1 = H256(from: [UInt8](repeating: 0x00, count: 32))
+                    let h2 = H256(from: [UInt8](repeating: 0x01, count: 32))
 
-                        expect(val.BYTES).to(equal([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC]))
-                        expect(val.toH160()).to(equal(valH160))
-                    }
+                    expect(h1.hashValue).toNot(equal(h2.hashValue))
                 }
 
-                context("when hashing H256") {
-                    it("produces the same hash for equal values") {
-                        let bytes = [UInt8](repeating: 0xAB, count: 32)
-                        let h1 = H256(from: bytes)
-                        let h2 = H256(from: bytes)
+                it("can be used in a Set") {
+                    let h1 = H256(from: [UInt8](repeating: 0x01, count: 32))
+                    let h2 = H256(from: [UInt8](repeating: 0x02, count: 32))
+                    let h3 = H256(from: [UInt8](repeating: 0x01, count: 32)) // same as h1
 
-                        expect(h1.hashValue).to(equal(h2.hashValue))
-                    }
+                    var set: Set<H256> = []
+                    set.insert(h1)
+                    set.insert(h2)
+                    set.insert(h3)
 
-                    it("produces different hash for different values") {
-                        let h1 = H256(from: [UInt8](repeating: 0x00, count: 32))
-                        let h2 = H256(from: [UInt8](repeating: 0x01, count: 32))
-
-                        expect(h1.hashValue).toNot(equal(h2.hashValue))
-                    }
-
-                    it("can be used in a Set") {
-                        let h1 = H256(from: [UInt8](repeating: 0x01, count: 32))
-                        let h2 = H256(from: [UInt8](repeating: 0x02, count: 32))
-                        let h3 = H256(from: [UInt8](repeating: 0x01, count: 32)) // same as h1
-
-                        var set: Set<H256> = []
-                        set.insert(h1)
-                        set.insert(h2)
-                        set.insert(h3)
-
-                        expect(set.count).to(equal(2))
-                        expect(set.contains(h1)).to(beTrue())
-                        expect(set.contains(h2)).to(beTrue())
-                    }
+                    expect(set.count).to(equal(2))
+                    expect(set.contains(h1)).to(beTrue())
+                    expect(set.contains(h2)).to(beTrue())
                 }
             }
         }

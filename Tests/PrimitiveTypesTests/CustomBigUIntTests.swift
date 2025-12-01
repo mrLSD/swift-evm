@@ -108,7 +108,7 @@ final class BigUintSpec: QuickSpec {
                 it("correct transformed to Little Endian array") {
                     expect(val.toLittleEndian).to(equal([UInt8](repeating: 0xFF, count: 16)))
                 }
-                it("correct transformed to Bit Endian array") {
+                it("correct transformed to Big Endian array") {
                     expect(val.toBigEndian).to(equal([UInt8](repeating: 0xFF, count: 16)))
                 }
                 it("correct transformed from Little Endian") {
@@ -124,7 +124,7 @@ final class BigUintSpec: QuickSpec {
                 it("correct bytes") {
                     expect(val.BYTES).to(equal([0, 0]))
                 }
-                it("not Zero value") {
+                it("is Zero value") {
                     expect(val.isZero).to(beTrue())
                 }
                 it("not u64 MAX") {
@@ -140,7 +140,7 @@ final class BigUintSpec: QuickSpec {
                 it("correct transformed to Little Endian array") {
                     expect(val.toLittleEndian).to(equal([UInt8](repeating: 0, count: 16)))
                 }
-                it("correct transformed to Bit Endian array") {
+                it("correct transformed to Big Endian array") {
                     expect(val.toBigEndian).to(equal([UInt8](repeating: 0, count: 16)))
                 }
                 it("correct transformed from Little Endian") {

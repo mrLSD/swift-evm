@@ -19,7 +19,7 @@ public struct H256: FixedArray, Hashable {
         self.bytes = newArray
     }
 
-    /// Covert `H256` to `H160` by taking the last 20 bytes
+    /// Convert `H256` to `H160` by taking the last 20 bytes
     /// Optimizations:  only one array copy (analog of `memcpy`)
     public func toH160() -> H160 {
         return bytes.withUnsafeBufferPointer { ptr in

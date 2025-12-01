@@ -71,7 +71,7 @@ final class H160Spec: QuickSpec {
                     it("correct bytes") {
                         expect(val.BYTES).to(equal([UInt8](repeating: 0, count: 20)))
                     }
-                    it("not Zero value") {
+                    it("is Zero value") {
                         expect(val.isZero).to(beTrue())
                     }
                     it("correct transformed to String") {

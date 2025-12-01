@@ -32,7 +32,6 @@ final class MStore8Spec: QuickSpec {
                 _ = m2.stack.push(value: U256(from: 0))
                 m2.evalLoop()
                 expect(m2.machineStatus).to(equal(.Exit(.Error(.StackUnderflow))))
-                expect(m2.machineStatus).to(equal(.Exit(.Error(.StackUnderflow))))
                 expect(m2.gas.remaining).to(equal(7))
                 expect(m2.gas.memoryGas.numWords).to(equal(0))
                 expect(m2.gas.memoryGas.gasCost).to(equal(0))
