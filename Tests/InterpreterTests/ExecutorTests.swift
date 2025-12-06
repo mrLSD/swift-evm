@@ -6,7 +6,7 @@ import Quick
 final class ExecutorSpec: QuickSpec {
     override class func spec() {
         describe("Executor") {
-            it("initializes ") {
+            it("initializes") {
                 let state = ExecutionState()
                 let e = Executor(state: state)
                 e.execute()

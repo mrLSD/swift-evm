@@ -4,8 +4,9 @@ import PrimitiveTypes
 import Quick
 
 final class InstructionReturnSpec: QuickSpec {
-    @MainActor
-    static let machine = TestMachine.machine(opcode: Opcode.RETURN, gasLimit: 100)
+    static var machine: Machine {
+        return TestMachine.machine(opcode: Opcode.RETURN, gasLimit: 100)
+    }
 
     override class func spec() {
         describe("Instruction RETURN") {

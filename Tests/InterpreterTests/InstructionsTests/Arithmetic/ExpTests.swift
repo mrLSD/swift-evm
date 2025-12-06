@@ -84,7 +84,7 @@ final class InstructionExpSpec: QuickSpec {
                 expect(m.gas.remaining).to(equal(65))
             }
 
-            it("Add with OutOfGas result") {
+            it("Exp with OutOfGas result") {
                 let m = TestMachine.machine(opcode: Opcode.EXP, gasLimit: 2)
 
                 _ = m.stack.push(value: U256(from: 1))

@@ -34,7 +34,7 @@ final class H160Spec: QuickSpec {
                             }.to(throwAssertion())
                         }).to(contain("Invalid hex string for 20 bytes"))
                     }
-                    it("String length to compared to `mod 2`") {
+                    it("String length compared to `mod 2`") {
                         expect(captureStandardError {
                             expect {
                                 _ = H160.fromString(hex: String(repeating: "A", count: 1))
@@ -71,7 +71,7 @@ final class H160Spec: QuickSpec {
                     it("correct bytes") {
                         expect(val.BYTES).to(equal([UInt8](repeating: 0, count: 20)))
                     }
-                    it("not Zero value") {
+                    it("is Zero value") {
                         expect(val.isZero).to(beTrue())
                     }
                     it("correct transformed to String") {

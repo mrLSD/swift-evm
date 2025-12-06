@@ -296,8 +296,8 @@ final class InterpreterGasSpec: QuickSpec {
                 it("success") {
                     let size = 70
                     let multiple = 10
-                    let nunWOrd = 3
-                    let expected = UInt64(nunWOrd * multiple)
+                    let numWord = 3
+                    let expected = UInt64(numWord * multiple)
                     guard let res = GasCost.costPerWord(size: size, multiple: multiple) else {
                         fail("Expected non-nil result")
                         return
@@ -435,7 +435,7 @@ final class InterpreterGasSpec: QuickSpec {
                 }
             }
 
-            context("expCosr") {
+            context("expCost") {
                 it("pow 0") {
                     let result = GasCost.expCost(hardFork: HardFork.SpuriousDragon, power: U256.ZERO)
                     let expected: UInt64 = GasConstant.EXP

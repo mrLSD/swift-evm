@@ -71,7 +71,7 @@ public enum Opcode: UInt8, CustomStringConvertible {
     case GASLIMIT = 0x45
 
     //
-    //  Block Information
+    // Chain and Fee Information
     //
     case CHAINID = 0x46
     case SELFBALANCE = 0x47
@@ -193,7 +193,7 @@ public enum Opcode: UInt8, CustomStringConvertible {
     case DATACOPY = 0xd3
 
     //
-    // EOFv1 instrucitons
+    // EOFv1 instructions
     //
     case RJUMP = 0xe0
     case RJUMPI = 0xe1

@@ -15,13 +15,13 @@ public struct I256: BigUInt {
     public var BYTES: [UInt64] { self.bytes }
 
     public init(from value: [UInt64]) {
-        precondition(value.count == Self.numberBase, "U256 must be initialized with \(Self.numberBase) UInt64 values.")
+        precondition(value.count == Self.numberBase, "I256 must be initialized with \(Self.numberBase) UInt64 values.")
         self.bytes = value
         self.signExtend = false
     }
 
     public init(from value: [UInt64], signExtend: Bool) {
-        precondition(value.count == Self.numberBase, "U256 must be initialized with \(Self.numberBase) UInt64 values.")
+        precondition(value.count == Self.numberBase, "I256 must be initialized with \(Self.numberBase) UInt64 values.")
         self.bytes = value
         self.signExtend = signExtend
     }
@@ -99,7 +99,7 @@ public struct I256: BigUInt {
         }
     }
 
-    /// `I256` reminder operation
+    /// `I256` remainder operation
     func rem(rhs: Self) -> Self {
         var r = self.divRem(divisor: rhs).remainder & I256(from: Self.SIGN_BIT_MASK.BYTES)
         if r.isZero {
@@ -175,7 +175,7 @@ public extension I256 {
         lhs.div(rhs: rhs)
     }
 
-    /// Reminder of two values of the same type.
+    /// Remainder of two values of the same type.
     static func % (lhs: Self, rhs: Self) -> Self {
         lhs.rem(rhs: rhs)
     }

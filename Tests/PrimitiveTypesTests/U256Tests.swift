@@ -18,7 +18,7 @@ final class U256Spec: QuickSpec {
                     it("is Empty") {
                         expectFailInit(array: [])
                     }
-                    it("is 3") {
+                    it("is 1") {
                         expectFailInit(array: [0])
                     }
                     it("is 5") {
@@ -48,7 +48,7 @@ final class U256Spec: QuickSpec {
                             }.to(throwAssertion())
                         }).to(contain("Invalid hex string for 32 bytes"))
                     }
-                    it("String length to compared to `mod 2`") {
+                    it("String length compared to `mod 2`") {
                         expect(captureStandardError {
                             expect {
                                 _ = U256.fromString(hex: String(repeating: "A", count: 1))
@@ -94,7 +94,7 @@ final class U256Spec: QuickSpec {
                 it("correct transformed to Little Endian array") {
                     expect(val.toLittleEndian).to(equal([UInt8](repeating: 0xFF, count: 32)))
                 }
-                it("correct transformed to Bit Endian array") {
+                it("correct transformed to Big Endian array") {
                     expect(val.toBigEndian).to(equal([UInt8](repeating: 0xFF, count: 32)))
                 }
                 it("correct transformed from Little Endian") {
@@ -110,7 +110,7 @@ final class U256Spec: QuickSpec {
                 it("correct bytes") {
                     expect(val.BYTES).to(equal([0, 0, 0, 0]))
                 }
-                it("not Zero value") {
+                it("is Zero value") {
                     expect(val.isZero).to(beTrue())
                 }
                 it("not u64 MAX") {
@@ -125,7 +125,7 @@ final class U256Spec: QuickSpec {
                 it("correct transformed to Little Endian array") {
                     expect(val.toLittleEndian).to(equal([UInt8](repeating: 0, count: 32)))
                 }
-                it("correct transformed to Bit Endian array") {
+                it("correct transformed to Big Endian array") {
                     expect(val.toBigEndian).to(equal([UInt8](repeating: 0, count: 32)))
                 }
                 it("correct transformed from Little Endian") {

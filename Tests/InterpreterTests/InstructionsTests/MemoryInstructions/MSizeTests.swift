@@ -6,7 +6,7 @@ import Quick
 final class MSizeSpec: QuickSpec {
     override class func spec() {
         describe("Instruction MSIZE") {
-            it("with OutOfGas result for index=0") {
+            it("with OutOfGas result") {
                 let m = TestMachine.machine(opcode: Opcode.MSIZE, gasLimit: 1)
 
                 m.evalLoop()

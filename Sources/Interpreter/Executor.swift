@@ -1,4 +1,4 @@
-class Executor {
+public final class Executor {
     var state: ExecutionState
     var runtime: [Machine] = []
 
