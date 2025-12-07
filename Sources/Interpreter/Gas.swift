@@ -276,12 +276,10 @@ enum GasCost {
     }
 
     /// `KECCAK256` opcode cost calculation.
-    static func keccak256Cost(size: Int) -> UInt64? {
-        guard let costPerWord = self.costPerWord(size: size, multiple: Int(clamping: GasConstant.KECCAK256WORD)) else {
-            return nil
-        }
+    static func keccak256Cost(size: Int) -> UInt64 {
+        // Overflow impossible in that case
+        let costPerWord = self.costPerWord(size: size, multiple: Int(clamping: GasConstant.KECCAK256WORD))!
 
-        let (total, overflow) = GasConstant.KECCAK256.addingReportingOverflow(costPerWord)
-        return overflow ? nil : total
+        return GasConstant.KECCAK256 + costPerWord
     }
 }

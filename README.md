@@ -39,6 +39,7 @@ consistent codebase that is both developers-friendly.
   - Shanghai
   - Cancun
   - Prague
+  - Osaka
 
 ## Integration & Future Plans
 
@@ -74,7 +75,7 @@ This is due the new capabilities of `Swift 6`, including support for the `UInt12
 Use as dependency:
 ```swift
     dependencies: [
-        .package(url: "https://github.com/mrLSD/swift-evm.git", from: "0.5.0")
+        .package(url: "https://github.com/mrLSD/swift-evm.git", from: "0.5.21")
     ]
 ```
 

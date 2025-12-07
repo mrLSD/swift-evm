@@ -77,7 +77,7 @@ enum SystemInstructions {
 
     /// Copies call data into memory at the specified offset and size.
     static func callDataCopy(machine m: Machine) {
-        // Pop the required values from the stack: memory offset, code offset, and size.
+        // Pop the required val		ues from the stack: memory offset, code offset, and size.
         guard let rawMemoryOffset = m.stackPop() else {
             return
         }
@@ -171,10 +171,7 @@ enum SystemInstructions {
         }
 
         // Calculate the gas cost for Keccak256 operation.
-        guard let cost = GasCost.keccak256Cost(size: size) else {
-                        m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.OutOfGas))
-            return
-        }
+        let cost = GasCost.keccak256Cost(size: size)
 
         // Record the gas cost for the copy operation.
         if !m.gasRecordCost(cost: cost) {
