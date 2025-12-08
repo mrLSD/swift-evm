@@ -37,7 +37,7 @@ enum SystemInstructions {
         // Calculate the gas cost for the very low copy operation.
         let cost = GasCost.veryLowCopy(size: size)
 
-        // Record the gas cost for the copy operation.
+        // Record the gas cost for the code copy operation.
         if !m.gasRecordCost(cost: cost) {
             return
         }
@@ -77,7 +77,7 @@ enum SystemInstructions {
 
     /// Copies call data into memory at the specified offset and size.
     static func callDataCopy(machine m: Machine) {
-        // Pop the required val		ues from the stack: memory offset, code offset, and size.
+        // Pop the required values from the stack: memory offset, code offset, and size.
         guard let rawMemoryOffset = m.stackPop() else {
             return
         }
@@ -96,7 +96,7 @@ enum SystemInstructions {
         // Calculate the gas cost for the very low copy operation.
         let cost = GasCost.veryLowCopy(size: size)
 
-        // Record the gas cost for the copy operation.
+        // Record the gas cost for the call data copy operation.
         if !m.gasRecordCost(cost: cost) {
             return
         }
@@ -173,7 +173,7 @@ enum SystemInstructions {
         // Calculate the gas cost for Keccak256 operation.
         let cost = GasCost.keccak256Cost(size: size)
 
-        // Record the gas cost for the copy operation.
+        // Record the gas cost for the Keccak256 operation.
         if !m.gasRecordCost(cost: cost) {
             return
         }
