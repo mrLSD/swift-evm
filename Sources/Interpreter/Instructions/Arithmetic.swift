@@ -1,38 +1,58 @@
 import PrimitiveTypes
 
-/// EVM Arithmetic instructions
+/// ## EVM Arithmetic instructions
+///
+/// EVM arithmetic opcode implementations.
+///
+/// `ArithmeticInstructions` groups pure, stateless handlers for arithmetic\-related EVM opcodes.
+/// Each handler operates on a `Machine` instance by popping its operands from the stack,
+/// charging the required gas via `gasRecordCost`, and pushing the resulting value back onto
+/// the stack. On failure (e.g., insufficient stack items or gas), the handler returns early
+/// without producing an output value.
+///
+/// This type is used as a namespacing container and is not intended to be instantiated.
 enum ArithmeticInstructions {
+    /// Executes the EVM `ADD` opcode (`0x01`).
+    /// Pops two `U256` values, charges `VERYLOW` gas, and pushes the sum.
+    /// Returns early if the stack underflows or gas charging fails, leaving the machine unchanged.
     static func add(machine m: Machine) {
-        guard let op1 = m.stackPop() else {
-            return
-        }
-        guard let op2 = m.stackPop() else {
+        if !m.verifyStack(pop: 2) {
             return
         }
 
         if !m.gasRecordCost(cost: GasConstant.VERYLOW) {
             return
         }
+
+// After stack verification this guard will always succeed. But we keep it for safety and clarity.
+        guard let op1 = m.stackPop(), let op2 = m.stackPop() else { return }
 
         let (newValue, _) = op1.overflowAdd(op2)
         m.stackPush(value: newValue)
     }
 
+    /// Executes the EVM `SUB` opcode (`0x03`).
+    /// Pops two `U256` values, charges `VERYLOW` gas, and pushes the substraction result.
+    /// Returns early if the stack underflows or gas charging fails, leaving the machine unchanged.
     static func sub(machine m: Machine) {
+        if !m.verifyStack(pop: 2) {
+            return
+        }
+
         if !m.gasRecordCost(cost: GasConstant.VERYLOW) {
             return
         }
-        guard let op1 = m.stackPop() else {
-            return
-        }
-        guard let op2 = m.stackPop() else {
-            return
-        }
+
+        // After stack verification this guard will always succeed. But we keep it for safety and clarity.
+        guard let op1 = m.stackPop(), let op2 = m.stackPop() else { return }
 
         let (newValue, _) = op1.overflowSub(op2)
         m.stackPush(value: newValue)
     }
 
+    /// Executes the EVM `MUL` opcode (`0x02`).
+    /// Pops two `U256` values, charges `LOW` gas, and pushes the product.
+    /// Returns early if the stack underflows or gas charging fails, leaving the machine unchanged.
     static func mul(machine m: Machine) {
         guard let op1 = m.stackPop() else {
             return
@@ -49,6 +69,9 @@ enum ArithmeticInstructions {
         m.stackPush(value: newValue)
     }
 
+    /// Executes the EVM `DIV` opcode (`0x04`).
+    /// Pops two `U256` values, charges `LOW` gas, and pushes the quotient (or `0` if divisor is zero).
+    /// Returns early if the stack underflows or gas charging fails, leaving the machine unchanged.
     static func div(machine m: Machine) {
         guard let op1 = m.stackPop() else {
             return

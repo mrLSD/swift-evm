@@ -114,15 +114,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - **External State Opcodes:** Implemented a full suite of opcodes for interacting with external accounts, allowing the VM to query balances and code of other contracts:
-    - `BALANCE` (0x31): Get balance of the given account.
-    - `EXTCODESIZE` (0x3B): Get code size of an account.
-    - `EXTCODECOPY` (0x3C): Copy an account's code to memory.
-    - `EXTCODEHASH` (0x3F): Get the code hash of an account.
+  - `BALANCE` (0x31): Get balance of the given account.
+  - `EXTCODESIZE` (0x3B): Get code size of an account.
+  - `EXTCODECOPY` (0x3C): Copy an account's code to memory.
+  - `EXTCODEHASH` (0x3F): Get the code hash of an account.
 - **Host Interface:** Significantly expanded the `InterpreterHandler` protocol to support state access. New required methods include:
-    - `balance(at address: H160) -> U256`
-    - `codeSize(at address: H160) -> U256`
-    - `codeHash(at address: H160) -> H256`
-    - `codeCopy(at address: H160, range: Range<Int>) -> [UInt8]`
+  - `balance(at address: H160) -> U256`
+  - `codeSize(at address: H160) -> U256`
+  - `codeHash(at address: H160) -> H256`
+  - `codeCopy(at address: H160, range: Range<Int>) -> [UInt8]`
 - **Gas Logic:** Added gas calculation logic for account access, including costs for accessing "cold" vs "warm" accounts (where applicable) and memory expansion costs for code copying ([#47]).
 
 ### Changed
@@ -130,6 +130,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Tests
 - **Coverage:** Added extensive tests for the new opcodes, covering edge cases like non-existent accounts, memory boundary checks during code copy, and gas accounting accuracy ([#47]).
+
+## [0.5.12] - 2025-06-07
+
+### Added
+- **WASM Support:** Added support for compiling and running the EVM on WebAssembly (wasm32) targets, enabling execution in browser environments ([#46]).
+- **Cross-Platform Memory:** Implemented a unified memory management model that supports diverse build targets (macOS, Linux, Windows, WASM) without platform-specific conditional compilation ([#46]).
+
+### Changed
+- **Memory Refactor:** Completely refactored the internal `Memory` implementation to use safe, platform-agnostic buffer manipulations, removing dependencies on specific pointer widths or endianness that previously hindered WASM support ([#46]).
+- **Build Targets:** Updated package configuration to explicitly support non-Apple platforms, verifying successful builds on Linux and Windows ([#46]).
+
+## [0.5.11] - 2025-06-04
+
+### Added
+- **CALLVALUE Opcode:** Implemented logic for the `CALLVALUE` (0x34) opcode, allowing smart contracts to retrieve the value (in Wei) deposited by the instruction or transaction responsible for this execution ([#45]).
+- **Runtime Context:** Updated the `Runtime` and `Machine` structures to correctly propagate transaction values (`msg.value`) into the execution context ([#45]).
+
+### Changed
+- **Runtime Refactor:** Refactored the internal Runtime initialization logic to support value transfers and context propagation, preparing the architecture for future `CALL` operations ([#45]).
+
+### Tests
+- **Coverage:** Added unit tests for `CALLVALUE` to verify it correctly places the transaction value onto the stack and charges the appropriate gas (Base Gas: 2) ([#45]).
+
+## [0.5.10] - 2025-06-02
+
+### Added
+- **Runtime Environment:** Introduced the basic `Runtime` structure, laying the foundation for managing execution context, transactions, and block data ([#44]).
+
+### Changed
+- **Machine Architecture:** Refactored the core `Machine` type from a `struct` (value type) to a `class` (reference type). This change ensures a single mutable instance throughout execution, removing the need for `inout` passing and simplifying state management ([#44]).
+- **Test Suite:** Updated all unit tests to align with the new reference semantics of the `Machine` class ([#44]).
 
 <!-- Versions -->
 [0.5.22]: https://github.com/mrLSD/swift-evm/compare/v0.5.21...v0.5.22
@@ -142,6 +173,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [0.5.15]: https://github.com/mrLSD/swift-evm/compare/v0.5.14...v0.5.15
 [0.5.14]: https://github.com/mrLSD/swift-evm/compare/v0.5.13...v0.5.14
 [0.5.13]: https://github.com/mrLSD/swift-evm/compare/v0.5.12...v0.5.13
+[0.5.12]: https://github.com/mrLSD/swift-evm/compare/v0.5.11...v0.5.12
+[0.5.11]: https://github.com/mrLSD/swift-evm/compare/v0.5.10...v0.5.11
+[0.5.10]: https://github.com/mrLSD/swift-evm/compare/v0.5.9...v0.5.10
 
 <!-- PRs -->
 [#57]: https://github.com/mrLSD/swift-evm/pull/57
@@ -155,3 +189,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [#49]: https://github.com/mrLSD/swift-evm/pull/49
 [#48]: https://github.com/mrLSD/swift-evm/pull/48
 [#47]: https://github.com/mrLSD/swift-evm/pull/47
+[#46]: https://github.com/mrLSD/swift-evm/pull/46
+[#45]: https://github.com/mrLSD/swift-evm/pull/45
+[#44]: https://github.com/mrLSD/swift-evm/pull/44
