@@ -9,7 +9,7 @@ import PrimitiveTypes
 /// -  `TRACE_GAS_CALC`
 /// - `TRACE_STACK_INOUT`
 /// - `TRACE_HIDE_UNCHANGED`
-/// - `TRACE_HI`DE_MEMORY`
+/// - `TRACE_HIDE_MEMORY`
 /// - `TRACE_HIDE_STACK`
 /// - `TRACE_HIDE_STORAGE`
 /// - `TRACE_STORAGE_HEX_VALUE`
@@ -143,13 +143,17 @@ public class Trace {
             }
             self.stackIn = nil
             self.stackOut = nil
-            self.memory = machine.memory
+            if cfg.hideMemory {
+                self.memory = nil
+            } else {
+                self.memory = machine.memory
+            }
             self.storage = nil
             self.subCallTrace = nil
         }
     }
 
-    /// Tracde Gas data
+    /// Trace Gas data
     public struct TraceGas {
         private(set) var remaining: UInt64
         private(set) var refunded: Int64
@@ -224,7 +228,7 @@ public class Trace {
                 print(", Stack: ", terminator: "")
                 if let stackValues = trace.stack {
                     let s = stackValues.data.map { value -> String in
-                        // Check is it possible print number UInt, for shot output
+                        // Check if it's possible to print number as UInt for short output
                         if value < U256(from: UInt64(UInt.max)) {
                             String(format: "%x", value.getUInt.map { $0 } ?? 0)
                         } else {

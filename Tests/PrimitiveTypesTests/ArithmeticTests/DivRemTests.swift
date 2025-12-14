@@ -129,7 +129,7 @@ final class ArithmeticDivRemSpec: QuickSpec {
                     expect(remainder.BYTES).to(equal([0x8000000000000001, 0x7ffffffffffffffe, 0, 0]))
                 }
 
-                it("partial case 2") {
+                it("partial case 2 - multi-word divisor") {
                     let a = U256(from: [UInt64.max/2, 1, UInt64.max/3, UInt64.max/2])
                     let b = U256(from: [0, UInt64.max/2, 1, UInt64.max/4])
                     let (quotient, remainder) = a.divRem(divisor: b)
@@ -146,7 +146,8 @@ final class ArithmeticDivRemSpec: QuickSpec {
                     expect(quotient.BYTES).to(equal([1, 1, 1, 1]))
                     expect(remainder.BYTES).to(equal([0, 0, 0, 0]))
                 }
-                it("partial case 3") {
+
+                it("partial case 3 - dividend smaller than divisor") {
                     let a = U256(from: UInt64.max - 1)
                     let b = U256(from: [UInt64.max - 1, UInt64.max - 1, UInt64.max - 1, UInt64.max - 1])
                     let (quotient, remainder) = a.divRem(divisor: b)
@@ -178,7 +179,16 @@ final class ArithmeticDivRemSpec: QuickSpec {
                     expect(rem).to(equal(6))
                 }
 
-                it("fuzz for lo 10000 elements") {
+                it("fuzz single random pair") {
+                    let a = UInt64.random(in: 1..<UInt64.max)
+                    let b = UInt64.random(in: 1..<UInt64.max)
+                    let (div, rem) = DivModUtils.divModWord64(hi: 0, lo: a, y: b)
+
+                    expect(div).to(equal(a/b))
+                    expect(rem).to(equal(a % b))
+                }
+
+                it("fuzz single random pair") {
                     let a = UInt64.random(in: 1..<UInt64.max)
                     let b = UInt64.random(in: 1..<UInt64.max)
                     let (div, rem) = DivModUtils.divModWord64(hi: 0, lo: a, y: b)

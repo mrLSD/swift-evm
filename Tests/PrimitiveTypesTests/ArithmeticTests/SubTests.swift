@@ -119,13 +119,13 @@ final class ArithmeticSubSpec: QuickSpec {
                     // Byte 0: 5 - 5 = 0
                     // Byte 1: 10 - 10 = 0
                     // Byte 2: 15 - 16 = UInt64.max (borrow)
-                    // Byte 3: 20 - 20 - 1(borrow) = 19
+                    // Byte 3: 20 - 20 - 1(borrow) = UInt64.max (borrow, causes overflow)
                     expect(result).to(equal(U256(from: [0, 0, UInt64.max, UInt64.max])))
                     expect(overflow).to(beTrue())
                 }
             }
 
-            context("when subtraction results in all words underflowing2") {
+            context("when subtraction results in all words underflowing") {
                 it("correctly sets overflow") {
                     let selfNumber = U256(from: [0, 0, 0, 0])
                     let value = U256(from: [1, 1, 1, 1])
@@ -148,8 +148,8 @@ final class ArithmeticSubSpec: QuickSpec {
                 }
             }
 
-            context("when subtraction causes multiple borrows without overflow") {
-                it("handles multiple borrows correctly and sets overflow") {
+            context("when subtraction causes multiple borrows with overflow") {
+                it("handles multiple borrows correctly and sets overflow to true") {
                     let selfNumber = U256(from: [10, 0, 0, 0])
                     let value = U256(from: [5, 1, 0, 0])
                     let (result, overflow) = selfNumber.overflowSub(value)

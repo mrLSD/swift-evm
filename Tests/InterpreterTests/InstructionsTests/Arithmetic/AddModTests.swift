@@ -60,7 +60,7 @@ final class InstructionAddModSpec: QuickSpec {
                 expect(m.gas.remaining).to(equal(2))
             }
 
-            it("Add with OutOfGas result") {
+            it("AddMod with OutOfGas result") {
                 let m = Self.machineLowGas
 
                 _ = m.stack.push(value: U256(from: 1))

@@ -5,7 +5,7 @@ enum HardFork: UInt8, CustomStringConvertible, CaseIterable {
     case Homestead
     // Tangerine Whistle      2463000
     case Tangerine
-    // Spurious Dragon        267500
+    // Spurious Dragon        2675000
     case SpuriousDragon
     // Byzantium              4370000
     case Byzantium
@@ -15,7 +15,7 @@ enum HardFork: UInt8, CustomStringConvertible, CaseIterable {
     case Istanbul
     // Berlin                 12244000
     case Berlin
-    // London                 2965000
+    // London                 12965000
     case London
     // Paris/Merge            15537394
     case Paris

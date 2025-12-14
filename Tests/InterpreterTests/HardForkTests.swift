@@ -26,7 +26,7 @@ final class InterpreterHardForkSpec: QuickSpec {
                         .Osaka: 0x0d,
                     ]
 
-                    // Check that covared all cases
+                    // Check that covered all cases
                     expect(HardFork.allCases.count).to(equal(hardForkRawValues.count))
 
                     for (hardFork, rawValue) in hardForkRawValues {
@@ -57,7 +57,7 @@ final class InterpreterHardForkSpec: QuickSpec {
         }
 
         context("Test for description of each case") {
-            it("should return correct description for all Opcode cases") {
+            it("should return correct description for all HardFork cases") {
                 let hardForkDescriptions: [HardFork: String] = [
                     .Frontier: "Frontier",
                     .Homestead: "Homestead",
@@ -75,7 +75,7 @@ final class InterpreterHardForkSpec: QuickSpec {
                     .Osaka: "Osaka",
                 ]
 
-                // Check that covared all cases
+                // Check that covered all cases
                 expect(HardFork.allCases.count).to(equal(hardForkDescriptions.count))
 
                 for (hardFork, description) in hardForkDescriptions {
@@ -94,7 +94,7 @@ final class InterpreterHardForkSpec: QuickSpec {
                 expect(HardFork.Homestead.isHomestead()).to(beTrue())
                 expect(HardFork.Tangerine.isTangerine()).to(beTrue())
                 expect(HardFork.SpuriousDragon.isSpuriousDragon()).to(beTrue())
-                expect(HardFork.Berlin.isByzantium()).to(beTrue())
+                expect(HardFork.Byzantium.isByzantium()).to(beTrue())
                 expect(HardFork.Constantinople.isConstantinople()).to(beTrue())
                 expect(HardFork.Istanbul.isIstanbul()).to(beTrue())
                 expect(HardFork.Berlin.isBerlin()).to(beTrue())

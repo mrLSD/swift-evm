@@ -2,7 +2,7 @@ import PrimitiveTypes
 
 /// EVM Machine Stack
 struct Stack {
-    public static let STACK_LIMIT: Int = 1024
+    static let STACK_LIMIT: Int = 1024
     /// Stack data
     private(set) var data: [U256] = []
     /// Stack limit
@@ -29,7 +29,7 @@ struct Stack {
 
     /// Push `U256` value to the Stack. Return error if it's reach limit.
     ///
-    /// - Parameter value: `U256` value that will be pushed to Stacl
+    /// - Parameter value: `U256` value that will be pushed to Stack.
     /// - Returns: A `Result` containing the `Void` value if successful, or an `ExitError.StackOverflow` if an error occurs.
     @inline(__always)
     mutating func push(value: U256) -> Result<Void, Machine.ExitError> {
@@ -46,7 +46,7 @@ struct Stack {
 
     /// Pop `U256` value from the Stack
     ///
-    /// - Returns: A `Result` containing the `H256` value if successful, or an `ExitError.StackUnderflow` if stack is empty.
+    /// - Returns: A `Result` containing the `U256` value if successful, or an `ExitError.StackUnderflow` if stack is empty.
     @inline(__always)
     mutating func pop() -> Result<U256, Machine.ExitError> {
         guard let value = self.data.popLast() else {
@@ -105,7 +105,7 @@ struct Stack {
     }
 
     /// Peeks a value at a given index from the top of the stack and converts it to `Int`.
-    /// If the value is larger than `Int.max`, `ExitError.outOfGas` is returned (`outOfGas` error possible only for 32-bit context like `wasm32`).
+    /// If the value is larger than `UInt.max`, `ExitError.OutOfOffset` is returned (possible only for 32-bit context like `wasm32`).
     ///
     /// - Parameter indexFromTop: The index from the top of the stack.
     /// - Returns: A `Result` containing the `Int` value if successful, or an `ExitError` if an error occurs.
