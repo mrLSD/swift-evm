@@ -39,7 +39,7 @@ final class InstructionAddModSpec: QuickSpec {
                 m.evalLoop()
 
                 expect(m.machineStatus).to(equal(.Exit(.Error(.StackUnderflow))))
-                expect(m.stack.length).to(equal(0))
+                expect(m.stack.length).to(equal(2))
                 expect(m.gas.remaining).to(equal(10))
             }
 
@@ -69,7 +69,7 @@ final class InstructionAddModSpec: QuickSpec {
                 m.evalLoop()
 
                 expect(m.machineStatus).to(equal(.Exit(.Error(.OutOfGas))))
-                expect(m.stack.length).to(equal(0))
+                expect(m.stack.length).to(equal(3))
                 expect(m.gas.remaining).to(equal(2))
             }
 

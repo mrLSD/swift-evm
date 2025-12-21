@@ -32,7 +32,7 @@ enum ArithmeticInstructions {
     }
 
     /// Executes the EVM `SUB` opcode (`0x03`).
-    /// Pops two `U256` values, charges `VERYLOW` gas, and pushes the subtraction result.890da606ca60d93bffa02d536d8b93dbae5fd625
+    /// Pops two `U256` values, charges `VERYLOW` gas, and pushes the subtraction result.
     /// Returns early if the stack underflows or gas charging fails, leaving the machine unchanged.
     static func sub(machine m: Machine) {
         if !m.verifyStack(pop: 2) {
@@ -218,7 +218,7 @@ enum ArithmeticInstructions {
         }
 
         // After stack verification this guard will always succeed. But we keep it for safety and clarity.
-        guard var op2 = m.stackPeek(indexFromTop: 2) else { return }
+        guard var op2 = m.stackPeek(indexFromTop: 1) else { return }
 
         if !m.gasRecordCost(cost: GasCost.expCost(hardFork: m.hardFork, power: op2)) {
             return

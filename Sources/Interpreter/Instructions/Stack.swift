@@ -58,13 +58,16 @@ enum StackInstructions {
     }
 
     static func dup(machine m: Machine, n: Int) {
+        if !m.verifyStack(pop: n, push: n + 1) {
+            return
+        }
+
         if !m.gasRecordCost(cost: GasConstant.VERYLOW) {
             return
         }
 
-        guard let dupVal = m.stackPeek(indexFromTop: n - 1) else {
-            return
-        }
+        // After stack verification this guard will always succeed. But we keep it for safety and clarity.
+        guard let dupVal = m.stackPeek(indexFromTop: n - 1) else { return }
 
         m.stackPush(value: dupVal)
     }
