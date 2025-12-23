@@ -76,7 +76,8 @@ public struct I256: BigUInt {
             return Self.ZERO
         }
 
-        // MIN_VALUE / 1  == MIN_VALUE
+        // MIN_VALUE / 1 == MIN_VALUE; MIN_VALUE / -1 also returns MIN_VALUE per Yellow Paper (EVM overflow semantics)
+        // We don't check sign of rhs, because both 1 and -1 have the same bytes representation.
         if self == Self.minValue, rhs.BYTES == [1, 0, 0, 0] {
             return Self.minValue
         }

@@ -40,10 +40,10 @@ public extension BigUInt {
 
     /// Performs an overflow multiplication operation with the given value.
     ///
-    /// Algorithm base on `mac` (multiply-accumulate) operation. It's optimised to avoid
-    /// redundant operations with matrix. In common cases multiplication `2*Width`. For
-    /// 256-bit in common cases result will be 512-bit - `high` and `low` part. `Low` contains
-    /// result itself, `high` contains overflowed number. We're oprimised algorithm to return only `Width`,
+    /// Algorithm based on `mac` (multiply-accumulate) operation. It's optimised to avoid
+    /// redundant operations with matrix. In common cases multiplication is `2*Width`. For
+    /// 256-bit, in common cases result will be 512-bit - `high` and `low` part. `Low` contains
+    /// result itself, `high` contains overflowed number. We've optimised the algorithm to return only `Width`,
     /// itself, to avoid redundant calculations, and just calculating `overflow` flag.
     ///
     /// - Parameter value: The value to be multiplying.
@@ -425,8 +425,7 @@ public extension BigUInt {
     ///
     /// - Returns: The multiply of the two values.
     static func * (lhs: Self, rhs: Self) -> Self {
-        let (result, _) = lhs.overflowMul(rhs)
-        return result
+        lhs.mul(rhs)
     }
 
     /// Performs `multiply` and updates the left-hand side with the result.

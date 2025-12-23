@@ -183,7 +183,7 @@ struct Stack {
     }
 
     #if TRACING
-        /// Cleat trace Stack in/out data
+        /// Clear trace Stack in/out data
         mutating func clearTraceStack() {
             #if TRACE_STACK_INOUT
                 self.traceStackIn = []

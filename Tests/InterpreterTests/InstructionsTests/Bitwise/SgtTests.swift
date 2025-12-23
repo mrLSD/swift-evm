@@ -14,7 +14,7 @@ final class InstructionSgtSpec: QuickSpec {
 
     override class func spec() {
         describe("Instruction SGT") {
-            it("a > b") {
+            it("3 > 2") {
                 let m = Self.machine
 
                 let _ = m.stack.push(value: U256(from: 2))
@@ -94,7 +94,7 @@ final class InstructionSgtSpec: QuickSpec {
                 expect(m.gas.remaining).to(equal(7))
             }
 
-            it("a > b") {
+            it("5 > 3") {
                 let m = Self.machine
 
                 let _ = m.stack.push(value: U256(from: 3))

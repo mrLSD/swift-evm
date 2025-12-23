@@ -41,7 +41,7 @@ jobs:
         echo "Binary path found: $BINARY_PATH"
         xcrun llvm-cov export -format="lcov" "$BINARY_PATH" \
           -instr-profile="$BIN_PATH/codecov/default.profdata" \
-          -ignore-filename-regex=".build|Tests" \
+          -ignore-filename-regex="\.build|Tests" \
           > coverage/lcov.info
         ls -la coverage/lcov.info
 

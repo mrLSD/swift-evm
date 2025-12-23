@@ -123,7 +123,6 @@ reviews:
       enabled: true
     semgrep:
       enabled: true
-      config_file: .semgrep.yaml
     circleci:
       enabled: true
     clippy:

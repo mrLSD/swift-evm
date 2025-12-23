@@ -17,8 +17,8 @@ final class InstructionLtSpec: QuickSpec {
             it("a < b") {
                 let m = Self.machine
 
-                let _ = m.stack.push(value: U256(from: 3))
-                let _ = m.stack.push(value: U256(from: 2))
+                _ = m.stack.push(value: U256(from: 3))
+                _ = m.stack.push(value: U256(from: 2))
                 m.evalLoop()
                 let result = m.stack.pop()
 
@@ -33,8 +33,8 @@ final class InstructionLtSpec: QuickSpec {
             it("a == b") {
                 let m = Self.machine
 
-                let _ = m.stack.push(value: U256(from: 3))
-                let _ = m.stack.push(value: U256(from: 3))
+                _ = m.stack.push(value: U256(from: 3))
+                _ = m.stack.push(value: U256(from: 3))
                 m.evalLoop()
                 let result = m.stack.pop()
 
@@ -49,8 +49,8 @@ final class InstructionLtSpec: QuickSpec {
             it("a > b") {
                 let m = Self.machine
 
-                let _ = m.stack.push(value: U256(from: 3))
-                let _ = m.stack.push(value: U256(from: 5))
+                _ = m.stack.push(value: U256(from: 3))
+                _ = m.stack.push(value: U256(from: 5))
                 m.evalLoop()
                 let result = m.stack.pop()
 
@@ -62,10 +62,10 @@ final class InstructionLtSpec: QuickSpec {
                 expect(m.gas.remaining).to(equal(7))
             }
 
-            it("`a > b`, when `b` not in the stack") {
+            it("StackUnderflow with only one operand") {
                 let m = Self.machine
 
-                let _ = m.stack.push(value: U256(from: 2))
+                _ = m.stack.push(value: U256(from: 2))
                 m.evalLoop()
 
                 expect(m.machineStatus).to(equal(.Exit(.Error(.StackUnderflow))))
@@ -76,8 +76,8 @@ final class InstructionLtSpec: QuickSpec {
             it("with OutOfGas result") {
                 let m = Self.machineLowGas
 
-                let _ = m.stack.push(value: U256(from: 1))
-                let _ = m.stack.push(value: U256(from: 2))
+                _ = m.stack.push(value: U256(from: 1))
+                _ = m.stack.push(value: U256(from: 2))
                 m.evalLoop()
 
                 expect(m.machineStatus).to(equal(.Exit(.Error(.OutOfGas))))
@@ -91,13 +91,13 @@ final class InstructionLtSpec: QuickSpec {
                 expect(m.machineStatus).to(equal(.Exit(.Error(.StackUnderflow))))
 
                 let m1 = Self.machine
-                let _ = m1.stack.push(value: U256(from: 5))
+                _ = m1.stack.push(value: U256(from: 5))
                 m1.evalLoop()
                 expect(m1.machineStatus).to(equal(.Exit(.Error(.StackUnderflow))))
 
                 let m2 = Self.machine
-                let _ = m2.stack.push(value: U256(from: 2))
-                let _ = m2.stack.push(value: U256(from: 2))
+                _ = m2.stack.push(value: U256(from: 2))
+                _ = m2.stack.push(value: U256(from: 2))
                 m2.evalLoop()
                 expect(m2.machineStatus).to(equal(.Exit(.Success(.Stop))))
             }

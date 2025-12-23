@@ -162,6 +162,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Machine Architecture:** Refactored the core `Machine` type from a `struct` (value type) to a `class` (reference type). This change ensures a single mutable instance throughout execution, removing the need for `inout` passing and simplifying state management ([#44]).
 - **Test Suite:** Updated all unit tests to align with the new reference semantics of the `Machine` class ([#44]).
 
+## [0.5.9] - 2025-05-06
+
+### Added
+- **Flow Control Opcodes:** Implemented the core set of control flow instructions ensuring correct program counter manipulation:
+  - `JUMP` (0x56): Unconditional jump to a destination.
+  - `JUMPI` (0x57): Conditional jump based on stack value.
+  - `JUMPDEST` (0x5B): Marks a valid destination for jumps.
+  - `PC` (0x58): Get the value of the program counter prior to the increment.
+- **Gas & MSIZE:** Implemented logic for:
+  - `GAS` (0x5A): Get the amount of available gas, including reduction for the instruction itself.
+  - `MSIZE` (0x59): Get the size of active memory in bytes.
+- **Jump Validation:** Added `JumpTable` and valid destination verification logic to trap invalid jumps (jumping to non-JUMPDEST bytes or into immediate data) with `BadJumpDestination` error ([#43]).
+
+### Tests
+- **Coverage:** Added comprehensive tests for jump validity, infinite loops (with gas limits), and stack/memory interaction for `MSIZE` ([#43]).
+
 <!-- Versions -->
 [0.5.22]: https://github.com/mrLSD/swift-evm/compare/v0.5.21...v0.5.22
 [0.5.21]: https://github.com/mrLSD/swift-evm/compare/v0.5.20...v0.5.21
@@ -176,6 +192,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [0.5.12]: https://github.com/mrLSD/swift-evm/compare/v0.5.11...v0.5.12
 [0.5.11]: https://github.com/mrLSD/swift-evm/compare/v0.5.10...v0.5.11
 [0.5.10]: https://github.com/mrLSD/swift-evm/compare/v0.5.9...v0.5.10
+[0.5.9]: https://github.com/mrLSD/swift-evm/compare/v0.5.8...v0.5.9
 
 <!-- PRs -->
 [#57]: https://github.com/mrLSD/swift-evm/pull/57
@@ -192,3 +209,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [#46]: https://github.com/mrLSD/swift-evm/pull/46
 [#45]: https://github.com/mrLSD/swift-evm/pull/45
 [#44]: https://github.com/mrLSD/swift-evm/pull/44
+[#43]: https://github.com/mrLSD/swift-evm/pull/43
