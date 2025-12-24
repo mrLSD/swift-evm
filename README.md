@@ -12,9 +12,9 @@
   <p><strong>Portable, compliant, and high-performance pure Swift implementation of the Ethereum Virtual Machine (EVM)</strong></p>
 </div>
 
------
+---
 
-**SwiftEVM** is a modular EVM implementation  for the Ethereum protocol, written in pure Swift. It is designed for low-overhead 
+**SwiftEVM** is a modular EVM implementation for the Ethereum protocol, written in pure Swift. It is designed for low-overhead 
 integration into blockchain nodes, embedded systems, and Layer-2 solutions requiring deterministic EVM bytecode execution.
 
 Unlike general-purpose wrappers, SwiftEVM offers a ground-up implementation of the **Yellow Paper** specifications, optimizing 
@@ -33,7 +33,7 @@ and generated documentation here:
 *   **Yellow Paper Compliant:** Strict adherence to Ethereum protocol specifications.
 *   **Zero-Copy Architecture:** Optimized memory handling to minimize ARC overhead in hot execution paths.
 *   **Platform Agnostic:** Runs natively on **macOS**, **iOS**, **Linux**, and **WebAssembly (wasm32)** and many others.
-*.  **Uncompromising Reliability:** The codebase maintains **100% unit test coverage**. Every opcode, edge case, and gas calculation path is rigorously tested, ensuring production-grade stability and correctness rarely seen in early-stage implementations.
+*   **Uncompromising Reliability:** The codebase maintains **100% unit test coverage**. Every opcode, edge case, and gas calculation path is rigorously tested, ensuring production-grade stability and correctness rarely seen in early-stage implementations.
 *   **Deterministic Execution:** 100% reproducible state transitions.
 *   **Modular Design:** Decoupled components (Gasometer, Stack, Memory, Interpreter) allowing for custom extensions and instrumentation.
 
@@ -60,7 +60,7 @@ Granular execution tracing for debugging and state analysis. Supports standard J
 
 ## Implementation Status & Roadmap
 
-The project follows the latest Ethereum specification upgrades.
+The project targets the Ethereum specification upgrades listed below.
 
 | Component | Status | Notes |
 | :--- | :--- | :--- |
@@ -68,7 +68,7 @@ The project follows the latest Ethereum specification upgrades.
 | **Opcode Logic** | ✅ Complete | Arithmetic, Bitwise, Control Flow, System |
 | **Precompiles** | 🔄 In Progress | ECRecover, SHA256, RIPEMD160, Identity etc. |
 | **Runtime** | 🛠 Active Dev | Transaction context, Block environment |
-| **zkEVM** | 🔜 Planned | Guest program, Block valudation & execution |
+| **zkEVM** | 🔜 Planned | Guest program, Block validation & execution |
 
 ### Compliance & Verification
 *  ✅ **Unit Testing:** 100% Code Coverage enforced by CI and CodeCov.
@@ -96,7 +96,7 @@ Add SwiftEVM to your `Package.swift` dependencies:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/mrLSD/swift-evm.git", from: "0.5.21")
+    .package(url: "https://github.com/mrLSD/swift-evm.git", from: "0.5.23")
 ]
 ```
 

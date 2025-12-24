@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.23] - 2026-01-19
+
+### Added
+- **CALLER Opcode:** Implemented the `CALLER` (0x33) opcode, allowing smart contracts to retrieve the address of the account that invoked the transaction or execution ([#59]).
+- **Machine Status:** Introduced explicit `MachineStatus` enum (including `ExitSuccess`, `ExitFatal`, `ExitError`, `ExitRevert`) to strictly define the execution state and exit reasons ([#61]).
+- **Stack Validation:** Added centralized `verifyStack(pop:push:)` methods to `MachineStack` for safer checking of underflow/overflow conditions before stack mutation ([#61]).
+- **Memory Helpers:** Added optimized `memCpy` and `memSet` internal helpers for memory operations ([#61]).
+- **Documentation:** Major overhaul of `README.md` and formatting updates to `CHANGELOG.md` ([#61]).
+
+### Changed
+- **Context Refactoring:** Renamed `Context` fields for greater clarity across the codebase ([#59]):
+  - `target` → `targetAddress`
+  - `sender` → `callerAddress`
+  - `value` → `callValue`
+- **Arithmetic Safety:** Completely refactored `ArithmeticInstructions` to use the new `verifyStack` pattern. Now, gas availability and stack requirements are validated *before* any operands are popped, preserving stack integrity in case of failure ([#61]).
+- **Opcode Architecture:** Moved `ADDRESS` from Host to System instructions and standardized the implementation of `SELFBALANCE`, `ORIGIN`, and `COINBASE` within the Host instruction set ([#59]).
+- **Jump Validation:** Updated `isValidJumpDestination` signature and logic to align with the new `MachineStatus` model ([#61]).
+- **Visibility:** Made `HardFork` enum public to facilitate configuration from the host environment ([#61]).
+
+### Tests
+- **Caller Tests:** Added dedicated `CallerTests` suite covering standard execution, gas costs, and context propagation ([#59]).
+- **Refactored Tests:** Updated `ArithmeticTests` and `MachineTests` to reflect the new `MachineStatus` error handling models and renamed Context fields ([#61]).
+- **CLI Runner:** Added a CLI test-runner script for better test output formatting ([#61]).
+
 ## [0.5.22] - 2026-01-05
 
 ### Added
@@ -169,7 +193,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `JUMP` (0x56): Unconditional jump to a destination.
   - `JUMPI` (0x57): Conditional jump based on stack value.
   - `JUMPDEST` (0x5B): Marks a valid destination for jumps.
-  - `PC` (0x58): Get the value of the program counter prior to the increment.
+  - `PC` (0x58): Get the value of the program counter before to the increment.
 - **Gas & MSIZE:** Implemented logic for:
   - `GAS` (0x5A): Get the amount of available gas, including reduction for the instruction itself.
   - `MSIZE` (0x59): Get the size of active memory in bytes.
@@ -179,6 +203,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Coverage:** Added comprehensive tests for jump validity, infinite loops (with gas limits), and stack/memory interaction for `MSIZE` ([#43]).
 
 <!-- Versions -->
+[0.5.23]: https://github.com/mrLSD/swift-evm/compare/v0.5.22...v0.5.23
 [0.5.22]: https://github.com/mrLSD/swift-evm/compare/v0.5.21...v0.5.22
 [0.5.21]: https://github.com/mrLSD/swift-evm/compare/v0.5.20...v0.5.21
 [0.5.20]: https://github.com/mrLSD/swift-evm/compare/v0.5.19...v0.5.20
@@ -195,6 +220,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [0.5.9]: https://github.com/mrLSD/swift-evm/compare/v0.5.8...v0.5.9
 
 <!-- PRs -->
+[#61]: https://github.com/mrLSD/swift-evm/pull/61
+[#59]: https://github.com/mrLSD/swift-evm/pull/59
 [#57]: https://github.com/mrLSD/swift-evm/pull/57
 [#56]: https://github.com/mrLSD/swift-evm/pull/56
 [#55]: https://github.com/mrLSD/swift-evm/pull/55

@@ -10,7 +10,7 @@ final class InstructionExpSpec: QuickSpec {
 
     override class func spec() {
         describe("Instruction Exp") {
-            it("2 exp 3 without hard fork ") {
+            it("2 exp 3 without hard fork") {
                 let m = Self.machine
 
                 _ = m.stack.push(value: U256(from: 3))
