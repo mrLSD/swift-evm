@@ -27,7 +27,7 @@ final class InstructionSwapSpec: QuickSpec {
                     })
 
                     expect(m.stack.length).to(equal(Int(n) + 2))
-                    expect(m.gas.remaining).to(equal(7))
+                    expect(m.gas.remaining).to(equal(10 - GasConstant.VERYLOW))
                 }
             }
 
@@ -35,7 +35,7 @@ final class InstructionSwapSpec: QuickSpec {
                 let m = TestMachine.machine(opcode: Opcode.SWAP1, gasLimit: 1)
 
                 for i in (1 ... UInt64(16)).reversed() {
-                    let _ = m.stack.push(value: U256(from: i))
+                    _ = m.stack.push(value: U256(from: i))
                 }
 
                 m.evalLoop()
@@ -44,28 +44,28 @@ final class InstructionSwapSpec: QuickSpec {
                 expect(m.stack.length).to(equal(16))
                 expect(m.gas.remaining).to(equal(1))
             }
-        }
 
-        it("check stack underflow for empty stack") {
-            let m = TestMachine.machine(opcode: Opcode.SWAP1, gasLimit: 10)
-
-            m.evalLoop()
-            expect(m.machineStatus).to(equal(.Exit(.Error(.StackUnderflow))))
-            expect(m.stack.length).to(equal(0))
-            expect(m.gas.remaining).to(equal(7))
-        }
-
-        it("check stack underflow for SWAP1..SWAP16") {
-            for n in 0 ... UInt8(15) {
-                let m = TestMachine.machine(rawCode: [Opcode.SWAP1.rawValue + n], gasLimit: 10)
-                for i in (1 ... UInt64(n + 1)).reversed() {
-                    let _ = m.stack.push(value: U256(from: i))
-                }
+            it("check stack underflow for empty stack") {
+                let m = TestMachine.machine(opcode: Opcode.SWAP1, gasLimit: 10)
 
                 m.evalLoop()
                 expect(m.machineStatus).to(equal(.Exit(.Error(.StackUnderflow))))
-                expect(m.stack.length).to(equal(Int(n) + 1))
-                expect(m.gas.remaining).to(equal(7))
+                expect(m.stack.length).to(equal(0))
+                expect(m.gas.remaining).to(equal(10))
+            }
+
+            it("check stack underflow for SWAP1..SWAP16") {
+                for n in 0 ... UInt8(15) {
+                    let m = TestMachine.machine(rawCode: [Opcode.SWAP1.rawValue + n], gasLimit: 10)
+                    for i in (1 ... UInt64(n + 1)).reversed() {
+                        let _ = m.stack.push(value: U256(from: i))
+                    }
+
+                    m.evalLoop()
+                    expect(m.machineStatus).to(equal(.Exit(.Error(.StackUnderflow))))
+                    expect(m.stack.length).to(equal(Int(n) + 1))
+                    expect(m.gas.remaining).to(equal(10))
+                }
             }
         }
     }

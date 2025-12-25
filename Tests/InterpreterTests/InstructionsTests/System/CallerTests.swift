@@ -1,5 +1,3 @@
-
-
 @testable import Interpreter
 import Nimble
 import PrimitiveTypes

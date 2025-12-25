@@ -1,8 +1,18 @@
 import PrimitiveTypes
 
-/// EVM Stack instructions
+/// EVM stack instruction implementations.
+///
+/// Provides helpers for stack mutation opcodes (e.g. `POP`, `PUSH*`, `DUP*`, `SWAP*`).
+/// Each instruction validates stack requirements, charges gas, and returns early on failure.
 enum StackInstructions {
+    /// Pops the top item from the stack.
+    ///
+    /// Fails with `StackUnderflow` if the stack is empty, or `OutOfGas` if `GasConstant.BASE` cannot be paid.
     static func pop(machine m: Machine) {
+        if !m.verifyStack(pop: 1) {
+            return
+        }
+
         if !m.gasRecordCost(cost: GasConstant.BASE) {
             return
         }
@@ -17,6 +27,10 @@ enum StackInstructions {
     /// EIP-3855: PUSH0 instruction
     /// https://eips.ethereum.org/EIPS/eip-3855
     static func push0(machine m: Machine) {
+        if !m.verifyStack(pop: 0, push: 1) {
+            return
+        }
+
         if !m.gasRecordCost(cost: GasConstant.BASE) {
             return
         }
@@ -24,7 +38,15 @@ enum StackInstructions {
         m.stackPush(value: U256.ZERO)
     }
 
+    /// Pushes an immediate value (`n` bytes) from code onto the stack.
+    ///
+    /// Reads up to `n` bytes starting at `pc + 1`, left--pads to 32 bytes, pushes the resulting `U256`,
+    /// and advances `pc` by `n + 1`. Fails with `StackOverflow` (needs 1 free slot) or `OutOfGas` (`GasConstant.VERYLOW`).
     static func push(machine m: Machine, n: Int) {
+        if !m.verifyStack(pop: 0, push: 1) {
+            return
+        }
+
         if !m.gasRecordCost(cost: GasConstant.VERYLOW) {
             return
         }
@@ -39,15 +61,18 @@ enum StackInstructions {
         m.stackPush(value: newValue)
     }
 
+    /// Swaps the top stack item with the item `n` positions below it.
+    ///
+    /// Fails silently if either index is out of bounds. Costs `GasConstant.VERYLOW`.
     static func swap(machine m: Machine, n: Int) {
-        if !m.gasRecordCost(cost: GasConstant.VERYLOW) {
-            return
-        }
-
         guard let val1 = m.stackPeek(indexFromTop: 0) else {
             return
         }
         guard let val2 = m.stackPeek(indexFromTop: n) else {
+            return
+        }
+
+        if !m.gasRecordCost(cost: GasConstant.VERYLOW) {
             return
         }
 
@@ -57,6 +82,9 @@ enum StackInstructions {
         _ = m.stack.set(indexFromTop: 0, value: val2)
     }
 
+    /// Duplicates the stack item `n` positions from the top and pushes the copy.
+    ///
+    /// Requires at least `n` items and 1 free slot; fails with `StackUnderflow`\/`StackOverflow` or `OutOfGas` (`GasConstant.VERYLOW`).
     static func dup(machine m: Machine, n: Int) {
         if !m.verifyStack(pop: n, push: n + 1) {
             return

@@ -1,4 +1,3 @@
-
 @testable import Interpreter
 import Nimble
 import PrimitiveTypes
@@ -65,9 +64,6 @@ final class InstructionJumpSpec: QuickSpec {
                 let m = TestMachine.machine(rawCode: [Opcode.PUSH1.rawValue, 0x4, Opcode.JUMP.rawValue, Opcode.PC.rawValue, Opcode.JUMPDEST.rawValue], gasLimit: 11)
 
                 m.evalLoop()
-
-                m.evalLoop()
-
                 expect(m.pc).to(equal(4))
                 expect(m.machineStatus).to(equal(.Exit(.Error(.OutOfGas))))
                 expect(m.stack.length).to(equal(0))
