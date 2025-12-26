@@ -70,7 +70,7 @@ final class InstructionMulModSpec: QuickSpec {
 
                 expect(m.machineStatus).to(equal(.Exit(.Error(.OutOfGas))))
                 expect(m.stack.length).to(equal(3))
-                expect(m.gas.remaining).to(equal(10 - GasConstant.MID))
+                expect(m.gas.remaining).to(equal(2))
             }
 
             it("check stack") {

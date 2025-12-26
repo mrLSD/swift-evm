@@ -4,6 +4,10 @@ import PrimitiveTypes
 enum HostInstructions {
     /// Pushes the balance of the account at the given address onto the stack.
     static func balance(machine m: Machine) {
+        if !m.verifyStack(pop: 1) {
+            return
+        }
+
         guard let address = m.stackPopH256()?.toH160() else {
             return
         }
@@ -46,6 +50,10 @@ enum HostInstructions {
 
     /// Pushes the gas price of the transaction onto the stack.
     static func gasPrice(machine m: Machine) {
+        if !m.verifyStack(pop: 0, push: 1) {
+            return
+        }
+
         if !m.gasRecordCost(cost: GasConstant.BASE) {
             return
         }
@@ -55,6 +63,10 @@ enum HostInstructions {
 
     /// Pushes the address of the originator (sender) of the transaction onto the stack.
     static func origin(machine m: Machine) {
+        if !m.verifyStack(pop: 0, push: 1) {
+            return
+        }
+
         if !m.gasRecordCost(cost: GasConstant.BASE) {
             return
         }
@@ -65,6 +77,10 @@ enum HostInstructions {
 
     /// EIP-1344: ChainID opcode
     static func chainId(machine m: Machine) {
+        if !m.verifyStack(pop: 0, push: 1) {
+            return
+        }
+
         // Check hardfork
         guard m.hardFork.isIstanbul() else {
             m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.HardForkNotActive))
@@ -80,6 +96,10 @@ enum HostInstructions {
 
     /// Pushes the address of the miner (coinbase) of the current block onto the stack.
     static func coinbase(machine m: Machine) {
+        if !m.verifyStack(pop: 0, push: 1) {
+            return
+        }
+
         if !m.gasRecordCost(cost: GasConstant.BASE) {
             return
         }

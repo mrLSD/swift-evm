@@ -3,7 +3,7 @@ public struct U128: BigUInt {
     /// Internal constant representing the number of `UInt64` values used to represent `U128`.
     private let bytes: [UInt64]
 
-    /// Number of bytes in `U128`.https://www.youtube.com/@ProdAdvice
+    /// Number of bytes in `U128`.
     public static let numberBytes: UInt8 = 16
     /// Number of `UInt64` values used to represent `U128`.
     public static let MAX: Self = getMax

@@ -7,6 +7,10 @@ import PrimitiveTypes
 enum SystemInstructions {
     /// Pushes the size of the current code onto the stack.
     static func codeSize(machine m: Machine) {
+        if !m.verifyStack(pop: 0, push: 1) {
+            return
+        }
+
         if !m.gasRecordCost(cost: GasConstant.BASE) {
             return
         }
@@ -18,6 +22,10 @@ enum SystemInstructions {
     /// Performs a code copy operation by reading parameters from the machine's stack,
     /// calculating the associated gas costs, and executing the memory copy.
     static func codeCopy(machine m: Machine) {
+        if !m.verifyStack(pop: 3) {
+            return
+        }
+
         // Pop the required values from the stack: memory offset, code offset, and size.
         guard let rawMemoryOffset = m.stackPop() else {
             return
@@ -67,6 +75,10 @@ enum SystemInstructions {
 
     /// Pushes the size of the call data onto the stack.
     static func callDataSize(machine m: Machine) {
+        if !m.verifyStack(pop: 0, push: 1) {
+            return
+        }
+
         if !m.gasRecordCost(cost: GasConstant.BASE) {
             return
         }
@@ -77,6 +89,10 @@ enum SystemInstructions {
 
     /// Copies call data into memory at the specified offset and size.
     static func callDataCopy(machine m: Machine) {
+        if !m.verifyStack(pop: 3) {
+            return
+        }
+
         // Pop the required values from the stack: memory offset, code offset, and size.
         guard let rawMemoryOffset = m.stackPop() else {
             return
@@ -126,6 +142,10 @@ enum SystemInstructions {
 
     /// Loads 32 bytes from call data at the specified index and pushes it onto the stack.
     static func callDataLoad(machine m: Machine) {
+        if !m.verifyStack(pop: 1) {
+            return
+        }
+
         if !m.gasRecordCost(cost: GasConstant.VERYLOW) {
             return
         }
@@ -149,6 +169,10 @@ enum SystemInstructions {
 
     /// Pushes the call value onto the stack.
     static func callValue(machine m: Machine) {
+        if !m.verifyStack(pop: 0, push: 1) {
+            return
+        }
+
         if !m.gasRecordCost(cost: GasConstant.BASE) {
             return
         }
@@ -157,6 +181,10 @@ enum SystemInstructions {
 
     /// Pushes the address of the currently executing account onto the stack.
     static func address(machine m: Machine) {
+        if !m.verifyStack(pop: 0, push: 1) {
+            return
+        }
+
         if !m.gasRecordCost(cost: GasConstant.BASE) {
             return
         }
@@ -168,6 +196,10 @@ enum SystemInstructions {
 
     /// Pushes the caller address onto the stack.
     static func caller(machine m: Machine) {
+        if !m.verifyStack(pop: 0, push: 1) {
+            return
+        }
+
         if !m.gasRecordCost(cost: GasConstant.BASE) {
             return
         }
@@ -179,6 +211,10 @@ enum SystemInstructions {
 
     /// Computes the Keccak-256 hash of a memory region and pushes the result onto the stack.
     static func keccak256(machine m: Machine) {
+        if !m.verifyStack(pop: 2) {
+            return
+        }
+
         // Pop the required values from the stack: memory offset and size.
         guard let rawMemoryOffset = m.stackPop() else {
             return

@@ -3,7 +3,7 @@ public struct U512: BigUInt {
     /// Internal representation as an array of  `UInt64` values.
     private let bytes: [UInt64]
 
-    /// Number of bytes used to represent `U256`.
+    /// Number of bytes used to represent `U512`.
     public static let numberBytes: UInt8 = 64
     /// Maximum value of `U512`
     public static let MAX: Self = getMax

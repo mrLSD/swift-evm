@@ -50,7 +50,7 @@ final class InstructionMulSpec: QuickSpec {
                     expect(value).to(equal(U256(from: [4, 4, 5, 6])))
                 })
                 expect(m.stack.length).to(equal(1))
-                expect(m.gas.spent).to(equal(10-GasConstant.LOW))
+                expect(m.gas.remaining).to(equal(10-GasConstant.LOW))
             }
 
             it("Mul with OutOfGas result") {

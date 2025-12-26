@@ -3,6 +3,10 @@ import PrimitiveTypes
 /// EVM Memory instructions
 enum MemoryInstructions {
     static func mload(machine m: Machine) {
+        if !m.verifyStack(pop: 1) {
+            return
+        }
+
         if !m.gasRecordCost(cost: GasConstant.VERYLOW) {
             return
         }
@@ -23,6 +27,10 @@ enum MemoryInstructions {
     }
 
     static func mstore(machine m: Machine) {
+        if !m.verifyStack(pop: 2) {
+            return
+        }
+
         if !m.gasRecordCost(cost: GasConstant.VERYLOW) {
             return
         }
@@ -49,6 +57,10 @@ enum MemoryInstructions {
     }
 
     static func mstore8(machine m: Machine) {
+        if !m.verifyStack(pop: 2) {
+            return
+        }
+
         if !m.gasRecordCost(cost: GasConstant.VERYLOW) {
             return
         }
@@ -76,6 +88,10 @@ enum MemoryInstructions {
     }
 
     static func msize(machine m: Machine) {
+        if !m.verifyStack(pop: 0, push: 1) {
+            return
+        }
+
         if !m.gasRecordCost(cost: GasConstant.BASE) {
             return
         }

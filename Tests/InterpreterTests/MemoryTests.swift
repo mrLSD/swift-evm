@@ -269,7 +269,7 @@ final class InterpreterMemorySpec: QuickSpec {
                     expect(memory.effectiveLength).to(equal(32))
                 }
 
-                it("copyData success with") {
+                it("copyData success") {
                     let memory = Memory(limit: 100)
                     let res1 = memory.resize(offset: 0, size: 3)
                     expect(res1).to(beTrue())

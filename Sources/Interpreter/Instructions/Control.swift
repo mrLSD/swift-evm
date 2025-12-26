@@ -3,6 +3,10 @@ import PrimitiveTypes
 /// EVM Control instructions
 enum ControlInstructions {
     static func pc(machine m: Machine) {
+        if !m.verifyStack(pop: 0, push: 1) {
+            return
+        }
+
         if !m.gasRecordCost(cost: GasConstant.BASE) {
             return
         }
@@ -114,6 +118,8 @@ enum ControlInstructions {
             m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.HardForkNotActive))
             return
         }
+
+        
 
         // Pop values
         guard let rawOffset = m.stackPop() else {
