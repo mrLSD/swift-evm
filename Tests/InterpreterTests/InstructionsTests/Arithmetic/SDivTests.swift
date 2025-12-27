@@ -42,7 +42,7 @@ final class InstructionSDivSpec: QuickSpec {
                 expect(m.gas.remaining).to(equal(10 - GasConstant.LOW))
             }
 
-            it("7 / 0") {
+            it("7 / 0 = 0") {
                 let m = Self.machine
 
                 _ = m.stack.push(value: U256.ZERO)
@@ -59,7 +59,7 @@ final class InstructionSDivSpec: QuickSpec {
                 expect(m.gas.remaining).to(equal(10 - GasConstant.LOW))
             }
 
-            it("-7 / 0") {
+            it("-7 / 0 = 0") {
                 let m = Self.machine
 
                 _ = m.stack.push(value: U256.ZERO)

@@ -26,16 +26,9 @@ enum SystemInstructions {
             return
         }
 
+        // After stack verification this guard will always succeed. But we keep it for safety and clarity.
         // Pop the required values from the stack: memory offset, code offset, and size.
-        guard let rawMemoryOffset = m.stackPop() else {
-            return
-        }
-        guard let rawCodeOffset = m.stackPop() else {
-            return
-        }
-        guard let rawSize = m.stackPop() else {
-            return
-        }
+        guard let rawMemoryOffset = m.stackPop(), let rawCodeOffset = m.stackPop(), let rawSize = m.stackPop() else { return }
 
         // This situation possible only for 32-bit context (for example wasm32)
         guard let size = m.getIntOrFail(rawSize) else {
@@ -93,16 +86,9 @@ enum SystemInstructions {
             return
         }
 
-        // Pop the required values from the stack: memory offset, code offset, and size.
-        guard let rawMemoryOffset = m.stackPop() else {
-            return
-        }
-        guard let rawDataOffset = m.stackPop() else {
-            return
-        }
-        guard let rawSize = m.stackPop() else {
-            return
-        }
+        // After stack verification this guard will always succeed. But we keep it for safety and clarity.
+        // Peek the required values from the stack: memory offset, code offset, and size.
+        guard let rawMemoryOffset = m.stackPeek(indexFromTop: 0), let rawDataOffset = m.stackPeek(indexFromTop: 1), let rawSize = m.stackPeek(indexFromTop: 2) else { return }
 
         // This situation possible only for 32-bit context (for example wasm32)
         guard let size = m.getIntOrFail(rawSize) else {
@@ -116,6 +102,9 @@ enum SystemInstructions {
         if !m.gasRecordCost(cost: cost) {
             return
         }
+
+        // After stack verification this guard will always succeed. But we keep it for safety and clarity.
+        guard let _ = m.stackPop(), let _ = m.stackPop(), let _ = m.stackPop() else { return }
 
         // If the size is zero, no copying is required.
         if size == 0 {
@@ -150,9 +139,8 @@ enum SystemInstructions {
             return
         }
 
-        guard let index = m.stackPop() else {
-            return
-        }
+        // After stack verification this guard will always succeed. But we keep it for safety and clarity.
+        guard let index = m.stackPop() else { return }
 
         var load = [UInt8](repeating: 0, count: 32)
         let dataCount = m.data.count
@@ -215,13 +203,9 @@ enum SystemInstructions {
             return
         }
 
-        // Pop the required values from the stack: memory offset and size.
-        guard let rawMemoryOffset = m.stackPop() else {
-            return
-        }
-        guard let rawSize = m.stackPop() else {
-            return
-        }
+        // After stack verification this guard will always succeed. But we keep it for safety and clarity.
+        // Peek the required values from the stack: memory offset and size.
+        guard let rawMemoryOffset = m.stackPeek(indexFromTop: 0), let rawSize = m.stackPeek(indexFromTop: 1) else { return }
 
         // This situation possible only for 32-bit context (for example wasm32)
         guard let size = m.getIntOrFail(rawSize) else {
@@ -235,6 +219,9 @@ enum SystemInstructions {
         if !m.gasRecordCost(cost: cost) {
             return
         }
+
+        // After stack verification this guard will always succeed. But we keep it for safety and clarity.
+        guard let _ = m.stackPop(), let _ = m.stackPop() else { return }
 
         // This situation possible only for 32-bit context (for example wasm32)
         guard let memoryOffset = m.getIntOrFail(rawMemoryOffset) else {

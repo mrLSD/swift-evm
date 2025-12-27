@@ -166,7 +166,7 @@ public extension I256 {
         !(lhs > rhs)
     }
 
-    /// Operator `>=`: Compare two `I256` values for less than or equal
+    /// Operator `>=`: Compare two `I256` values for greater than or equal
     static func >= (lhs: Self, rhs: Self) -> Bool {
         !(lhs < rhs)
     }

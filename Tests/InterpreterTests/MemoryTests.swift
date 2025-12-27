@@ -257,7 +257,19 @@ final class InterpreterMemorySpec: QuickSpec {
                     let memory = Memory(limit: 100)
                     let res1 = memory.resize(offset: 0, size: 3)
                     expect(res1).to(beTrue())
-                    expect(memory.copyData(memoryOffset: 1, dataOffset: 2, size: 1, data: [1])).to(beFailure(equal(Machine.ExitReason.Error(.MemoryOperation(.CopyDataOffsetOutOfBounds)))))
+
+                    let res2 = memory.copyData(memoryOffset: 1, dataOffset: 10, size: 1, data: [1])
+                    expect(res2).to(beSuccess())
+                    expect(memory.effectiveLength).to(equal(32))
+                }
+
+                it("destOffset < 0") {
+                    let memory = Memory(limit: 100)
+                    let res1 = memory.resize(offset: 0, size: 3)
+                    expect(res1).to(beTrue())
+
+                    let res2 = memory.copyData(memoryOffset: 1, dataOffset: -1, size: 1, data: [1])
+                    expect(res2).to(beFailure(equal(Machine.ExitReason.Error(.MemoryOperation(.CopyDataOffsetOutOfBounds)))))
                     expect(memory.effectiveLength).to(equal(32))
                 }
 

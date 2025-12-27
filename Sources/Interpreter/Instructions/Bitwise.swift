@@ -146,7 +146,7 @@ enum BitwiseInstructions {
         m.stackPush(value: newValue)
     }
 
-    /// Pushes `a || b` onto the stack.
+    /// Pushes `a | b` onto the stack.
     ///
     /// Requires 2 stack items; fails with `StackUnderflow` or `OutOfGas` (`GasConstant.VERYLOW`).
     static func or(machine m: Machine) {
@@ -184,7 +184,7 @@ enum BitwiseInstructions {
         m.stackPush(value: newValue)
     }
 
-    /// Pushes `!a` onto the stack.
+    /// Pushes `~a` onto the stack.
     ///
     /// Requires 1 stack item; fails with `StackUnderflow` or `OutOfGas` (`GasConstant.VERYLOW`).
     static func not(machine m: Machine) {

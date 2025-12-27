@@ -79,7 +79,7 @@ final class InstructionCallDataLoadSpec: QuickSpec {
 
                 expect(m.machineStatus).to(equal(.Exit(.Error(.StackUnderflow))))
                 expect(m.stack.length).to(equal(0))
-                expect(m.gas.remaining).to(equal(7))
+                expect(m.gas.remaining).to(equal(10))
             }
         }
     }

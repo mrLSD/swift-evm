@@ -124,7 +124,7 @@ enum ArithmeticInstructions {
 
         let iOp1 = I256.fromU256(op1)
         let iOp2 = I256.fromU256(op2)
-        let newValue = op2.isZero ? I256.ZERO : iOp1 / iOp2
+        let newValue = iOp2.isZero ? I256.ZERO : iOp1 / iOp2
         m.stackPush(value: newValue.toU256)
     }
 

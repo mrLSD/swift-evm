@@ -16,14 +16,14 @@ final class InstructionModSpec: QuickSpec {
                 _ = m.stack.push(value: U256(from: 2))
                 _ = m.stack.push(value: U256(from: 5))
                 m.evalLoop()
-                let result = m.stack.pop()
+                let result = m.stack.peek(indexFromTop: 0)
 
                 expect(m.machineStatus).to(equal(.Exit(.Success(.Stop))))
                 expect(result).to(beSuccess { value in
                     expect(value).to(equal(U256(from: 1)))
                 })
-                expect(m.stack.length).to(equal(0))
-                expect(m.gas.remaining).to(equal(GasConstant.LOW))
+                expect(m.stack.length).to(equal(1))
+                expect(m.gas.remaining).to(equal(10-GasConstant.LOW))
             }
 
             it("`a % b`, when `b` not in the stack") {

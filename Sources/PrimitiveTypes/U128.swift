@@ -5,7 +5,7 @@ public struct U128: BigUInt {
 
     /// Number of bytes in `U128`.
     public static let numberBytes: UInt8 = 16
-    /// Number of `UInt64` values used to represent `U128`.
+    /// Maximum value of `U128`.
     public static let MAX: Self = getMax
     /// Zero value of U128
     public static let ZERO: Self = getZero

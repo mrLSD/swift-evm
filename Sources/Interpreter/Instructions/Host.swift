@@ -8,9 +8,8 @@ enum HostInstructions {
             return
         }
 
-        guard let address = m.stackPopH256()?.toH160() else {
-            return
-        }
+        // After stack verification this guard will always succeed. But we keep it for safety and clarity.
+        guard let address = m.stackPopH256()?.toH160() else { return }
 
         // Calculate gas depending on hard fork
         var gasCost: UInt64 = 0
@@ -38,6 +37,10 @@ enum HostInstructions {
         // Check hardfork
         guard m.hardFork.isIstanbul() else {
             m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.HardForkNotActive))
+            return
+        }
+
+        if !m.verifyStack(pop: 0, push: 1) {
             return
         }
 
@@ -77,13 +80,13 @@ enum HostInstructions {
 
     /// EIP-1344: ChainID opcode
     static func chainId(machine m: Machine) {
-        if !m.verifyStack(pop: 0, push: 1) {
-            return
-        }
-
         // Check hardfork
         guard m.hardFork.isIstanbul() else {
             m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.HardForkNotActive))
+            return
+        }
+
+        if !m.verifyStack(pop: 0, push: 1) {
             return
         }
 

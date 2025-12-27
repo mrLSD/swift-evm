@@ -24,7 +24,7 @@ final class MLoadSpec: QuickSpec {
                 let m = TestMachine.machine(opcode: Opcode.MLOAD, gasLimit: 10)
                 m.evalLoop()
                 expect(m.machineStatus).to(equal(.Exit(.Error(.StackUnderflow))))
-                expect(m.gas.remaining).to(equal(7))
+                expect(m.gas.remaining).to(equal(10))
                 expect(m.gas.memoryGas.numWords).to(equal(0))
                 expect(m.gas.memoryGas.gasCost).to(equal(0))
             }

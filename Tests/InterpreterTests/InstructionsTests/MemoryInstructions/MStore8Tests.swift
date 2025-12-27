@@ -9,12 +9,12 @@ final class MStore8Spec: QuickSpec {
         describe("Instruction MSTORE8") {
             it("with OutOfGas result for index=0") {
                 let m = TestMachine.machine(opcode: Opcode.MSTORE8, gasLimit: 1)
-
+                _ = m.stack.push(value: U256(from: 0))
                 _ = m.stack.push(value: U256(from: 0))
                 m.evalLoop()
 
                 expect(m.machineStatus).to(equal(.Exit(.Error(.OutOfGas))))
-                expect(m.stack.length).to(equal(1))
+                expect(m.stack.length).to(equal(2))
                 expect(m.gas.remaining).to(equal(1))
                 expect(m.gas.memoryGas.numWords).to(equal(0))
                 expect(m.gas.memoryGas.gasCost).to(equal(0))
@@ -24,7 +24,7 @@ final class MStore8Spec: QuickSpec {
                 let m1 = TestMachine.machine(opcode: Opcode.MSTORE8, gasLimit: 10)
                 m1.evalLoop()
                 expect(m1.machineStatus).to(equal(.Exit(.Error(.StackUnderflow))))
-                expect(m1.gas.remaining).to(equal(7))
+                expect(m1.gas.remaining).to(equal(10))
                 expect(m1.gas.memoryGas.numWords).to(equal(0))
                 expect(m1.gas.memoryGas.gasCost).to(equal(0))
 
@@ -32,7 +32,7 @@ final class MStore8Spec: QuickSpec {
                 _ = m2.stack.push(value: U256(from: 0))
                 m2.evalLoop()
                 expect(m2.machineStatus).to(equal(.Exit(.Error(.StackUnderflow))))
-                expect(m2.gas.remaining).to(equal(7))
+                expect(m2.gas.remaining).to(equal(10))
                 expect(m2.gas.memoryGas.numWords).to(equal(0))
                 expect(m2.gas.memoryGas.gasCost).to(equal(0))
             }

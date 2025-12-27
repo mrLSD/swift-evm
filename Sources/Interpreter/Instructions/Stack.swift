@@ -65,12 +65,12 @@ enum StackInstructions {
     ///
     /// Fails silently if either index is out of bounds. Costs `GasConstant.VERYLOW`.
     static func swap(machine m: Machine, n: Int) {
-        guard let val1 = m.stackPeek(indexFromTop: 0) else {
+        if !m.verifyStack(pop: n + 1) {
             return
         }
-        guard let val2 = m.stackPeek(indexFromTop: n) else {
-            return
-        }
+
+        // After stack verification this guard will always succeed. But we keep it for safety and clarity.
+        guard let val1 = m.stackPeek(indexFromTop: 0), let val2 = m.stackPeek(indexFromTop: n) else { return }
 
         if !m.gasRecordCost(cost: GasConstant.VERYLOW) {
             return
