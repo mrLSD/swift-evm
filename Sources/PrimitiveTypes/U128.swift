@@ -1,6 +1,6 @@
 /// `U128` is a 128-bit unsigned integer type represented using two `UInt64` values.
 public struct U128: BigUInt {
-    /// Internal constant representing the number of `UInt64` values used to represent `U128`.
+    /// Internal storage for the `UInt64` values representing `U128`.
     private let bytes: [UInt64]
 
     /// Number of bytes in `U128`.

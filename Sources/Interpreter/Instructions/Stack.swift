@@ -40,7 +40,7 @@ enum StackInstructions {
 
     /// Pushes an immediate value (`n` bytes) from code onto the stack.
     ///
-    /// Reads up to `n` bytes starting at `pc + 1`, left--pads to 32 bytes, pushes the resulting `U256`,
+    /// Reads up to `n` bytes starting at `pc + 1`, left-gpads to 32 bytes, pushes the resulting `U256`,
     /// and advances `pc` by `n + 1`. Fails with `StackOverflow` (needs 1 free slot) or `OutOfGas` (`GasConstant.VERYLOW`).
     static func push(machine m: Machine, n: Int) {
         if !m.verifyStack(pop: 0, push: 1) {
@@ -63,7 +63,8 @@ enum StackInstructions {
 
     /// Swaps the top stack item with the item `n` positions below it.
     ///
-    /// Fails silently if either index is out of bounds. Costs `GasConstant.VERYLOW`.
+    /// Fails with `StackUnderflow` if the stack has fewer than `n + 1` items, or `OutOfGas` if
+    /// `GasConstant.VERYLOW` cannot be paid.
     static func swap(machine m: Machine, n: Int) {
         if !m.verifyStack(pop: n + 1) {
             return
