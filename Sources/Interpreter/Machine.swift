@@ -31,7 +31,10 @@ public final class Machine {
     /// Machine Gasometr
     var gas: Gas
     /// Calculate Code Size
-    var codeSize: Int { self.code.count }
+    var codeSize: Int {
+        self.code.count
+    }
+
     /// EVM  hard fork
     let hardFork: HardFork
     /// EVM return data
@@ -137,18 +140,46 @@ public final class Machine {
     /// Some cases wrap a more specific domain error, such as `MemoryError`.
     @frozen
     public enum ExitError: Equatable, Error {
+        /// Trying to pop from an empty stack.
         case StackUnderflow
+
+        /// Trying to push into a stack over stack limit.
         case StackOverflow
+
+        /// Jump destination is invalid.
         case InvalidJump
+
+        /// Int calculation overflow
         case IntOverflow
+
+        /// An opcode accesses memory region, but the region is invalid.
         case InvalidRange
+
+        /// Call stack is too deep (runtime).
         case CallTooDeep
+
+        /// An opcode accesses external information, but the request is off offset
+        /// limit (runtime).
         case OutOfOffset
+
+        /// Execution runs out of gas (runtime).
         case OutOfGas
+
+        /// Not enough fund to start the execution (runtime).
         case OutOfFund
+
+        /// Invalid opcode call
         case InvalidOpcode(UInt8)
+
+        /// Memory operations errors.
         case MemoryOperation(MemoryError)
+
+        /// Inactive Ethereum hard fork. This error is used when an opcode is not available in the current hard fork revision.
         case HardForkNotActive
+
+        /// Nonce reached maximum value of 2^64-1
+        /// <https://eips.ethereum.org/EIPS/eip-2681>
+        case MaxNonce
     }
 
     /// Closure type of Evaluation function.
