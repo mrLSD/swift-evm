@@ -8,7 +8,7 @@ public class MemoryState {
     var metadata: Metadata
 
     /// State logs list. This list is used to store logs generated during execution and can be used for various purposes such as event emission, debugging, etc.
-    var logs: [Logs] = []
+    var logs: [Log] = []
 
     /// Parent State reference. This reference is used to track the parent state during execution and
     /// can be used for various purposes such as reverting state changes, etc.
@@ -20,7 +20,7 @@ public class MemoryState {
     /// Storages mapping. This mapping is used to store the state of storage slots during execution and can be used for various purposes such as storage tracking, etc.
     var storages: [Storage: H256] = [:]
 
-    /// TStoreges  mapping. This mapping is used to store the state of TStorage slots during execution.
+    /// TStorages  mapping. This mapping is used to store the state of TStorage slots during execution.
     var tstorages: [Storage: H256] = [:]
 
     /// Deleted accounts set. This set is used to track deleted accounts during execution and can be used for various purposes such as reverting state changes, etc.
@@ -127,16 +127,16 @@ public class MemoryState {
     /// Struct to store accessed storage key-value pairs. This struct is used to track the state of accessed storage during execution
     /// and can be used for various purposes such as gas calculation, access control, etc.
     public struct Storage: Hashable {
-        /// Key of accessed storage slot.
-        var key: H160
+        /// Address of accessed storage slot.
+        var address: H160
 
-        /// Value of accessed storage slot.
-        var value: H256
+        /// Index of accessed storage slot.
+        var index: H256
 
         /// Initialize `Storage` with predefined key and value.
-        public init(key: H160, value: H256) {
-            self.key = key
-            self.value = value
+        public init(address: H160, index: H256) {
+            self.address = address
+            self.index = index
         }
     }
 
@@ -169,16 +169,12 @@ public class MemoryState {
     /// Check if account is known to be empty. This function is used to check if an account is known to be empty (i.e., has zero balance, zero nonce and empty code).
     public func knownEmpty(_ address: H160) -> Bool? {
         if let account = knownAccount(address) {
-            if account.basic.balance != U256.ZERO {
+            if account.basic.balance != U256.ZERO || account.basic.nonce != U256.ZERO {
                 return false
             }
-            if account.basic.nonce != U256.ZERO {
-                return false
-            }
+
             if let code = account.code {
-                return account.basic.balance == U256.ZERO
-                    && account.basic.nonce == U256.ZERO
-                    && code.isEmpty
+                return code.isEmpty
             }
         }
         return nil
@@ -186,7 +182,7 @@ public class MemoryState {
 
     /// Get known storage value by address and key. This function is used to retrieve the value of a storage slot by its address and key.
     public func knownStorage(address: H160, key: H256) -> H256? {
-        if let value = storages[Storage(key: address, value: key)] {
+        if let value = storages[Storage(address: address, index: key)] {
             return value
         }
         if let account = accounts[address], account.reset {
@@ -210,7 +206,7 @@ public class MemoryState {
 
     /// Check is storage slot is cold by address and key.
     public func isStorageCold(address: H160, key: H256) -> Bool {
-        return recursiveIsCold { accessed in accessed.storage.contains(Storage(key: address, value: key)) }
+        return recursiveIsCold { accessed in accessed.storage.contains(Storage(address: address, index: key)) }
     }
 
     /// Check recursively if account or storage is cold.
@@ -260,10 +256,10 @@ public class MemoryState {
         return account
     }
 
-    /// Increment nonve for address in the state
+    /// Increment nonce for address in the state
     public func incNonce(address: H160) -> Result<Void, Machine.ExitError> {
         let account = accountMut(address: address)
-        if account.basic.nonce == U256(from: UInt64.max) {
+        if account.basic.nonce >= U256(from: UInt64.max) {
             return .failure(Machine.ExitError.MaxNonce)
         }
         account.basic.incNonce()
@@ -274,21 +270,15 @@ public class MemoryState {
     /// Set storage value for address and key.
     public func setStorage(address: H160, key: H256, value: H256) {
         // Using Storage(key:address, value:key) as composite key.
-        storages[Storage(key: address, value: key)] = value
+        storages[Storage(address: address, index: key)] = value
     }
 
     /// Reset storage for address and mark account as reset.
     public func resetStorage(address: H160) {
-        var removing: [H256] = []
+        let keysToRemove = storages.keys.filter { $0.address == address }
 
-        for storageKey in storages.keys {
-            if storageKey.key == address {
-                removing.append(storageKey.value)
-            }
-        }
-
-        for key in removing {
-            storages.removeValue(forKey: Storage(key: address, value: key))
+        for key in keysToRemove {
+            storages.removeValue(forKey: key)
         }
 
         accountMut(address: address).reset = true
@@ -296,7 +286,7 @@ public class MemoryState {
 
     /// Append log entry.
     public func log(address: H160, topics: [H256], data: [UInt8]) {
-        logs.append(Logs(address: address, topics: topics, data: data))
+        logs.append(Log(address: address, topics: topics, data: data))
     }
 
     /// Mark account as deleted.

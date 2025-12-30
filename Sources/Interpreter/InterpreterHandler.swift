@@ -9,7 +9,7 @@ public protocol InterpreterHandler {
 
     /// Get environmental account balance for given address.
     func balance(address: H160) -> U256
-    /// Gas  environmental gas price.
+    /// Get environmental gas price.
     func gasPrice() -> U256
     /// Get environmental transaction origin (sender) address.
     func origin() -> H160

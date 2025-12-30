@@ -2,7 +2,7 @@ import PrimitiveTypes
 
 /// Interpreter backend. Provides necessary information for `Machine` to execute `Opcode`.
 public protocol Backend {
-    /// Gas  environmental gas price.
+    /// Get environmental gas price.
     func gasPrice() -> U256
     /// Get environmental transaction origin.
     func origin() -> H160
