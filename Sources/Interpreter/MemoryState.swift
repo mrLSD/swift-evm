@@ -2,6 +2,7 @@ import PrimitiveTypes
 
 /// EVM memory state struct. This struct is used to track the state of the execution context, accessed data and storages during execution.
 public class MemoryState {
+    /// Environment backend. This backend is used to retrieve account data and other information from the environment during execution.
     let backend: Backend
 
     /// State metadata. Represents the metadata of the execution context during all execution flow.
@@ -18,10 +19,10 @@ public class MemoryState {
     var accounts: [H160: StateAccount] = [:]
 
     /// Storages mapping. This mapping is used to store the state of storage slots during execution and can be used for various purposes such as storage tracking, etc.
-    var storages: [Storage: H256] = [:]
+    var storages: [H160: [H256: H256]] = [:]
 
     /// TStorages  mapping. This mapping is used to store the state of TStorage slots during execution.
-    var tstorages: [Storage: H256] = [:]
+    var tstorages: [H160: [H256: H256]] = [:]
 
     /// Deleted accounts set. This set is used to track deleted accounts during execution and can be used for various purposes such as reverting state changes, etc.
     var deletes: Set<H160> = .init()
@@ -31,6 +32,9 @@ public class MemoryState {
 
     /// Struct to store metadata of the execution context. This struct is used to track the state of the execution context
     public struct Metadata {
+        /// State gasometer.
+        private(set) var gasometer: Gas
+
         /// EVM id static call flag. This flag indicates whether the current execution context is a static call or not.
         /// A static call is a call that does not allow state modifications and is used for read-only operations. This flag
         /// can be used to enforce restrictions on certain operations that are not allowed in static calls, such as modifying
@@ -48,8 +52,9 @@ public class MemoryState {
         let accessed: Accessed?
 
         /// Initialize `Metadata` with predefined static call flag and optional depth.
-        public init(hardFork: HardFork) {
+        public init(gasometr: Gas, hardFork: HardFork) {
             self.accessed = hardFork.isBerlin() ? Accessed() : nil
+            self.gasometer = gasometr
         }
     }
 
@@ -141,8 +146,8 @@ public class MemoryState {
     }
 
     /// Initialize `MemoryState` with predefined metadata.
-    public init(metadata: Metadata, backend: Backend) {
-        self.metadata = metadata
+    public init(gasLimit: UInt64, backend: Backend, hardFork: HardFork) {
+        self.metadata = Metadata(gasometr: Gas(limit: gasLimit), hardFork: hardFork)
         self.backend = backend
     }
 
@@ -182,7 +187,7 @@ public class MemoryState {
 
     /// Get known storage value by address and key. This function is used to retrieve the value of a storage slot by its address and key.
     public func knownStorage(address: H160, key: H256) -> H256? {
-        if let value = storages[Storage(address: address, index: key)] {
+        if let accountStorage = storages[address], let value = accountStorage[key] {
             return value
         }
         if let account = accounts[address], account.reset {
@@ -269,17 +274,15 @@ public class MemoryState {
 
     /// Set storage value for address and key.
     public func setStorage(address: H160, key: H256, value: H256) {
-        // Using Storage(key:address, value:key) as composite key.
-        storages[Storage(address: address, index: key)] = value
+        if storages[address] == nil {
+            storages[address] = [:]
+        }
+        storages[address]?[key] = value
     }
 
     /// Reset storage for address and mark account as reset.
     public func resetStorage(address: H160) {
-        let keysToRemove = storages.keys.filter { $0.address == address }
-
-        for key in keysToRemove {
-            storages.removeValue(forKey: key)
-        }
+        storages.removeValue(forKey: address)
 
         accountMut(address: address).reset = true
     }
