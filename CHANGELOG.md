@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.24] - 2026-02-17
+
+### Added
+- **Memory State Management:** Introduced `MemoryState` class to handle hierarchical execution states, access tracking, and in-memory state mutations for nested executions ([#63]).
+- **Backend Protocol:** Added a public `Backend` protocol providing a standardized interface for environment, block, account, and storage queries, including blob hash support ([#63]).
+- **Primitive Types API:** Significantly expanded the public API surface for `U128`, `U256`, `I256`, `H160`, and `H256`. Added new constructors, overflow-aware arithmetic helpers, and hex parsing for `FixedArray` ([#62]).
+- **Enhanced Error Reporting:** Expanded `Machine.ExitError` with granular runtime error types, including `StackUnderflow`, `StackOverflow`, `CallTooDeep`, `OutOfFund`, `IntOverflow`, and `InvalidRange` ([#63]).
+- **State Models:** Added `BasicAccount` struct, `StateAccount` class, and a public `Log` struct to model account states and execution logs ([#63]).
+
+### Changed
+- **Instruction Validation:** Refactored the entire instruction set (Arithmetic, Bitwise, Control, Stack, System, and Host) to use the `verifyStack` pattern. Stack depth and gas requirements are now validated *before* execution to prevent inconsistent states ([#62]).
+- **Interpreter Visibility:** Made `Executor`, `ExecutionState`, and their initializers `public` to allow external integration and custom execution flows ([#62]).
+- **Arithmetic Semantics:** Updated `DIV`, `SDIV`, `MOD`, and `SMOD` instructions to explicitly return zero when the divisor is zero, aligning with EVM specifications ([#62]).
+- **Memory & Gas Ordering:** Reordered memory resize and gas validation logic to ensure that state mutations (like `numWords` updates) only occur after successful validation ([#62]).
+- **Host Interface:** Extended `InterpreterHandler` with mandatory methods for `balance`, `gasPrice`, `origin`, `chainId`, and `coinbase` to support the new backend architecture ([#63]).
+
+### Fixed
+- **Memory Safety:** Improved `memCpy` behavior in `copyData` with safer length computation and explicit zero-fill for out-of-range data ([#62]).
+
+### Tests
+- **Non-Destructive Testing:** Updated the test suite to use stack `peek` patterns instead of `pop`, allowing for better verification of the stack state after operations ([#62]).
+- **Validation Coverage:** Added dedicated tests for stack underflow and overflow conditions across various opcodes ([#62]).
+
 ## [0.5.23] - 2026-01-19
 
 ### Added
@@ -202,7 +225,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Tests
 - **Coverage:** Added comprehensive tests for jump validity, infinite loops (with gas limits), and stack/memory interaction for `MSIZE` ([#43]).
 
+## [0.5.8] - 2025-05-04
+
+### Added
+- **Stack Manipulation Opcodes:** Implemented a full suite of instructions for managing the EVM stack:
+  - `PUSH0` through `PUSH32` (0x5F-0x7F): For pushing zero or immediate data from code to stack ([#42]).
+  - `POP` (0x50): For removing the top item from the stack ([#42]).
+  - `DUP1` through `DUP16` (0x80-0x8F): For duplicating stack elements ([#42]).
+  - `SWAP1` through `SWAP16` (0x90-0x9F): For exchanging the top stack element with others ([#42]).
+- **Memory Opcodes:** Implemented core instructions for volatile memory interaction:
+  - `MLOAD` (0x51): Load a 32-byte word from memory onto the stack ([#42]).
+  - `MSTORE` (0x52): Save a 32-byte word to memory ([#42]).
+  - `MSTORE8` (0x53): Save a single byte to memory ([#42]).
+- **Execution Lifecycle Opcodes:** Added instructions for halting and reverting execution:
+  - `RETURN` (0xF3): Halts execution and returns a specified memory range as output ([#42]).
+  - `REVERT` (0xFD): Halts execution, reverts state changes, and returns a memory range ([#42]).
+  - `INVALID` (0xFE): Designated instruction to abort execution with an error ([#42]).
+- **Memory Gas Calculation:** Implemented dynamic gas accounting for memory expansion, ensuring costs are correctly calculated based on the highest accessed memory word ([#42]).
+
+### Changed
+- **Memory Architecture:** Updated internal memory management to support byte-level addressing and automatic expansion during `MSTORE` and `MLOAD` operations ([#42]).
+
+### Tests
+- **Opcode Coverage:** Added exhaustive unit tests for all PUSH, DUP, and SWAP variations, covering both standard usage and stack boundary conditions ([#42]).
+- **Memory Integrity:** Added tests for `MLOAD` and `MSTORE` to verify big-endian byte ordering and proper memory growth ([#42]).
+- **Flow Control:** Added tests for `RETURN` and `REVERT` to ensure correct output data capture and execution status reporting ([#42]).
+
+
 <!-- Versions -->
+[0.5.24]: https://github.com/mrLSD/swift-evm/compare/v0.5.23...v0.5.24
 [0.5.23]: https://github.com/mrLSD/swift-evm/compare/v0.5.22...v0.5.23
 [0.5.22]: https://github.com/mrLSD/swift-evm/compare/v0.5.21...v0.5.22
 [0.5.21]: https://github.com/mrLSD/swift-evm/compare/v0.5.20...v0.5.21
@@ -218,8 +269,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [0.5.11]: https://github.com/mrLSD/swift-evm/compare/v0.5.10...v0.5.11
 [0.5.10]: https://github.com/mrLSD/swift-evm/compare/v0.5.9...v0.5.10
 [0.5.9]: https://github.com/mrLSD/swift-evm/compare/v0.5.8...v0.5.9
+[0.5.8]: https://github.com/mrLSD/swift-evm/compare/v0.5.7...v0.5.8
 
 <!-- PRs -->
+[#63]: https://github.com/mrLSD/swift-evm/pull/63
+[#62]: https://github.com/mrLSD/swift-evm/pull/62
 [#61]: https://github.com/mrLSD/swift-evm/pull/61
 [#59]: https://github.com/mrLSD/swift-evm/pull/59
 [#57]: https://github.com/mrLSD/swift-evm/pull/57
@@ -237,3 +291,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [#45]: https://github.com/mrLSD/swift-evm/pull/45
 [#44]: https://github.com/mrLSD/swift-evm/pull/44
 [#43]: https://github.com/mrLSD/swift-evm/pull/43
+[#42]: https://github.com/mrLSD/swift-evm/pull/42
