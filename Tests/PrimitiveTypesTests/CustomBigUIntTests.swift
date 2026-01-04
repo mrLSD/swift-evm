@@ -10,7 +10,7 @@ final class BigUintSpec: QuickSpec {
         static let MAX: Self = getMax
         static let ZERO: Self = getZero
 
-        public init(from value: [UInt64]) {
+        init(from value: [UInt64]) {
             precondition(value.count == Self.numberBase, "BigUInt must be initialized with \(Self.numberBase) UInt64 values.")
             self.bytes = value
         }
@@ -22,7 +22,7 @@ final class BigUintSpec: QuickSpec {
                 func expectFailInit(array arr: [UInt64]) {
                     let errorMessage = captureStandardError {
                         expect {
-                            let _ = TestUint128(from: arr)
+                            _ = TestUint128(from: arr)
                         }.to(throwAssertion())
                     }
                     expect(errorMessage).to(contain("must be initialized with 2 UInt64 values"))
@@ -56,25 +56,20 @@ final class BigUintSpec: QuickSpec {
 
                 context("wrong String for conversion") {
                     it("too big String") {
-                        expect(captureStandardError {
-                            expect {
-                                _ = TestUint128.fromString(hex: String(repeating: "A", count: 33))
-                            }.to(throwAssertion())
-                        }).to(contain("Invalid hex string for 16 bytes"))
+                        let res = TestUint128.fromString(hex: String(repeating: "A", count: 33))
+                        expect(res).to(beFailure { error in
+                            expect(error).to(matchError(HexStringError.InvalidStringLength))
+                        })
                     }
                     it("String length compared to `mod 2`") {
-                        expect(captureStandardError {
-                            expect {
-                                _ = TestUint128.fromString(hex: String(repeating: "A", count: 1))
-                            }.to(throwAssertion())
-                        }).to(contain("Invalid hex string for `mod 2"))
+                        let res = TestUint128.fromString(hex: String(repeating: "A", count: 1))
+                        expect(res).to(beSuccess(TestUint128(from: 0xA)))
                     }
                     it("String contains wrong character G") {
-                        expect(captureStandardError {
-                            expect {
-                                _ = TestUint128.fromString(hex: "0G")
-                            }.to(throwAssertion())
-                        }).to(contain("Invalid hex string byte character: 0G"))
+                        let res = TestUint128.fromString(hex: "0G")
+                        expect(res).to(beFailure { error in
+                            expect(error).to(matchError(HexStringError.InvalidHexCharacter("0G")))
+                        })
                     }
                 }
             }
@@ -100,10 +95,11 @@ final class BigUintSpec: QuickSpec {
                     expect(val).toNot(equal(TestUint128(from: UInt64.max)))
                 }
                 it("correct transformed to String") {
-                    expect("\(val)").to(equal("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"))
+                    expect("\(val)").to(equal("ffffffffffffffffffffffffffffffff"))
                 }
                 it("correct transformed from String") {
-                    expect(TestUint128.fromString(hex: "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF")).to(equal(val))
+                    let res = TestUint128.fromString(hex: "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF")
+                    expect(res).to(beSuccess(val))
                 }
                 it("correct transformed to Little Endian array") {
                     expect(val.toLittleEndian).to(equal([UInt8](repeating: 0xFF, count: 16)))
@@ -131,10 +127,11 @@ final class BigUintSpec: QuickSpec {
                     expect(val).toNot(equal(TestUint128(from: UInt64.max)))
                 }
                 it("correct transformed to String") {
-                    expect("\(val)").to(equal("00000000000000000000000000000000"))
+                    expect("\(val)").to(equal("0"))
                 }
                 it("correct transformed from String") {
-                    expect(TestUint128.fromString(hex: "00000000000000000000000000000000")).to(equal(val))
+                    let res = TestUint128.fromString(hex: "00000000000000000000000000000000")
+                    expect(res).to(beSuccess(val))
                 }
 
                 it("correct transformed to Little Endian array") {
@@ -148,6 +145,50 @@ final class BigUintSpec: QuickSpec {
                 }
                 it("correct transformed from Big Endian") {
                     expect(TestUint128.fromBigEndian(from: val.toBigEndian)).to(equal(val))
+                }
+            }
+
+            context("wrong String number overflow") {
+                it("too big String with overflow") {
+                    let hex = String(repeating: "A", count: 34)
+                    let res = TestUint128.fromString(hex: hex)
+                    expect(res).to(beFailure { error in
+                        expect(error).to(matchError(HexStringError.InvalidStringLength))
+                    })
+                }
+
+                it("leading zeros + 32 'A' characters should fail") {
+                    // Prepend 4 hex zeros (2 bytes) to a 32-'A' hex string.
+                    let trimmed = String(repeating: "A", count: 32)
+                    let hex = "0000" + trimmed
+
+                    // Parsing must fail due to invalid length.
+                    let res = TestUint128.fromString(hex: hex)
+                    expect(res).to(beFailure { error in
+                        expect(error).to(matchError(HexStringError.InvalidStringLength))
+                    })
+                }
+
+                context("Different hex variants") {
+                    it("String with 0x prefix") {
+                        let hex = "0xAC"
+                        let res = TestUint128.fromString(hex: hex)
+                        expect(res).to(beSuccess(TestUint128(from: 0xAC)))
+                    }
+
+                    it("Empty string") {
+                        let res1 = TestUint128.fromString(hex: "0x")
+                        let res2 = TestUint128.fromString(hex: "")
+                        expect(res1).to(beSuccess(TestUint128.ZERO))
+                        expect(res2).to(beSuccess(TestUint128.ZERO))
+                    }
+
+                    it("Encode hex to upper case") {
+                        let res = TestUint128(from: 0xAC).encodeHexUpper()
+                        let res2 = TestUint128(from: 0xAC).encodeHexLower()
+                        expect(res).to(equal("AC"))
+                        expect(res2.uppercased()).to(equal(res))
+                    }
                 }
             }
         }

@@ -51,25 +51,20 @@ final class U512Spec: QuickSpec {
 
                 context("wrong String for conversion") {
                     it("too big String") {
-                        expect(captureStandardError {
-                            expect {
-                                _ = U512.fromString(hex: String(repeating: "A", count: 129))
-                            }.to(throwAssertion())
-                        }).to(contain("Invalid hex string for 64 bytes"))
+                        let res = U512.fromString(hex: String(repeating: "A", count: 129))
+                        expect(res).to(beFailure { error in
+                            expect(error).to(matchError(HexStringError.InvalidStringLength))
+                        })
                     }
                     it("String length compared to `mod 2`") {
-                        expect(captureStandardError {
-                            expect {
-                                _ = U512.fromString(hex: String(repeating: "A", count: 1))
-                            }.to(throwAssertion())
-                        }).to(contain("Invalid hex string for `mod 2"))
+                        let res = U512.fromString(hex: String(repeating: "A", count: 1))
+                        expect(res).to(beSuccess(U512(from: 0xA)))
                     }
                     it("String contains wrong character G") {
-                        expect(captureStandardError {
-                            expect {
-                                _ = U512.fromString(hex: "0G")
-                            }.to(throwAssertion())
-                        }).to(contain("Invalid hex string byte character: 0G"))
+                        let res = U512.fromString(hex: "0G")
+                        expect(res).to(beFailure { error in
+                            expect(error).to(matchError(HexStringError.InvalidHexCharacter("0G")))
+                        })
                     }
                 }
             }
@@ -95,10 +90,11 @@ final class U512Spec: QuickSpec {
                     expect(val).toNot(equal(U512(from: UInt64.max)))
                 }
                 it("correct transformed to String") {
-                    expect("\(val)").to(equal("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"))
+                    expect("\(val)").to(equal("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"))
                 }
                 it("correct transformed from String") {
-                    expect(U512.fromString(hex: "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF")).to(equal(val))
+                    let res = U512.fromString(hex: "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF")
+                    expect(res).to(beSuccess(val))
                 }
                 it("correct transformed to Little Endian array") {
                     expect(val.toLittleEndian).to(equal([UInt8](repeating: 0xFF, count: 64)))
@@ -126,10 +122,11 @@ final class U512Spec: QuickSpec {
                     expect(val).toNot(equal(U512(from: UInt64.max)))
                 }
                 it("correct transformed to String") {
-                    expect("\(val)").to(equal("00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"))
+                    expect("\(val)").to(equal("0"))
                 }
                 it("correct transformed from String") {
-                    expect(U512.fromString(hex: "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000")).to(equal(val))
+                    let res = U512.fromString(hex: "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000")
+                    expect(res).to(beSuccess(val))
                 }
                 it("correct transformed to Little Endian array") {
                     expect(val.toLittleEndian).to(equal([UInt8](repeating: 0, count: 64)))
