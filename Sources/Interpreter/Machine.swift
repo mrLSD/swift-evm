@@ -148,6 +148,7 @@ public final class Machine {
         table[Opcode.CALLDATACOPY.index] = SystemInstructions.callDataCopy
         table[Opcode.CALLDATALOAD.index] = SystemInstructions.callDataLoad
         table[Opcode.CALLVALUE.index] = SystemInstructions.callValue
+        table[Opcode.SHA3.index] = SystemInstructions.keccak256
 
         // Control
         table[Opcode.STOP.index] = ControlInstructions.stop
