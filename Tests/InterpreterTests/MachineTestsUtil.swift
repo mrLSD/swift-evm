@@ -5,10 +5,8 @@
 import PrimitiveTypes
 
 class TestHandler: InterpreterHandler {
-    static let address1: H160 = try! .fromString(hex: "9A6402EEa6d967dBd7609346c11A1702Db4E5001").get()
-    static let address2: H160 = try! .fromString(hex: "9A6402EEa6d967dBd7609346c11A1702Db4E5002").get()
-    static let address3: H160 = try! .fromString(hex: "9A6402EEa6d967dBd7609346c11A1702Db4E5003").get()
-    static let testGasPrice: U256 = .init(from: 123)
+    static let address1: H160 = .fromString(hex: "9A6402EEa6d967dBd7609346c11A1702Db4E5001")
+    static let address2: H160 = .fromString(hex: "9A6402EEa6d967dBd7609346c11A1702Db4E5002")
 
     func beforeOpcodeExecution(machine: Machine, opcode: Opcode?) -> Machine.ExitError? {
         return nil
@@ -23,22 +21,6 @@ class TestHandler: InterpreterHandler {
         default:
             return U256.ZERO
         }
-    }
-
-    func gasPrice() -> U256 {
-        Self.testGasPrice
-    }
-
-    func origin() -> H160 {
-        Self.address1
-    }
-
-    func chainId() -> U256 {
-        U256(from: 33)
-    }
-
-    func coinbase() -> H160 {
-        Self.address2
     }
 }
 
@@ -82,14 +64,34 @@ enum TestMachine {
         Machine(data: [], code: code, gasLimit: gasLimit, context: defaultContext(), state: ExecutionState(), handler: TestHandler())
     }
 
+    /// Create a Machine configured to execute a single opcode under the provided execution context.
+    /// - Parameters:
+    ///   - opcode: The opcode to include as the Machine's code.
+    ///   - gasLimit: The gas limit available to the Machine for execution.
+    ///   - context: The execution context (sender, target, value, etc.) to use for the Machine.
+    /// - Returns: A Machine set up with the given opcode, gas limit, and context.
     static func machineWithContext(opcode: Opcode, gasLimit: UInt64, context: Machine.Context) -> Machine {
         Machine(data: [], code: [opcode.rawValue], gasLimit: gasLimit, context: context, state: ExecutionState(), handler: TestHandler())
     }
 
+    /// Create a Machine initialized to execute a single opcode with a fixed 32,000 memory limit.
+    /// - Parameters:
+    ///   - opcode: The single opcode to place in the Machine's code.
+    ///   - gasLimit: The gas limit for the Machine's execution.
+    ///   - context: The execution context to use (sender, target, value, etc.).
+    ///   - hardFork: The HardFork ruleset to apply to execution.
+    /// - Returns: A configured `Machine` containing the provided opcode, gas limit, context, hard fork, and a memory limit of 32,000.
     static func machine(opcode: Opcode, gasLimit: UInt64, context: Machine.Context, hardFork: HardFork) -> Machine {
         Machine(data: [], code: [opcode.rawValue], gasLimit: gasLimit, memoryLimit: 32000, context: context, state: ExecutionState(), handler: TestHandler(), hardFork: hardFork)
     }
 
+    /// Creates a Machine initialized with the provided opcodes, gas limit, execution context, and hard-fork rules.
+    /// - Parameters:
+    ///   - code: The sequence of opcodes to use as the machine's program.
+    ///   - gasLimit: The gas limit allotted to the machine.
+    ///   - context: The execution context (target, sender, value, etc.).
+    ///   - hardFork: The HardFork ruleset to apply to execution.
+    /// - Returns: A `Machine` configured with the given parameters, an empty input data buffer, a memory limit of 32000, a fresh `ExecutionState`, and a `TestHandler`.
     static func machine(opcodes code: [Opcode], gasLimit: UInt64, context: Machine.Context, hardFork: HardFork) -> Machine {
         Machine(data: [], code: code.map(\.rawValue), gasLimit: gasLimit, memoryLimit: 32000, context: context, state: ExecutionState(), handler: TestHandler(), hardFork: hardFork)
     }
