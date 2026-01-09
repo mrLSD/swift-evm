@@ -106,7 +106,7 @@ final class InstructionSignextendSpec: QuickSpec {
                 expect(m.gas.remaining).to(equal(10))
             }
 
-            it("signextend with byte position 0") {
+            it("signextend with byte position 2 on zero value") {
                 let m = Self.machine
 
                 _ = m.stack.push(value: U256(from: 0))

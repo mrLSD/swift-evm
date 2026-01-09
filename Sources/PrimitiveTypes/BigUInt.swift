@@ -29,8 +29,18 @@ public protocol BigUInt: CustomStringConvertible, Equatable, Sendable, Hashable 
     /// Create `BitUInt` from `big-endian` array
     static func fromBigEndian(from val: [UInt8]) -> Self
 
-    /// Create `BigUInt` from hex `String`
-    static func fromString(hex value: String) -> Self
+    /// Create `BigUInt` from hex `String`. Returns Result type
+    static func fromString(hex value: String) -> Result<Self, HexStringError>
+
+    /// Encode to hex string with lowercase characters.
+    func encodeHexLower() -> String
+
+    /// Encode to hex string with uppercase characters.
+    func encodeHexUpper() -> String
+
+    /// Encode to hex string.
+    /// - Parameter uppercase: Use uppercase hex characters.
+    func hexString(uppercase: Bool) -> String
 
     /// Convert `BigUInt` to `little-endian` array
     var toLittleEndian: [UInt8] { get }
@@ -149,42 +159,85 @@ public extension BigUInt {
         return byteArray
     }
 
-    /// Create `BigUInt` from hex `String`
-    ///
-    /// - Precondition:
-    ///   - `value.count` value must be less than or equal to ` numberBytes * 2` of `BigUInt`.
-    ///   - `value.count` value must be ` mod 2`.
-    ///   - `hex` value of the `String` must be  equal `1 byte (8 bit)`.
-    static func fromString(hex value: String) -> Self {
-        precondition(value.count <= numberBytes * 2, "Invalid hex string for \(numberBytes) bytes.")
-        precondition(value.count % 2 == 0, "Invalid hex string for `mod 2`")
+    /// Create `BigUInt` from hex `String`. Returns Result type
+    static func fromString(hex value: String) -> Result<Self, HexStringError> {
+        var hex = value.hasPrefix("0x") || value.hasPrefix("0X")
+            ? String(value.dropFirst(2))
+            : value
+
+        if hex.isEmpty {
+            return .success(Self.ZERO)
+        }
+
+        // Validate Length
+        if hex.count > Int(numberBytes) * 2 {
+            return .failure(.InvalidStringLength)
+        }
+
+        // Handle Odd Length
+        if hex.count % 2 != 0 {
+            hex = "0" + hex
+        }
 
         var byteArray: [UInt8] = []
-        var index = value.startIndex
-        while index < value.endIndex {
-            let nextIndex = value.index(index, offsetBy: 2)
-            let byteString = String(value[index ..< nextIndex])
-            if let byte = UInt8(byteString, radix: 16) {
-                byteArray.append(byte)
-            } else {
-                fatalError("Invalid hex string byte character: \(byteString)")
+        byteArray.reserveCapacity(hex.count / 2)
+
+        var index = hex.startIndex
+        while index < hex.endIndex {
+            let nextIndex = hex.index(index, offsetBy: 2)
+            let byteString = String(hex[index ..< nextIndex])
+            guard let byte = UInt8(byteString, radix: 16) else {
+                return .failure(.InvalidHexCharacter(byteString))
             }
+            byteArray.append(byte)
             index = nextIndex
         }
 
-        return Self.fromLittleEndian(from: byteArray)
+        return .success(Self.fromBigEndian(from: byteArray))
     }
 }
 
-/// Implementation of `CustomStringConvertible`
+/// Implementation of `CustomStringConvertible` and Hex Encoding
 public extension BigUInt {
+    /// Canonical string representation (Lowercase hex, stripped leading zeros)
     var description: String {
-        self.BYTES.map { String(format: "%016lX", $0) }.joined()
+        self.encodeHexLower()
+    }
+
+    /// Encode to hex string with lowercase characters.
+    func encodeHexLower() -> String {
+        return self.hexString(uppercase: false)
+    }
+
+    /// Encode to hex string with uppercase characters.
+    func encodeHexUpper() -> String {
+        return self.hexString(uppercase: true)
+    }
+
+    /// Encode to hex string.
+    /// - Parameter uppercase: Use uppercase hex characters.
+    func hexString(uppercase: Bool) -> String {
+        if self.isZero {
+            return "0"
+        }
+
+        // Use BigEndian for human-readable string
+        let bytes = self.toBigEndian
+        let format = uppercase ? "%02X" : "%02x"
+
+        // Strip leading zeros
+        let hex = bytes
+            .drop { $0 == 0 }
+            .map { String(format: format, $0) }
+            .joined()
+
+        return hex
     }
 }
 
 /// Implementation of `Equatable`
 public extension BigUInt {
+    /// Compare if `lhs` is less than `rhs`
     static func cmpLess(lhs: Self, rhs: Self) -> Bool {
         // Reversed iteration
         for i in stride(from: Int(self.numberBase) - 1, through: 0, by: -1) {
@@ -198,6 +251,7 @@ public extension BigUInt {
         return false
     }
 
+    /// Operator `==`: Check if two `BigUInt` values are equal
     static func == (lhs: Self, rhs: Self) -> Bool {
         lhs.BYTES == rhs.BYTES
     }

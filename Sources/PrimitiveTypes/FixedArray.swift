@@ -15,8 +15,18 @@ public protocol FixedArray: CustomStringConvertible, Equatable, Sendable {
     /// Init from bytes array.
     init(from value: [UInt8])
 
-    /// Create `FixedArray` from hex `String`
-    static func fromString(hex value: String) -> Self
+    /// Create `FixedArray` from hex `String`. Returns Result type
+    static func fromString(hex value: String) -> Result<Self, HexStringError>
+
+    /// Encode to hex string with lowercase characters.
+    func encodeHexLower() -> String
+
+    /// Encode to hex string with uppercase characters.
+    func encodeHexUpper() -> String
+
+    /// Encode to hex string.
+    /// - Parameter uppercase: Use uppercase hex characters.
+    func hexString(uppercase: Bool) -> String
 }
 
 public extension FixedArray {
@@ -35,36 +45,76 @@ public extension FixedArray {
         return BYTES.allSatisfy { $0 == 0 }
     }
 
-    static func fromString(hex value: String) -> Self {
-        precondition(value.count <= numberBytes * 2, "Invalid hex string for \(numberBytes) bytes.")
-        precondition(value.count % 2 == 0, "Invalid hex string for `mod 2`")
+    /// Create `FixedArray` from hex `String`. Returns Result type
+    static func fromString(hex value: String) -> Result<Self, HexStringError> {
+        let hex = value.hasPrefix("0x") || value.hasPrefix("0X")
+            ? String(value.dropFirst(2))
+            : value
+
+        // FixedArray (H160/H256) logic is STRICT.
+        // It iterates exactly `numberBytes` times consuming 2 chars.
+        // If string is shorter or longer, it fails.
+        let expectedLength = Int(numberBytes) * 2
+
+        if hex.count != expectedLength {
+            return .failure(.InvalidStringLength)
+        }
 
         var byteArray: [UInt8] = []
-        var index = value.startIndex
-        while index < value.endIndex {
-            let nextIndex = value.index(index, offsetBy: 2)
-            let byteString = String(value[index ..< nextIndex])
-            if let byte = UInt8(byteString, radix: 16) {
-                byteArray.append(byte)
-            } else {
-                fatalError("Invalid hex string byte character: \(byteString)")
+        byteArray.reserveCapacity(Int(numberBytes))
+
+        var index = hex.startIndex
+        while index < hex.endIndex {
+            let nextIndex = hex.index(index, offsetBy: 2)
+            let byteString = String(hex[index ..< nextIndex])
+            guard let byte = UInt8(byteString, radix: 16) else {
+                return .failure(.InvalidHexCharacter(byteString))
             }
+            byteArray.append(byte)
             index = nextIndex
         }
 
-        return Self(from: byteArray)
+        return .success(Self(from: byteArray))
     }
 }
 
 /// Implementation of `CustomStringConvertible`
 public extension FixedArray {
+    /// Canonical string representation (lowercase hex, full length with leading zeros)
     var description: String {
-        self.BYTES.map { String(format: "%02lx", $0).uppercased() }.joined()
+        self.encodeHexLower()
+    }
+
+    /// Encode to hex string with lowercase characters.
+    func encodeHexLower() -> String {
+        return self.hexString(uppercase: false)
+    }
+
+    /// Encode to hex string with uppercase characters.
+    func encodeHexUpper() -> String {
+        return self.hexString(uppercase: true)
+    }
+
+    /// Encode to hex string.
+    /// - Parameter uppercase: Use uppercase hex characters.
+    func hexString(uppercase: Bool) -> String {
+        // FixedArray (H160/H256) logic:
+        // Never strip leading zeros. Always return full length string.
+
+        let bytes = self.BYTES
+        let format = uppercase ? "%02X" : "%02x"
+
+        let hex = bytes
+            .map { String(format: format, $0) }
+            .joined()
+
+        return hex
     }
 }
 
 /// Implementation of `Equatable`
 public extension FixedArray {
+    /// Operator `==`: Check if two `FixedArray` values are equal
     static func == (lhs: Self, rhs: Self) -> Bool {
         lhs.BYTES == rhs.BYTES
     }

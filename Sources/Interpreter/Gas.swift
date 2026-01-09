@@ -117,17 +117,29 @@ struct MemoryGas {
 
 /// Gas constants for record gas cost calculation
 enum GasConstant {
+    /// Base gas cost for basic operations.
     static let BASE: UInt64 = 2
+    /// Gas cost for very low-cost operations.
     static let VERYLOW: UInt64 = 3
+    /// Gas cost for low-cost operations.
     static let LOW: UInt64 = 5
+    /// Gas cost for medium-cost operations.
     static let MID: UInt64 = 8
+    /// Gas cost for high-cost operations.
     static let HIGH: UInt64 = 10
     static let JUMPDEST: UInt64 = 1
+    /// Base gas cost for EXP instruction.
     static let EXP: UInt64 = 10
+    /// Gas cost per word for memory operations.
     static let MEMORY: UInt64 = 3
+    /// Gas cost per word for copy operations.
     static let COPY: UInt64 = 3
     static let COLD_ACCOUNT_ACCESS_COST: UInt64 = 2600
     static let WARM_STORAGE_READ_COST: UInt64 = 100
+    /// Base gas cost for KECCAK256 instruction.
+    static let KECCAK256: UInt64 = 30
+    /// Gas cost per word for KECCAK256 instruction.
+    static let KECCAK256WORD: UInt64 = 6
 }
 
 /// Gas cost calculations
@@ -261,5 +273,13 @@ enum GasCost {
         } else {
             GasConstant.WARM_STORAGE_READ_COST
         }
+    }
+
+    /// `KECCAK256` opcode cost calculation.
+    static func keccak256Cost(size: Int) -> UInt64 {
+        // Overflow impossible in that case
+        let costPerWord = self.costPerWord(size: size, multiple: Int(clamping: GasConstant.KECCAK256WORD))!
+
+        return GasConstant.KECCAK256 + costPerWord
     }
 }

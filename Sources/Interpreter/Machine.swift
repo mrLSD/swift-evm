@@ -50,11 +50,11 @@ public final class Machine {
     /// Machine EVM Context
     public struct Context {
         /// Execution target address
-        let target: H160
+        let targetAddress: H160
         /// Sender (caller) address
-        let sender: H160
-        /// EVM apparent value
-        let value: U256
+        let callerAddress: H160
+        /// EVM apparent value (Value of the call)
+        let callValue: U256
     }
 
     public enum MachineStatus: Equatable {
@@ -148,6 +148,9 @@ public final class Machine {
         table[Opcode.CALLDATACOPY.index] = SystemInstructions.callDataCopy
         table[Opcode.CALLDATALOAD.index] = SystemInstructions.callDataLoad
         table[Opcode.CALLVALUE.index] = SystemInstructions.callValue
+        table[Opcode.ADDRESS.index] = SystemInstructions.address
+        table[Opcode.CALLER.index] = SystemInstructions.caller
+        table[Opcode.SHA3.index] = SystemInstructions.keccak256
 
         // Control
         table[Opcode.STOP.index] = ControlInstructions.stop
@@ -237,7 +240,6 @@ public final class Machine {
         // Host
         table[Opcode.BALANCE.index] = HostInstructions.balance
         table[Opcode.SELFBALANCE.index] = HostInstructions.selfBalance
-        table[Opcode.ADDRESS.index] = HostInstructions.address
         table[Opcode.GASPRICE.index] = HostInstructions.gasPrice
         table[Opcode.ORIGIN.index] = HostInstructions.origin
         table[Opcode.CHAINID.index] = HostInstructions.chainId

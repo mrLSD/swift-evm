@@ -72,12 +72,12 @@ public extension BigUInt {
     /// redundant operations with matrix. In common cases multiplication `2*Width`. For
     /// 256-bit in common cases result will be 512-bit - `high` and `low` part. `Low` contains
     /// result itself, `high` contains overflowed number. We're optimized algorithm to return only `Width`,
-    /// itself, to avoid redundant calculations, but for that we can't correclty calculate overflow status (for that
+    /// itself, to avoid redundant calculations, but for that we can't correctly calculate overflow status (for that
     /// we should perform full multiplication).
     ///
     /// - Parameter value: The value to be multiplying.
     ///
-    /// - Returns: A tuple containing the result of the operation and a boolean value indicating whether an overflow occurred.
+    /// - Returns: The result of the multiplication (overflow is discarded).
     @inline(__always)
     func mul(_ value: Self) -> Self {
         var result = [UInt64](repeating: 0, count: self.BYTES.count)

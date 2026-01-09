@@ -142,9 +142,7 @@ public class Memory {
         guard size > 0, offset < self.effectiveLength, let buf = self.buffer else {
             return result
         }
-
-        // We don't check overflow, as it's practically impossible size for Memory
-        let copySize = min(offset + size, self.effectiveLength) - offset
+        let copySize = size > self.effectiveLength - offset ? self.effectiveLength - offset : size
 
         // After all validation check we can guaranty that copySize is non zero
         result.withUnsafeMutableBytes { dest in
@@ -179,11 +177,11 @@ public class Memory {
             return .success(())
         }
 
-        // We don't overflow as Int.max impossible size for memory
-        let requiredLength = offset + size
-        if requiredLength > self.limit {
+        if size > self.limit - offset {
             return .failure(.Error(.MemoryOperation(.SetLimitExceeded)))
         }
+        // NOTE: after the above check, we can be sure that offset + size won't overflow
+        let requiredLength = offset + size
 
         guard self.resize(end: requiredLength) else { return .failure(.Fatal(.ReadMemory)) }
         guard let buf = self.buffer else { return .failure(.Fatal(.ReadMemory)) }
@@ -233,11 +231,11 @@ public class Memory {
         }
 
         let maxOffset = max(srcOffset, dstOffset)
-        // We don't check overflow as Int.max impossible size for memory
-        let requiredLength = maxOffset + size
-        if requiredLength > self.limit {
+        if size > self.limit - maxOffset {
             return .failure(.Error(.MemoryOperation(.CopyLimitExceeded)))
         }
+        // NOTE: after the above check, we can be sure that offset + size won't overflow
+        let requiredLength = maxOffset + size
 
         guard self.resize(end: requiredLength) else { return .failure(.Fatal(.ReadMemory)) }
         guard let buf = self.buffer else { return .failure(.Fatal(.ReadMemory)) }
@@ -294,11 +292,11 @@ public class Memory {
         let available = data.count - dataOffset
         let copyLength = min(size, available)
 
-        // We don't check overflow as Int.max impossible size for memory
-        let requiredLength = memoryOffset + size
-        if requiredLength > self.limit {
+        if size > self.limit - memoryOffset {
             return .failure(.Error(.MemoryOperation(.CopyDataLimitExceeded)))
         }
+        // NOTE: after the above check, we can be sure that offset + size won't overflow
+        let requiredLength = memoryOffset + size
 
         // Ensure the internal buffer is resized to accommodate the required length.
         guard self.resize(end: requiredLength) else { return .failure(.Fatal(.ReadMemory)) }

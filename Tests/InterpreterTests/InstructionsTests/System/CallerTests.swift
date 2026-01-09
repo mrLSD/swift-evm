@@ -1,13 +1,15 @@
+
+
 @testable import Interpreter
 import Nimble
 import PrimitiveTypes
 import Quick
 
-final class InstructionCoinbaseSpec: QuickSpec {
+final class InstructionCallerSpec: QuickSpec {
     override class func spec() {
-        describe("Instruction COINBASE") {
+        describe("Instruction CALLER") {
             it("with OutOfGas result") {
-                let m = TestMachine.machine(opcode: Opcode.COINBASE, gasLimit: 1)
+                let m = TestMachine.machine(opcode: Opcode.CALLER, gasLimit: 1)
 
                 m.evalLoop()
 
@@ -17,7 +19,7 @@ final class InstructionCoinbaseSpec: QuickSpec {
             }
 
             it("check stack overflow") {
-                let m = TestMachine.machine(opcode: Opcode.COINBASE, gasLimit: 10)
+                let m = TestMachine.machine(opcode: Opcode.CALLER, gasLimit: 10)
                 for _ in 0 ..< m.stack.limit {
                     _ = m.stack.push(value: U256(from: 5))
                 }
@@ -30,20 +32,16 @@ final class InstructionCoinbaseSpec: QuickSpec {
 
             it("Successful execution") {
                 let context = Machine.Context(targetAddress: TestHandler.address1,
-                                              callerAddress: TestHandler.address3,
+                                              callerAddress: TestHandler.address2,
                                               callValue: U256.ZERO)
-                let m = TestMachine.machine(opcode: Opcode.COINBASE, gasLimit: 10, context: context, hardFork: .latest())
+                let m = TestMachine.machine(opcode: Opcode.CALLER, gasLimit: 10, context: context, hardFork: .latest())
 
                 m.evalLoop()
 
                 expect(m.machineStatus).to(equal(.Exit(.Success(.Stop))))
 
-                let result = m.stack.popH256()
-                expect(result).to(beSuccess { value in
-                    let address = value.toH160()
-                    // Value from the Handler's coinbase()
-                    expect(address).to(equal(TestHandler.address2))
-                })
+                let result = try! m.stack.popH256().get().toH160()
+                expect(result).to(equal(TestHandler.address2))
 
                 expect(m.stack.length).to(equal(0))
                 expect(m.gas.remaining).to(equal(8))
