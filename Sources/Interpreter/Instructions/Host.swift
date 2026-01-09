@@ -2,6 +2,7 @@ import PrimitiveTypes
 
 /// EVM Host instructions
 enum HostInstructions {
+    /// Pushes the balance of the account at the given address onto the stack.
     static func balance(machine m: Machine) {
         guard let address = m.stackPopH256()?.toH160() else {
             return
@@ -28,6 +29,7 @@ enum HostInstructions {
         m.stackPush(value: m.handler.balance(address: address))
     }
 
+    /// Pushes the balance of the currently executing account onto the stack.
     static func selfBalance(machine m: Machine) {
         // Check hardfork
         guard m.hardFork.isIstanbul() else {
@@ -39,19 +41,10 @@ enum HostInstructions {
             return
         }
 
-        m.stackPush(value: m.handler.balance(address: m.context.target))
+        m.stackPush(value: m.handler.balance(address: m.context.targetAddress))
     }
 
-    static func address(machine m: Machine) {
-        if !m.gasRecordCost(cost: GasConstant.BASE) {
-            return
-        }
-
-        // Push the address of the current contract onto the stack
-        let newValue = H256(from: m.context.target).BYTES
-        m.stackPush(value: U256.fromBigEndian(from: newValue))
-    }
-
+    /// Pushes the gas price of the transaction onto the stack.
     static func gasPrice(machine m: Machine) {
         if !m.gasRecordCost(cost: GasConstant.BASE) {
             return
@@ -60,6 +53,7 @@ enum HostInstructions {
         m.stackPush(value: m.handler.gasPrice())
     }
 
+    /// Pushes the address of the originator (sender) of the transaction onto the stack.
     static func origin(machine m: Machine) {
         if !m.gasRecordCost(cost: GasConstant.BASE) {
             return
@@ -84,6 +78,7 @@ enum HostInstructions {
         m.stackPush(value: m.handler.chainId())
     }
 
+    /// Pushes the address of the miner (coinbase) of the current block onto the stack.
     static func coinbase(machine m: Machine) {
         if !m.gasRecordCost(cost: GasConstant.BASE) {
             return

@@ -114,6 +114,7 @@ public extension FixedArray {
 
 /// Implementation of `Equatable`
 public extension FixedArray {
+    /// Operator `==`: Check if two `FixedArray` values are equal
     static func == (lhs: Self, rhs: Self) -> Bool {
         lhs.BYTES == rhs.BYTES
     }

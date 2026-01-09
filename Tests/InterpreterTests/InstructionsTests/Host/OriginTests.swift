@@ -29,20 +29,17 @@ final class InstructionOriginSpec: QuickSpec {
             }
 
             it("Successful execution") {
-                let context = Machine.Context(target: TestHandler.address1,
-                                              sender: TestHandler.address2,
-                                              value: U256.ZERO)
+                let context = Machine.Context(targetAddress: TestHandler.address1,
+                                              callerAddress: TestHandler.address2,
+                                              callValue: U256.ZERO)
                 let m = TestMachine.machine(opcode: Opcode.ORIGIN, gasLimit: 10, context: context, hardFork: .latest())
 
                 m.evalLoop()
 
                 expect(m.machineStatus).to(equal(.Exit(.Success(.Stop))))
 
-                let result = m.stack.popH256()
-                expect(result).to(beSuccess { value in
-                    let address = value.toH160()
-                    expect(address).to(equal(TestHandler.address1))
-                })
+                let result = try! m.stack.popH256().get().toH160()
+                expect(result).to(equal(TestHandler.address1))
 
                 expect(m.stack.length).to(equal(0))
                 expect(m.gas.remaining).to(equal(8))

@@ -30,9 +30,9 @@ final class InstructionSelfbalanceSpec: QuickSpec {
             }
 
             it("Successful Istanbul hard fork") {
-                let context = Machine.Context(target: TestHandler.address1,
-                                              sender: TestHandler.address2,
-                                              value: U256.ZERO)
+                let context = Machine.Context(targetAddress: TestHandler.address1,
+                                              callerAddress: TestHandler.address2,
+                                              callValue: U256.ZERO)
                 let m = TestMachine.machine(opcode: Opcode.SELFBALANCE, gasLimit: 10, context: context, hardFork: .Istanbul)
 
                 m.evalLoop()
@@ -49,9 +49,9 @@ final class InstructionSelfbalanceSpec: QuickSpec {
             }
 
             it("Fail Constantinople hard fork") {
-                let context = Machine.Context(target: TestHandler.address1,
-                                              sender: TestHandler.address2,
-                                              value: U256.ZERO)
+                let context = Machine.Context(targetAddress: TestHandler.address1,
+                                              callerAddress: TestHandler.address2,
+                                              callValue: U256.ZERO)
                 let m = TestMachine.machine(opcode: Opcode.SELFBALANCE, gasLimit: 10, context: context, hardFork: .Constantinople)
 
                 m.evalLoop()

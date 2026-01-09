@@ -44,7 +44,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Test Descriptions:** Corrected misleading test descriptions for `ADDMOD`, `MULMOD`, `EXP`, and `MSIZE` to accurately reflect "OutOfGas" scenarios ([#55]).
 - **Terminology:** Fixed endianness labeling in tests, correcting "Bit Endian" to "Big Endian" in `I256` and `U256` test suites ([#55]).
 
-## [0.5.20] - 2025-11-30
+## [0.5.20] - 2025-12-01
 
 ### Changed
 - **Memory Gas Calculation:** Refactored `memoryGas` logic in `Gas.swift` to explicitly separate linear (`3*N`) and quadratic (`N²/512`) costs with improved overflow protection ([#54]).
@@ -56,13 +56,102 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - **SAR Opcode:** Fixed edge case handling for Shift Arithmetic Right (`SAR`) when shift amount is >= 255 ([#54]).
 
+## [0.5.19] - 2025-08-24
+
+### Added
+- **COINBASE Opcode:** Implemented logic for the `COINBASE` (0x41) opcode, allowing the retrieval of the block's beneficiary address ([#53]).
+- **Host Interface:** Updated the `InterpreterHandler` protocol to include `func coinbase() -> H160`, enabling the host environment to provide the miner/validator address ([#53]).
+- **Documentation:** Added `.spi.yml` configuration to support automatic documentation generation on the Swift Package Index ([#53]).
+
+### Tests
+- **Coverage:** Added unit tests for `COINBASE` covering standard execution, out-of-gas scenarios, and stack overflow protections ([#53]).
+
+## [0.5.18] - 2025-08-18
+
+### Added
+- **CHAINID Opcode:** Implemented logic for the `CHAINID` (0x46) opcode, allowing smart contracts to retrieve the current chain identifier ([#52]).
+- **Host Interface:** Updated the `InterpreterHandler` protocol to include `var chainID: U256 { get }`, enabling the host environment to supply the correct chain configuration ([#52]).
+
+### Tests
+- **Coverage:** Added unit tests for the `CHAINID` opcode to verify correct return values and gas consumption (Base Gas: 2) ([#52]).
+
+## [0.5.17] - 2025-08-11
+
+### Added
+- **ORIGIN Opcode:** Implemented logic for the `ORIGIN` (0x32) opcode, allowing smart contracts to retrieve the address of the account that originated the transaction (tx.origin) ([#51]).
+- **Host Interface:** Updated the `InterpreterHandler` protocol to include `var origin: H160 { get }`, enabling the host environment to supply the transaction initiator's address ([#51]).
+
+### Tests
+- **Coverage:** Added unit tests for the `ORIGIN` opcode to verify correct return values and gas consumption (Base Gas: 2) ([#51]).
+
+## [0.5.16] - 2025-07-21
+
+### Added
+- **GASPRICE Opcode:** Implemented logic for the `GASPRICE` (0x3A) opcode, allowing smart contracts to retrieve the gas price of the current transaction ([#50]).
+- **Host Interface:** Updated the `InterpreterHandler` protocol to include `var gasPrice: U256 { get }`, enabling the host environment to supply the transaction gas price ([#50]).
+
+### Tests
+- **Coverage:** Added unit tests for the `GASPRICE` opcode to verify correct return values and gas consumption (Base Gas: 2) ([#50]).
+
+## [0.5.15] - 2025-06-22
+
+### Added
+- **ADDRESS Opcode:** Implemented logic for the `ADDRESS` (0x30) opcode, allowing the executing code to retrieve its own address (the address of the account currently executing the contract) ([#49]).
+
+### Tests
+- **Coverage:** Added unit tests for the `ADDRESS` opcode to verify correct return values and gas consumption (Base Gas: 2) ([#49]).
+
+## [0.5.14] - 2025-06-17
+
+### Added
+- **SELFBALANCE Opcode:** Implemented logic for the `SELFBALANCE` (0x47) opcode, allowing the contract to retrieve its own balance directly (available from the Istanbul hard fork) ([#48]).
+- **Hardfork Support:** Logic ensures `SELFBALANCE` is only available when the active hard fork is Istanbul or later ([#48]).
+
+### Tests
+- **Coverage:** Added unit tests for `SELFBALANCE` covering gas costs (Low: 5), stack operations, and hard fork restrictions ([#48]).
+
+## [0.5.13] - 2025-06-09
+
+### Added
+- **External State Opcodes:** Implemented a full suite of opcodes for interacting with external accounts, allowing the VM to query balances and code of other contracts:
+    - `BALANCE` (0x31): Get balance of the given account.
+    - `EXTCODESIZE` (0x3B): Get code size of an account.
+    - `EXTCODECOPY` (0x3C): Copy an account's code to memory.
+    - `EXTCODEHASH` (0x3F): Get the code hash of an account.
+- **Host Interface:** Significantly expanded the `InterpreterHandler` protocol to support state access. New required methods include:
+    - `balance(at address: H160) -> U256`
+    - `codeSize(at address: H160) -> U256`
+    - `codeHash(at address: H160) -> H256`
+    - `codeCopy(at address: H160, range: Range<Int>) -> [UInt8]`
+- **Gas Logic:** Added gas calculation logic for account access, including costs for accessing "cold" vs "warm" accounts (where applicable) and memory expansion costs for code copying ([#47]).
+
+### Changed
+- **State Architecture:** Refactored the internal execution model to delegate state queries (balance/code) to the host environment via the updated `InterpreterHandler` interface, enabling integration with complex state tries or mock environments ([#47]).
+
+### Tests
+- **Coverage:** Added extensive tests for the new opcodes, covering edge cases like non-existent accounts, memory boundary checks during code copy, and gas accounting accuracy ([#47]).
+
 <!-- Versions -->
 [0.5.22]: https://github.com/mrLSD/swift-evm/compare/v0.5.21...v0.5.22
 [0.5.21]: https://github.com/mrLSD/swift-evm/compare/v0.5.20...v0.5.21
 [0.5.20]: https://github.com/mrLSD/swift-evm/compare/v0.5.19...v0.5.20
+[0.5.19]: https://github.com/mrLSD/swift-evm/compare/v0.5.18...v0.5.19  
+[0.5.18]: https://github.com/mrLSD/swift-evm/compare/v0.5.17...v0.5.18
+[0.5.17]: https://github.com/mrLSD/swift-evm/compare/v0.5.16...v0.5.17
+[0.5.16]: https://github.com/mrLSD/swift-evm/compare/v0.5.15...v0.5.16
+[0.5.15]: https://github.com/mrLSD/swift-evm/compare/v0.5.14...v0.5.15
+[0.5.14]: https://github.com/mrLSD/swift-evm/compare/v0.5.13...v0.5.14
+[0.5.13]: https://github.com/mrLSD/swift-evm/compare/v0.5.12...v0.5.13
 
 <!-- PRs -->
 [#57]: https://github.com/mrLSD/swift-evm/pull/57
 [#56]: https://github.com/mrLSD/swift-evm/pull/56
 [#55]: https://github.com/mrLSD/swift-evm/pull/55
 [#54]: https://github.com/mrLSD/swift-evm/pull/54
+[#53]: https://github.com/mrLSD/swift-evm/pull/53
+[#52]: https://github.com/mrLSD/swift-evm/pull/52
+[#51]: https://github.com/mrLSD/swift-evm/pull/51
+[#50]: https://github.com/mrLSD/swift-evm/pull/50
+[#49]: https://github.com/mrLSD/swift-evm/pull/49
+[#48]: https://github.com/mrLSD/swift-evm/pull/48
+[#47]: https://github.com/mrLSD/swift-evm/pull/47
