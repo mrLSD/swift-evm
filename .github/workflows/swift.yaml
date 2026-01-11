@@ -1,0 +1,56 @@
+# This workflow will build a Swift project
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-swift
+
+name: Swift
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+    - uses: actions/checkout@v4
+#    - uses: swift-actions/setup-swift@v2
+    - uses: SwiftyLab/setup-swift@latest
+      with:
+        swift-version: '6.0'
+    
+    - name: Build
+      run: swift build
+
+    - name: Install SwiftLint
+      run: brew install swiftlint
+
+    - name: Run SwiftLint
+      run: swiftlint
+
+    - name: Run tests
+      run: swift test --verbose --enable-code-coverage
+
+    - name: Generate Coverage Report
+      run: |
+        mkdir -p coverage
+        BIN_PATH=$(swift build --show-bin-path)
+        TEST_BUNDLE=$(find "$BIN_PATH" -name "*.xctest" | head -n 1)
+        BINARY_NAME=$(basename "$TEST_BUNDLE" .xctest)
+        BINARY_PATH="$TEST_BUNDLE/Contents/MacOS/$BINARY_NAME"
+        echo "Binary path found: $BINARY_PATH"
+        xcrun llvm-cov export -format="lcov" "$BINARY_PATH" \
+          -instr-profile="$BIN_PATH/codecov/default.profdata" \
+          -ignore-filename-regex=".build|Tests" \
+          > coverage/lcov.info
+        ls -la coverage/lcov.info
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v4
+      env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}      
+      with:
+        files: coverage/lcov.info
+        flags: swift
+        name: codecov-umbrella
+        fail_ci_if_error: true
