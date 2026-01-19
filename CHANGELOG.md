@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.23] - 2026-01-19
+
+### Added
+- **CALLER Opcode:** Implemented the `CALLER` (0x33) opcode, allowing smart contracts to retrieve the address of the account that invoked the transaction or execution ([#59]).
+- **Machine Status:** Introduced explicit `MachineStatus` enum (including `ExitSuccess`, `ExitFatal`, `ExitError`, `ExitRevert`) to strictly define the execution state and exit reasons ([#61]).
+- **Stack Validation:** Added centralized `verifyStack(pop:push:)` methods to `MachineStack` for safer checking of underflow/overflow conditions before stack mutation ([#61]).
+- **Memory Helpers:** Added optimized `memCpy` and `memSet` internal helpers for memory operations ([#61]).
+- **Documentation:** Major overhaul of `README.md` and formatting updates to `CHANGELOG.md` ([#61]).
+
+### Changed
+- **Context Refactoring:** Renamed `Context` fields for greater clarity across the codebase ([#59]):
+  - `target` → `targetAddress`
+  - `sender` → `callerAddress`
+  - `value` → `callValue`
+- **Arithmetic Safety:** Completely refactored `ArithmeticInstructions` to use the new `verifyStack` pattern. Now, gas availability and stack requirements are validated *before* any operands are popped, preserving stack integrity in case of failure ([#61]).
+- **Opcode Architecture:** Moved `ADDRESS` from Host to System instructions and standardized the implementation of `SELFBALANCE`, `ORIGIN`, and `COINBASE` within the Host instruction set ([#59]).
+- **Jump Validation:** Updated `isValidJumpDestination` signature and logic to align with the new `MachineStatus` model ([#61]).
+- **Visibility:** Made `HardFork` enum public to facilitate configuration from the host environment ([#61]).
+
+### Tests
+- **Caller Tests:** Added dedicated `CallerTests` suite covering standard execution, gas costs, and context propagation ([#59]).
+- **Refactored Tests:** Updated `ArithmeticTests` and `MachineTests` to reflect the new `MachineStatus` error handling models and renamed Context fields ([#61]).
+- **CLI Runner:** Added a CLI test-runner script for better test output formatting ([#61]).
+
 ## [0.5.22] - 2026-01-05
 
 ### Added
@@ -114,15 +138,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - **External State Opcodes:** Implemented a full suite of opcodes for interacting with external accounts, allowing the VM to query balances and code of other contracts:
-    - `BALANCE` (0x31): Get balance of the given account.
-    - `EXTCODESIZE` (0x3B): Get code size of an account.
-    - `EXTCODECOPY` (0x3C): Copy an account's code to memory.
-    - `EXTCODEHASH` (0x3F): Get the code hash of an account.
+  - `BALANCE` (0x31): Get balance of the given account.
+  - `EXTCODESIZE` (0x3B): Get code size of an account.
+  - `EXTCODECOPY` (0x3C): Copy an account's code to memory.
+  - `EXTCODEHASH` (0x3F): Get the code hash of an account.
 - **Host Interface:** Significantly expanded the `InterpreterHandler` protocol to support state access. New required methods include:
-    - `balance(at address: H160) -> U256`
-    - `codeSize(at address: H160) -> U256`
-    - `codeHash(at address: H160) -> H256`
-    - `codeCopy(at address: H160, range: Range<Int>) -> [UInt8]`
+  - `balance(at address: H160) -> U256`
+  - `codeSize(at address: H160) -> U256`
+  - `codeHash(at address: H160) -> H256`
+  - `codeCopy(at address: H160, range: Range<Int>) -> [UInt8]`
 - **Gas Logic:** Added gas calculation logic for account access, including costs for accessing "cold" vs "warm" accounts (where applicable) and memory expansion costs for code copying ([#47]).
 
 ### Changed
@@ -131,7 +155,55 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Tests
 - **Coverage:** Added extensive tests for the new opcodes, covering edge cases like non-existent accounts, memory boundary checks during code copy, and gas accounting accuracy ([#47]).
 
+## [0.5.12] - 2025-06-07
+
+### Added
+- **WASM Support:** Added support for compiling and running the EVM on WebAssembly (wasm32) targets, enabling execution in browser environments ([#46]).
+- **Cross-Platform Memory:** Implemented a unified memory management model that supports diverse build targets (macOS, Linux, Windows, WASM) without platform-specific conditional compilation ([#46]).
+
+### Changed
+- **Memory Refactor:** Completely refactored the internal `Memory` implementation to use safe, platform-agnostic buffer manipulations, removing dependencies on specific pointer widths or endianness that previously hindered WASM support ([#46]).
+- **Build Targets:** Updated package configuration to explicitly support non-Apple platforms, verifying successful builds on Linux and Windows ([#46]).
+
+## [0.5.11] - 2025-06-04
+
+### Added
+- **CALLVALUE Opcode:** Implemented logic for the `CALLVALUE` (0x34) opcode, allowing smart contracts to retrieve the value (in Wei) deposited by the instruction or transaction responsible for this execution ([#45]).
+- **Runtime Context:** Updated the `Runtime` and `Machine` structures to correctly propagate transaction values (`msg.value`) into the execution context ([#45]).
+
+### Changed
+- **Runtime Refactor:** Refactored the internal Runtime initialization logic to support value transfers and context propagation, preparing the architecture for future `CALL` operations ([#45]).
+
+### Tests
+- **Coverage:** Added unit tests for `CALLVALUE` to verify it correctly places the transaction value onto the stack and charges the appropriate gas (Base Gas: 2) ([#45]).
+
+## [0.5.10] - 2025-06-02
+
+### Added
+- **Runtime Environment:** Introduced the basic `Runtime` structure, laying the foundation for managing execution context, transactions, and block data ([#44]).
+
+### Changed
+- **Machine Architecture:** Refactored the core `Machine` type from a `struct` (value type) to a `class` (reference type). This change ensures a single mutable instance throughout execution, removing the need for `inout` passing and simplifying state management ([#44]).
+- **Test Suite:** Updated all unit tests to align with the new reference semantics of the `Machine` class ([#44]).
+
+## [0.5.9] - 2025-05-06
+
+### Added
+- **Flow Control Opcodes:** Implemented the core set of control flow instructions ensuring correct program counter manipulation:
+  - `JUMP` (0x56): Unconditional jump to a destination.
+  - `JUMPI` (0x57): Conditional jump based on stack value.
+  - `JUMPDEST` (0x5B): Marks a valid destination for jumps.
+  - `PC` (0x58): Get the value of the program counter before to the increment.
+- **Gas & MSIZE:** Implemented logic for:
+  - `GAS` (0x5A): Get the amount of available gas, including reduction for the instruction itself.
+  - `MSIZE` (0x59): Get the size of active memory in bytes.
+- **Jump Validation:** Added `JumpTable` and valid destination verification logic to trap invalid jumps (jumping to non-JUMPDEST bytes or into immediate data) with `BadJumpDestination` error ([#43]).
+
+### Tests
+- **Coverage:** Added comprehensive tests for jump validity, infinite loops (with gas limits), and stack/memory interaction for `MSIZE` ([#43]).
+
 <!-- Versions -->
+[0.5.23]: https://github.com/mrLSD/swift-evm/compare/v0.5.22...v0.5.23
 [0.5.22]: https://github.com/mrLSD/swift-evm/compare/v0.5.21...v0.5.22
 [0.5.21]: https://github.com/mrLSD/swift-evm/compare/v0.5.20...v0.5.21
 [0.5.20]: https://github.com/mrLSD/swift-evm/compare/v0.5.19...v0.5.20
@@ -142,8 +214,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [0.5.15]: https://github.com/mrLSD/swift-evm/compare/v0.5.14...v0.5.15
 [0.5.14]: https://github.com/mrLSD/swift-evm/compare/v0.5.13...v0.5.14
 [0.5.13]: https://github.com/mrLSD/swift-evm/compare/v0.5.12...v0.5.13
+[0.5.12]: https://github.com/mrLSD/swift-evm/compare/v0.5.11...v0.5.12
+[0.5.11]: https://github.com/mrLSD/swift-evm/compare/v0.5.10...v0.5.11
+[0.5.10]: https://github.com/mrLSD/swift-evm/compare/v0.5.9...v0.5.10
+[0.5.9]: https://github.com/mrLSD/swift-evm/compare/v0.5.8...v0.5.9
 
 <!-- PRs -->
+[#61]: https://github.com/mrLSD/swift-evm/pull/61
+[#59]: https://github.com/mrLSD/swift-evm/pull/59
 [#57]: https://github.com/mrLSD/swift-evm/pull/57
 [#56]: https://github.com/mrLSD/swift-evm/pull/56
 [#55]: https://github.com/mrLSD/swift-evm/pull/55
@@ -155,3 +233,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [#49]: https://github.com/mrLSD/swift-evm/pull/49
 [#48]: https://github.com/mrLSD/swift-evm/pull/48
 [#47]: https://github.com/mrLSD/swift-evm/pull/47
+[#46]: https://github.com/mrLSD/swift-evm/pull/46
+[#45]: https://github.com/mrLSD/swift-evm/pull/45
+[#44]: https://github.com/mrLSD/swift-evm/pull/44
+[#43]: https://github.com/mrLSD/swift-evm/pull/43

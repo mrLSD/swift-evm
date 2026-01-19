@@ -179,7 +179,7 @@ final class ArithmeticDivRemSpec: QuickSpec {
                     expect(rem).to(equal(6))
                 }
 
-                it("fuzz single random pair") {
+                it("fuzz single random pair 1") {
                     let a = UInt64.random(in: 1..<UInt64.max)
                     let b = UInt64.random(in: 1..<UInt64.max)
                     let (div, rem) = DivModUtils.divModWord64(hi: 0, lo: a, y: b)
@@ -188,7 +188,7 @@ final class ArithmeticDivRemSpec: QuickSpec {
                     expect(rem).to(equal(a % b))
                 }
 
-                it("fuzz single random pair") {
+                it("fuzz single random pair 2") {
                     let a = UInt64.random(in: 1..<UInt64.max)
                     let b = UInt64.random(in: 1..<UInt64.max)
                     let (div, rem) = DivModUtils.divModWord64(hi: 0, lo: a, y: b)

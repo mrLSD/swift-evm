@@ -1,4 +1,4 @@
-enum HardFork: UInt8, CustomStringConvertible, CaseIterable {
+public enum HardFork: UInt8, CustomStringConvertible, CaseIterable {
     // Frontier               0
     case Frontier
     // Homestead              1150000

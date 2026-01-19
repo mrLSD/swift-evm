@@ -1,3 +1,5 @@
+#!/bin/bash
+
 swift test 2>&1 | awk '
 /error:/ {
     # Use regular expression to capture required parts

@@ -90,7 +90,7 @@ final class InterpreterMachineStackSpec: QuickSpec {
             }
 
             context("peek operation") {
-                it("should return a values from the stack successfully") {
+                it("should return values from the stack successfully") {
                     var stack = Stack(limit: 2)
                     let result1 = stack.push(value: U256(from: 10))
                     expect(result1).to(beSuccess())
@@ -136,7 +136,7 @@ final class InterpreterMachineStackSpec: QuickSpec {
             }
 
             context("peek H256 operation") {
-                it("should return a values from the stack successfully") {
+                it("should return values from the stack successfully") {
                     var stack = Stack(limit: 2)
                     let result1 = stack.push(value: U256(from: 10))
                     expect(result1).to(beSuccess())
@@ -185,7 +185,7 @@ final class InterpreterMachineStackSpec: QuickSpec {
             }
 
             context("peek UInt operation") {
-                it("should return a values from the stack successfully") {
+                it("should return values from the stack successfully") {
                     var stack = Stack(limit: 2)
                     let result1 = stack.push(value: U256(from: 10))
                     expect(result1).to(beSuccess())

@@ -3,7 +3,6 @@
 ## Add support for Opcodes
 
 ### System
-- [ ] CALLER
 - [ ] EXTCODESIZE
 - [ ] EXTCODEHASH
 - [ ] EXTCODECOPY

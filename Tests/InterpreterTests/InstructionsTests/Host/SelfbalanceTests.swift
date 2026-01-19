@@ -38,14 +38,13 @@ final class InstructionSelfbalanceSpec: QuickSpec {
                 m.evalLoop()
 
                 expect(m.machineStatus).to(equal(.Exit(.Success(.Stop))))
+                expect(m.stack.length).to(equal(1))
+                expect(m.gas.remaining).to(equal(5))
 
                 let result = m.stack.pop()
                 expect(result).to(beSuccess { value in
                     expect(value).to(equal(U256(from: 5)))
                 })
-
-                expect(m.stack.length).to(equal(0))
-                expect(m.gas.remaining).to(equal(5))
             }
 
             it("Fail Constantinople hard fork") {

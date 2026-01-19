@@ -141,8 +141,49 @@ struct Stack {
         }
     }
 
+    /// Verifies if the stack has enough elements to perform a pop operation of a specific size.
+    ///
+    /// This method is used to ensure `StackUnderflow` does not occur before executing an instruction.
+    /// It checks if the current stack length is greater than or equal to the required number of elements.
+    ///
+    /// - Parameter pop: The number of elements intended to be removed from the stack.
+    /// - Returns: A `Result` containing `Void` if successful, or `ExitError.StackUnderflow` if there are not enough elements.
+    @inline(__always)
+    func verifyStack(pop: Int) -> Result<Void, Machine.ExitError> {
+        // Check if stack has enough elements
+        if self.data.count < pop {
+            return .failure(.StackUnderflow)
+        }
+        return .success(())
+    }
+
+    /// Verifies if the stack can accommodate a specific sequence of pop and push operations.
+    ///
+    /// This method checks two conditions simultaneously:
+    /// 1. **Underflow**: Ensures there are enough elements to pop.
+    /// 2. **Overflow**: Ensures that after popping and pushing, the stack size will not exceed the limit.
+    ///
+    /// - Parameters:
+    ///   - pop: The number of elements to be removed.
+    ///   - push: The number of elements to be added.
+    /// - Returns: A `Result` indicating success, or a specific `ExitError` (Underflow or Overflow).
+    @inline(__always)
+    func verifyStack(pop: Int, push: Int) -> Result<Void, Machine.ExitError> {
+        // 1. Check stack underflow
+        if self.data.count < pop {
+            return .failure(.StackUnderflow)
+        }
+
+        // 2. Check stack overflow (predicting future size)
+        if self.data.count - pop + push > self.limit {
+            return .failure(.StackOverflow)
+        }
+
+        return .success(())
+    }
+
     #if TRACING
-        /// Cleat trace Stack in/out data
+        /// Clear trace Stack in/out data
         mutating func clearTraceStack() {
             #if TRACE_STACK_INOUT
                 self.traceStackIn = []

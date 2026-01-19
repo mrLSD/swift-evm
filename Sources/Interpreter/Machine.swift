@@ -1,6 +1,18 @@
 import PrimitiveTypes
 
-/// Machine represents EVM core execution layer
+/// Core EVM execution engine.
+///
+/// `Machine` owns the mutable state required to interpret EVM bytecode, including the program
+/// counter, stack, memory, gas accounting, return data, and execution context. It precomputes a
+/// jump destination table for validating `JUMP` `JUMPI` targets and uses an opcode dispatch table
+/// to evaluate instructions.
+///
+/// Execution is driven via `step()` for single-instruction progress or `evalLoop()` to run until
+/// termination. Progress and termination are communicated through `machineStatus`, with stop
+/// reasons expressed by `ExitReason`.
+///
+/// - Note: Opcode semantics can depend on `hardFork`, which gates feature availability and
+/// behavior differences across protocol revisions.
 public final class Machine {
     /// Program input data
     let data: [UInt8]
@@ -57,6 +69,13 @@ public final class Machine {
         let callValue: U256
     }
 
+    /// Represents the current state of the EVM execution loop.
+    ///
+    /// `MachineStatus` is used as a lightweight control channel between opcode evaluation
+    /// and the main stepping logic. Most opcodes leave the machine in `.Continue`, while
+    /// control-flow opcodes can request a program counter update (`.AddPC` / `.Jump`) and
+    /// terminating opcodes set `.Exit` with an `ExitReason`.
+    @frozen
     public enum MachineStatus: Equatable {
         case NotStarted
         case Continue
@@ -65,6 +84,14 @@ public final class Machine {
         case Exit(ExitReason)
     }
 
+    /// Describes why the machine stopped executing.
+    ///
+    /// EVM execution terminates in one of four broad categories:
+    /// - successful completion (`.Success`),
+    /// - a non-fatal rollback (`.Revert`),
+    /// - a recoverable error (`.Error`), or
+    /// - a fatal error (`.Fatal`) when the interpreter can no longer proceed.
+    @frozen
     public enum ExitReason: Equatable, Error {
         case Success(ExitSuccess)
         case Revert
@@ -72,15 +99,28 @@ public final class Machine {
         case Fatal(ExitFatal)
     }
 
+    /// Indicates a successful termination condition.
+
+    @frozen
     public enum ExitSuccess: Equatable, Error {
         case Stop
         case Return
     }
 
+    /// Indicates an unrecoverable interpreter failure.
+    ///
+    /// Fatal errors represent situations where the interpreter cannot reliably continue,
+    /// even to produce a standard EVM error. They are treated separately from `ExitError`.
+    @frozen
     public enum ExitFatal: Equatable, Error {
         case ReadMemory
     }
 
+    /// Errors produced by memory-related operations.
+    ///
+    /// These cases usually correspond to violations of configured limits (for example,
+    /// memory growth/copy limits) or invalid ranges/offsets when copying input data.
+    @frozen
     public enum MemoryError: Equatable, Error {
         case SetLimitExceeded
         case CopyLimitExceeded
@@ -88,6 +128,14 @@ public final class Machine {
         case CopyDataLimitExceeded
     }
 
+    /// Errors produced during opcode execution.
+    ///
+    /// These failures correspond to standard EVM exceptional halts (for example stack
+    /// underflow/overflow, invalid jump destinations, out-of-gas) as well as interpreter
+    /// validation errors (invalid opcode, hard fork gating, or range/overflow issues).
+    ///
+    /// Some cases wrap a more specific domain error, such as `MemoryError`.
+    @frozen
     public enum ExitError: Equatable, Error {
         case StackUnderflow
         case StackOverflow
@@ -248,6 +296,19 @@ public final class Machine {
         return table
     }()
 
+    /// Creates a new EVM `Machine` configured for executing `code` with the provided input and environment.
+    ///
+    /// This initializer builds the jump destination table from `code`, initializes gas tracking with
+    /// `gasLimit`, and sets the default hard fork to the latest supported revision. `returnData` starts
+    /// empty and the program counter is positioned at the beginning of the bytecode.
+    ///
+    /// - Parameters:
+    ///   - data: Call data (input) available to the program during execution.
+    ///   - code: EVM bytecode to execute.
+    ///   - gasLimit: Maximum amount of gas available for this execution.
+    ///   - context: Execution context, such as caller/target addresses and call value.
+    ///   - state: Mutable execution state used by opcodes (e.g., for host interactions).
+    ///   - handler: Hook provider invoked before opcode execution to extend/intercept behavior.
     init(data: [UInt8], code: [UInt8], gasLimit: UInt64, context: Context, state: ExecutionState, handler: InterpreterHandler) {
         self.data = data
         self.code = code
@@ -263,6 +324,21 @@ public final class Machine {
         #endif
     }
 
+    /// Creates a new EVM `Machine` with explicit resource limits and a specified hard fork.
+    ///
+    /// Use this initializer when you need to control memory growth via `memoryLimit` and/or run
+    /// execution under a particular `hardFork` revision. The jump destination table is derived
+    /// from `code`, gas accounting is initialized with `gasLimit`, and `returnData` starts empty.
+    ///
+    /// - Parameters:
+    ///   - data: Call data (input) available to the program during execution.
+    ///   - code: EVM bytecode to execute.
+    ///   - gasLimit: Maximum amount of gas available for this execution.
+    ///   - memoryLimit: Upper bound for memory growth used by `Memory` to enforce limits.
+    ///   - context: Execution context, such as caller/target addresses and call value.
+    ///   - state: Mutable execution state used by opcodes (e.g., for host interactions).
+    ///   - handler: Hook provider invoked before opcode execution to extend/intercept behavior.
+    ///   - hardFork: Hard fork ruleset that gates opcode semantics and feature availability.
     init(data: [UInt8], code: [UInt8], gasLimit: UInt64, memoryLimit: Int, context: Context, state: ExecutionState, handler: InterpreterHandler, hardFork: HardFork) {
         self.data = data
         self.code = code
@@ -302,6 +378,7 @@ public final class Machine {
     }
 
     /// Check is valid jump destination
+    @inline(__always)
     func isValidJumpDestination(at index: Int) -> Bool {
         if index >= self.jumpTable.count {
             return false
@@ -375,11 +452,48 @@ public final class Machine {
         }
     }
 
+    // MARK: - Stack Verification Wrappers
+
+    /// Verifies if the stack has enough elements for a `pop` operation.
+    /// Updates `machineStatus` to `.Exit(.Error(.StackUnderflow))` on failure.
+    ///
+    /// - Parameter pop: Number of elements to pop.
+    /// - Returns: `true` if verification passed, `false` otherwise.
+    @inline(__always)
+    func verifyStack(pop: Int) -> Bool {
+        switch self.stack.verifyStack(pop: pop) {
+        case .success:
+            return true
+        case .failure(let err):
+            self.machineStatus = .Exit(.Error(err))
+            return false
+        }
+    }
+
+    /// Verifies if the stack can handle a `pop` and `push` operation sequence.
+    /// Updates `machineStatus` to `.Exit(.Error(...))` on failure (Underflow or Overflow).
+    ///
+    /// - Parameters:
+    ///   - pop: Number of elements to pop.
+    ///   - push: Number of elements to push.
+    /// - Returns: `true` if verification passed, `false` otherwise.
+    @inline(__always)
+    func verifyStack(pop: Int, push: Int) -> Bool {
+        switch self.stack.verifyStack(pop: pop, push: push) {
+        case .success:
+            return true
+        case .failure(let err):
+            self.machineStatus = .Exit(.Error(err))
+            return false
+        }
+    }
+
+    // MARK: - Stack Operations Wrappers
+
     /// Wrapper for `MachineStack` pop operation. If `pop` operation fails, set
     /// `machineStatus` exit error status.
     ///
-    /// ## Return
-    /// Optional value
+    /// - Returns: Optional value
     func stackPop() -> U256? {
         switch self.stack.pop() {
         case .success(let value):
@@ -393,8 +507,7 @@ public final class Machine {
     /// Wrapper for `MachineStack` pop H256 operation. If `popH256` operation fails, set
     /// `machineStatus` exit error status.
     ///
-    /// ## Return
-    /// Optional value
+    /// - Returns: Optional value
     func stackPopH256() -> H256? {
         switch self.stack.popH256() {
         case .success(let value):
@@ -407,7 +520,6 @@ public final class Machine {
 
     /// Wrapper for `MachineStack` push operation. If `push` operation fails, set
     /// `machineStatus` exit error status.
-
     func stackPush(value: U256) {
         switch self.stack.push(value: value) {
         case .success:
@@ -421,8 +533,7 @@ public final class Machine {
     /// Wrapper for `MachineStack` peek operation. If `peek` operation fails, set
     /// `machineStatus` exit error status.
     ///
-    /// ## Return
-    /// Boolean value is operation success or not
+    /// - Returns: Boolean value is operation success or not
     func stackPeek(indexFromTop: Int) -> U256? {
         switch self.stack.peek(indexFromTop: indexFromTop) {
         case .success(let val):
@@ -433,11 +544,13 @@ public final class Machine {
         }
     }
 
+    // MARK: - Gas & Memory Operations
+
     /// Wrapper for `Machine` gas `recordCost` operation. If operation fails, set
     /// `machineStatus` exit error `OutOfGas`.
     ///
-    /// ## Return
-    /// Boolean value is operation success or not
+    /// - Returns: Boolean value is operation success or not
+    @inline(__always)
     func gasRecordCost(cost: UInt64) -> Bool {
         if !self.gas.recordCost(cost: cost) {
             self.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.OutOfGas))

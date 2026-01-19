@@ -343,6 +343,14 @@ public class Memory {
         return (val.overflow ? Int.max : val.partialValue) >> 5
     }
 
+    /// Copies `count` bytes from `srcPtr` to `dstPtr`.
+    ///
+    /// - Parameters:
+    ///   - dstPtr: Destination memory address.
+    ///   - srcPtr: Source memory address.
+    ///   - count: Number of bytes to copy.
+    /// - Note: Uses platform `memcpy` on Darwin/Glibc, otherwise falls back to `copyMemory(from:byteCount:)`.
+    @inline(__always)
     private static func memCpy(
         dstPtr: UnsafeMutableRawPointer,
         srcPtr: UnsafeRawPointer,
@@ -355,6 +363,13 @@ public class Memory {
         #endif
     }
 
+    /// Sets `count` bytes at `dstPtr` to `value`.
+    ///
+    /// - Parameters:
+    ///   - dstPtr: Destination memory address.
+    ///   - value: Byte value to write.
+    ///   - count: Number of bytes to set.
+    /// - Note: Uses platform `memset` on Darwin/Glibc, otherwise falls back to `initializeMemory(as:repeating:count:)`.
     @inline(__always)
     private static func memSet(dstPtr: UnsafeMutableRawPointer, value: UInt8, count: Int) {
         #if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(visionOS) || os(Linux)
