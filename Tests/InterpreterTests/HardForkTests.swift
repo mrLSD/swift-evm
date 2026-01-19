@@ -38,7 +38,7 @@ final class InterpreterHardForkSpec: QuickSpec {
                     }
                 }
 
-                it(" latest hard work should be correct") {
+                it("latest hard fork should be correct") {
                     expect(HardFork.latest()).to(equal(HardFork.Prague))
                 }
             }

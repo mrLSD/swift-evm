@@ -25,7 +25,6 @@ final class InterpreterMachineTestsSpec: QuickSpec {
             }
 
             it("Machine beforeOpcodeExecution flow") {
-                print("-->")
                 let m = Machine(data: [], code: [Opcode.PC.rawValue], gasLimit: 100, context: TestMachine.defaultContext(), state: ExecutionState(), handler: CustomHandler())
                 m.evalLoop()
                 expect(m.machineStatus).to(equal(.Exit(.Error(.OutOfFund))))

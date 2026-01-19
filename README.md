@@ -9,88 +9,120 @@
   <img src=".github/logo.png" alt="SwiftEVM" />
 
   <h1>mrLSD<code>/SwiftEVM</code></h1>
-  <p><strong>A blazing fast 🚀, pure Swift implementation of the Ethereum Virtual Machine (EVM)</strong></p>
+  <p><strong>Portable, compliant, and high-performance pure Swift implementation of the Ethereum Virtual Machine (EVM)</strong></p>
 </div>
-
------
-
-**SwiftEVM** is a high-performance, open-source implementation of the Ethereum Virtual Machine, 
-written entirely in **Swift**. Engineered to empower web3-developers, it enables seamless integration of EVM—execution into a diverse array of applications and platforms, including macOS, iOS, other Apple ecosystems, wasm32, Linux, and beyond.
-
-Our focus is on:
-- 🌐 **Opensource**: Fully open source, promoting transparency, community collaboration, and innovation.
-- ⚡ **Speed & Performance**: Critical paths are highly optimized for blazing-fast execution.
-- 🔒 **Security & Reliability**: 100% test coverage ensures predictable and robust behavior.
-- 🔧 **Extensibility & Maintainability**: A modular architecture that facilitates ongoing improvements and customizations.
-
-Modern development tools such as SwiftLint and swiftformat are part of our workflow, ensuring a clean, 
-consistent codebase that is both developers-friendly.
 
 ---
 
-## Current Status
+**SwiftEVM** is a modular EVM implementation for the Ethereum protocol, written in pure Swift. It is designed for low-overhead 
+integration into blockchain nodes, embedded systems, and Layer-2 solutions requiring deterministic EVM bytecode execution.
 
-- ✅ **EVM Machine**: Fully implemented
-- ✅ **EVM Core**: ~90% complete
-- ⏳ **EVM Runtime**: Under active development
-- 🔜 **Ethereum Hard Forks**:
-  - Berlin
-  - London
-  - Shanghai
-  - Cancun
-  - Prague
-  - Osaka
+Unlike general-purpose wrappers, SwiftEVM offers a ground-up implementation of the **Yellow Paper** specifications, optimizing 
+critical paths (dispatch loop, stack operations, and memory expansion) for Apple Silicon and other architectures.
 
-## Integration & Future Plans
+### 📦 Swift Package Index
+The project is indexed and verified on the Swift Package Index. You can view detailed build compatibility reports across platforms 
+and generated documentation here:
 
-- **Blockchain Ecosystem**: Planned integration with [NEAR Protocol](https://near.org/) to broaden 
-blockchain interoperability.
-- **Key Environments**:
-  - **Embedded Systems**: Bring blockchain capabilities to resource-constrained devices.
-  - **WebAssembly (WASM)**: Run the EVM directly in WASM environments.
-  - **Mobile & Desktop**: Seamlessly integrate decentralized functionalities into **iOS**, **macOS**, and other `Swift`-based platforms.
+[<img src="https://img.shields.io/badge/View_on-Swift_Package_Index-F05138?logo=swift&logoColor=white" alt="Swift Package Index" />](https://swiftpackageindex.com/mrLSD/swift-evm)
 
-## Benefits
+---
 
-- **Pure Swift Implementation**: Leverage Swift’s performance and safety to integrate EVM directly into your projects.
-- **Cross-Platform Compatibility**: Enjoy hassle-free deployment across multiple platforms.
-- **Open Source**: Join a vibrant community—contribute, collaborate, and help shape the project’s future.
-- **Customization & Extensibility**: Easily adapt and extend the EVM functionality to meet specific project needs.
+## Key Features
 
-## What’s included?
+*   **Yellow Paper Compliant:** Strict adherence to Ethereum protocol specifications.
+*   **Zero-Copy Architecture:** Optimized memory handling to minimize ARC overhead in hot execution paths.
+*   **Platform Agnostic:** Runs natively on **macOS**, **iOS**, **Linux**, and **WebAssembly (wasm32)** and many others.
+*   **Uncompromising Reliability:** The codebase maintains **100% unit test coverage**. Every opcode, edge case, and gas calculation path is rigorously tested, ensuring production-grade stability and correctness rarely seen in early-stage implementations.
+*   **Deterministic Execution:** 100% reproducible state transitions.
+*   **Modular Design:** Decoupled components (Gasometer, Stack, Memory, Interpreter) allowing for custom extensions and instrumentation.
 
-- 🔢 **`PrimitiveTypes` Library**: Implements high-performance math tailored specifically for Ethereum’s needs—offering
-functionalities that generic libraries like `BigInt` and other general-purpose solutions can’t provide. 
-It’s designed and optimized for the unique demands of the `EVM`.
+## Architecture
 
-- ⚙️ **`EVM` Library**: Contains the actual implementation of the **Ethereum Virtual Machine**, powering EVM bytecode execution seamlessly.
+SwiftEVM is composed of specialized modules to ensure performance and correctness:
 
-- 🔍 **EVM Tracing Support**: Provides robust tracing capabilities to assist developers in debugging and optimizing EVM execution.
+### 1. `PrimitiveTypes` (Arithmetic Core)
+A specialized math library tailored for the EVM's 256-bit word size.
+*   **Why not BigInt?** Generic BigInt libraries introduce overhead for dynamic allocation and do not natively handle EVM-specific behaviors (e.g., specific overflow wrapping, two's complement representation for `SDIV`/`SMOD`).
+*   **UInt128 Support:** Leverages Swift 6 native `UInt128` for optimized high-precision calculations.
 
-## How to use
+### 2. `EVM` (Core Execution)
+The heart of the virtual machine.
+*   **Interpreter:** Optimized opcode dispatch loop.
+*   **Stack:** Fixed-size, high-performance LIFO structure with boundary safety checks.
+*   **Memory:** Dynamic linear memory with gas-metered expansion logic.
+*   **Gasometer:** Exact gas accounting for opcodes, intrinsic costs, and memory expansion.
 
-📱 Swift Support: Minimum supported version is `Swift 6`. 
-This is due the new capabilities of `Swift 6`, including support for the `UInt128` type.
+### 3. `Tracing`
+Granular execution tracing for debugging and state analysis. Supports standard JSON-RPC trace formats and custom hooks for indexers.
 
-Use as dependency:
+---
+
+## Implementation Status & Roadmap
+
+The project targets the Ethereum specification upgrades listed below.
+
+| Component | Status | Notes |
+| :--- | :--- | :--- |
+| **Machine State** | ✅ Complete | Stack, Memory, Context, Gas |
+| **Opcode Logic** | ✅ Complete | Arithmetic, Bitwise, Control Flow, System |
+| **Precompiles** | 🔄 In Progress | ECRecover, SHA256, RIPEMD160, Identity etc. |
+| **Runtime** | 🛠 Active Dev | Transaction context, Block environment |
+| **zkEVM** | 🔜 Planned | Guest program, Block validation & execution |
+
+### Compliance & Verification
+*  ✅ **Unit Testing:** 100% Code Coverage enforced by CI and CodeCov.
+*  🔜 **Ethereum State Tests:** Planned full integration with the official Ethereum Test Suite (execution-spec-tests) to guarantee pixel-perfect consensus compatibility.
+
+
+### Hard Fork Support
+Targeting compliance with the following upgrades:
+*   ✅ **Berlin**
+*   ✅ **London**
+*   ✅ **Shanghai**
+*   ✅ **Cancun**
+*   🔜 **Prague / Osaka** (*Planned*)
+
+---
+
+## Integration
+
+### Requirements
+*   **Swift 6.0+** (Required for `UInt128` and concurrency features).
+*   **OS:** macOS 14+, iOS 17+, Ubuntu 22.04+, or any environment supporting Swift 6.
+
+### Swift Package Manager
+Add SwiftEVM to your `Package.swift` dependencies:
+
 ```swift
-    dependencies: [
-        .package(url: "https://github.com/mrLSD/swift-evm.git", from: "0.5.21")
-    ]
+dependencies: [
+    .package(url: "https://github.com/mrLSD/swift-evm.git", from: "0.5.23")
+]
 ```
 
-## How to contribute
+## Contributing
 
-- ✅ All Tests Passing: Ensure that all tests run successfully.
-- 📊 100% Test Coverage: Verify that your tests cover the entire codebase.
-- 🛠️ SwiftFormat: Confirm that the `swiftformat` command completes.
-- 🔧 SwiftLint: Confirm that the `swiftlint` command executes successfully.
+We welcome contributions from EVM experts and systems engineers. To maintain the integrity of the consensus engine, we enforce strict quality gates:
 
-### Unit tests
+1.  **100% Test Coverage:** No code merges without full unit test coverage. Edge cases must be proven.
+2.  **Linting:** Code must pass `swiftlint` and be formatted via `swiftformat`.
+3.  **Performance:** PRs affecting the hot loop must demonstrate no regression in benchmarks.
 
-You can run:
-- `swift test`
-- `./Tests/cli-test-runner` - simple yet powerful tool to show tests errors
-- `swift test | xcbeautify` - swift tests xcbeautify
+### Development Environment
 
-### LICENSE: [MIT](LICENSE)
+```bash
+# Run test suite
+swift test
+
+# Run tests with prettified output
+swift test | xcbeautify
+
+# Check coverage (requires llvm-cov)
+./Scripts/coverage.sh
+```
+
+---
+
+## License
+
+SwiftEVM is released under the [MIT License](LICENSE).

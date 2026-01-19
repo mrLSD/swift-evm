@@ -88,6 +88,18 @@ final class ArithmeticAddSpec: QuickSpec {
                     expect(overflow).to(beFalse())
                 }
 
+                it("explicit sum operation returns correct sum with carry without overflow") {
+                    let a = U256(from: [0, 0, 0, UInt64.max - 1])
+                    let b = U256(from: [0, 0, 0, 2])
+                    let expectedSum = U256(from: [0, 0, 0, 0])
+
+                    let result = a + b
+
+                    expect(result).to(equal(expectedSum))
+                }
+            }
+
+            context("when adding two numbers with carry and overflow") {
                 it("returns correct sum with carry and overflow") {
                     let a = U256(from: [0, 0, 0, UInt64.max - 1])
                     let b = U256(from: [0, 0, 0, 2])
@@ -97,16 +109,6 @@ final class ArithmeticAddSpec: QuickSpec {
 
                     expect(result).to(equal(expectedSum))
                     expect(overflow).to(beTrue())
-                }
-
-                it("explicit sum operation returns correct sum with carry without overflow") {
-                    let a = U256(from: [0, 0, 0, UInt64.max - 1])
-                    let b = U256(from: [0, 0, 0, 2])
-                    let expectedSum = U256(from: [0, 0, 0, 0])
-
-                    let result = a + b
-
-                    expect(result).to(equal(expectedSum))
                 }
             }
 

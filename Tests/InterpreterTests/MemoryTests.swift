@@ -13,7 +13,7 @@ final class InterpreterMemorySpec: QuickSpec {
                 }
             }
 
-            context("length after  resize") {
+            context("length after resize") {
                 it("should return the correct length for double resize with same length") {
                     let memory = Memory(limit: 100)
                     expect(memory.effectiveLength).to(equal(0))

@@ -5,7 +5,7 @@ import Quick
 
 final class JumpTableSpec: QuickSpec {
     override class func spec() {
-        describe("Machine JumptTable") {
+        describe("Machine JumpTable") {
             it("check opcodes index and out of code size") {
                 let m = TestMachine.machine(opcodes: [Opcode.ADD, Opcode.PC, Opcode.SUB], gasLimit: 10)
                 for i in 0 ..< m.codeSize + 5 {

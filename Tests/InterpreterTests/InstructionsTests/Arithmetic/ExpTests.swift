@@ -10,7 +10,7 @@ final class InstructionExpSpec: QuickSpec {
 
     override class func spec() {
         describe("Instruction Exp") {
-            it("2 exp 6") {
+            it("2 exp 3 without hard fork") {
                 let m = Self.machine
 
                 _ = m.stack.push(value: U256(from: 3))
@@ -27,7 +27,7 @@ final class InstructionExpSpec: QuickSpec {
                 expect(m.gas.remaining).to(equal(15))
             }
 
-            it("2 exp 6 for Tangerine hard fork") {
+            it("2 exp 3 for Tangerine hard fork") {
                 let m = TestMachine.machine(opcodes: [Opcode.EXP], gasLimit: 75, memoryLimit: 1024, hardFork: .Tangerine)
 
                 _ = m.stack.push(value: U256(from: 3))
@@ -95,23 +95,23 @@ final class InstructionExpSpec: QuickSpec {
                 expect(m.stack.length).to(equal(2))
                 expect(m.gas.remaining).to(equal(2))
             }
-        }
 
-        it("check stack") {
-            let m = Self.machine
-            m.evalLoop()
-            expect(m.machineStatus).to(equal(.Exit(.Error(.StackUnderflow))))
+            it("check stack") {
+                let m = Self.machine
+                m.evalLoop()
+                expect(m.machineStatus).to(equal(.Exit(.Error(.StackUnderflow))))
 
-            let m1 = Self.machine
-            _ = m1.stack.push(value: U256(from: 5))
-            m1.evalLoop()
-            expect(m1.machineStatus).to(equal(.Exit(.Error(.StackUnderflow))))
+                let m1 = Self.machine
+                _ = m1.stack.push(value: U256(from: 5))
+                m1.evalLoop()
+                expect(m1.machineStatus).to(equal(.Exit(.Error(.StackUnderflow))))
 
-            let m2 = Self.machine
-            _ = m2.stack.push(value: U256(from: 2))
-            _ = m2.stack.push(value: U256(from: 2))
-            m2.evalLoop()
-            expect(m2.machineStatus).to(equal(.Exit(.Success(.Stop))))
+                let m2 = Self.machine
+                _ = m2.stack.push(value: U256(from: 2))
+                _ = m2.stack.push(value: U256(from: 2))
+                m2.evalLoop()
+                expect(m2.machineStatus).to(equal(.Exit(.Success(.Stop))))
+            }
         }
     }
 }
