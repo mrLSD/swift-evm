@@ -230,7 +230,7 @@ public class Trace {
                     let s = stackValues.data.map { value -> String in
                         // Check if it's possible to print number as UInt for short output
                         if value < U256(from: UInt64(UInt.max)) {
-                            String(format: "%x", value.getUInt.map { $0 } ?? 0)
+                            String(format: "%x", value.getUInt ?? 0)
                         } else {
                             "0x\(value)"
                         }

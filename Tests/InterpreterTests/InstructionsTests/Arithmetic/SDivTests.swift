@@ -16,14 +16,14 @@ final class InstructionSDivSpec: QuickSpec {
                 _ = m.stack.push(value: U256(from: 2))
                 _ = m.stack.push(value: U256(from: 5))
                 m.evalLoop()
-                let result = m.stack.pop()
+                let result = m.stack.peek(indexFromTop: 0)
 
                 expect(m.machineStatus).to(equal(.Exit(.Success(.Stop))))
                 expect(result).to(beSuccess { value in
                     expect(value).to(equal(U256(from: 2)))
                 })
-                expect(m.stack.length).to(equal(0))
-                expect(m.gas.remaining).to(equal(GasConstant.LOW))
+                expect(m.stack.length).to(equal(1))
+                expect(m.gas.remaining).to(equal(10 - GasConstant.LOW))
             }
 
             it("7/-2") {
@@ -32,30 +32,47 @@ final class InstructionSDivSpec: QuickSpec {
                 _ = m.stack.push(value: I256(from: [2, 0, 0, 0], signExtend: true).toU256)
                 _ = m.stack.push(value: U256(from: 7))
                 m.evalLoop()
-                let result = m.stack.pop()
+                let result = m.stack.peek(indexFromTop: 0)
 
                 expect(m.machineStatus).to(equal(.Exit(.Success(.Stop))))
                 expect(result).to(beSuccess { value in
                     expect(value).to(equal(I256(from: [3, 0, 0, 0], signExtend: true).toU256))
                 })
-                expect(m.stack.length).to(equal(0))
-                expect(m.gas.remaining).to(equal(GasConstant.LOW))
+                expect(m.stack.length).to(equal(1))
+                expect(m.gas.remaining).to(equal(10 - GasConstant.LOW))
             }
 
-            it("7/0") {
+            it("7 / 0") {
                 let m = Self.machine
 
                 _ = m.stack.push(value: U256.ZERO)
                 _ = m.stack.push(value: U256(from: 7))
+
                 m.evalLoop()
-                let result = m.stack.pop()
+                let result = m.stack.peek(indexFromTop: 0)
 
                 expect(m.machineStatus).to(equal(.Exit(.Success(.Stop))))
                 expect(result).to(beSuccess { value in
                     expect(value).to(equal(U256.ZERO))
                 })
-                expect(m.stack.length).to(equal(0))
-                expect(m.gas.remaining).to(equal(GasConstant.LOW))
+                expect(m.stack.length).to(equal(1))
+                expect(m.gas.remaining).to(equal(10 - GasConstant.LOW))
+            }
+
+            it("-7 / 0") {
+                let m = Self.machine
+
+                _ = m.stack.push(value: U256.ZERO)
+                _ = m.stack.push(value: I256(from: [7, 0, 0, 0], signExtend: true).toU256)
+                m.evalLoop()
+                let result = m.stack.peek(indexFromTop: 0)
+
+                expect(m.machineStatus).to(equal(.Exit(.Success(.Stop))))
+                expect(result).to(beSuccess { value in
+                    expect(value).to(equal(U256.ZERO))
+                })
+                expect(m.stack.length).to(equal(1))
+                expect(m.gas.remaining).to(equal(10 - GasConstant.LOW))
             }
 
             it("`a/b`, when `b` not in the stack") {
@@ -84,15 +101,15 @@ final class InstructionSDivSpec: QuickSpec {
                 _ = m.stack.push(value: U256(from: [UInt64.max - 1, 0, 0, 0]))
 
                 m.evalLoop()
-                let result = m.stack.pop()
+                let result = m.stack.peek(indexFromTop: 0)
 
                 expect(m.machineStatus).to(equal(.Exit(.Success(.Stop))))
                 expect(result).to(beSuccess { value in
                     // Since |Dividend| (~2^64) < |Divisor| (~2^192), the result is 0.
                     expect(value).to(equal(U256.ZERO))
                 })
-                expect(m.stack.length).to(equal(0))
-                expect(m.gas.remaining).to(equal(GasConstant.LOW))
+                expect(m.stack.length).to(equal(1))
+                expect(m.gas.remaining).to(equal(10 - GasConstant.LOW))
             }
 
             it("divides large positive by -2 (SDIV)") {
@@ -105,7 +122,7 @@ final class InstructionSDivSpec: QuickSpec {
                 _ = m.stack.push(value: U256(from: [UInt64.max - 1, 0, 0, 0]))
 
                 m.evalLoop()
-                let result = m.stack.pop()
+                let result = m.stack.peek(indexFromTop: 0)
 
                 let expectedLow: UInt64 = 0x8000000000000001
                 let expectedHigh = UInt64.max
@@ -114,6 +131,8 @@ final class InstructionSDivSpec: QuickSpec {
                 expect(result).to(beSuccess { value in
                     expect(value).to(equal(expectedValue))
                 })
+                expect(m.stack.length).to(equal(1))
+                expect(m.gas.remaining).to(equal(10 - GasConstant.LOW))
             }
 
             it("returns zero when dividend is smaller than divisor (SDIV)") {
@@ -123,14 +142,14 @@ final class InstructionSDivSpec: QuickSpec {
                 _ = m.stack.push(value: U256(from: 10))
 
                 m.evalLoop()
-                let result = m.stack.pop()
+                let result = m.stack.peek(indexFromTop: 0)
 
                 expect(m.machineStatus).to(equal(.Exit(.Success(.Stop))))
                 expect(result).to(beSuccess { value in
                     expect(value).to(equal(U256.ZERO))
                 })
-                expect(m.stack.length).to(equal(0))
-                expect(m.gas.remaining).to(equal(GasConstant.LOW))
+                expect(m.stack.length).to(equal(1))
+                expect(m.gas.remaining).to(equal(10 - GasConstant.LOW))
             }
 
             it("0 / 5") {
@@ -139,14 +158,14 @@ final class InstructionSDivSpec: QuickSpec {
                 _ = m.stack.push(value: U256.ZERO)
                 _ = m.stack.push(value: U256(from: 5))
                 m.evalLoop()
-                let result = m.stack.pop()
+                let result = m.stack.peek(indexFromTop: 0)
 
                 expect(m.machineStatus).to(equal(.Exit(.Success(.Stop))))
                 expect(result).to(beSuccess { value in
                     expect(value).to(equal(U256.ZERO))
                 })
-                expect(m.stack.length).to(equal(0))
-                expect(m.gas.remaining).to(equal(GasConstant.LOW))
+                expect(m.stack.length).to(equal(1))
+                expect(m.gas.remaining).to(equal(10 - GasConstant.LOW))
             }
 
             it("with OutOfGas result") {
@@ -165,17 +184,23 @@ final class InstructionSDivSpec: QuickSpec {
                 let m = Self.machine
                 m.evalLoop()
                 expect(m.machineStatus).to(equal(.Exit(.Error(.StackUnderflow))))
+                expect(m.stack.length).to(equal(0))
+                expect(m.gas.remaining).to(equal(10))
 
                 let m1 = Self.machine
                 _ = m1.stack.push(value: U256(from: 5))
                 m1.evalLoop()
                 expect(m1.machineStatus).to(equal(.Exit(.Error(.StackUnderflow))))
+                expect(m1.stack.length).to(equal(1))
+                expect(m1.gas.remaining).to(equal(10))
 
                 let m2 = Self.machine
                 _ = m2.stack.push(value: U256(from: 2))
                 _ = m2.stack.push(value: U256(from: 2))
                 m2.evalLoop()
                 expect(m2.machineStatus).to(equal(.Exit(.Success(.Stop))))
+                expect(m2.stack.length).to(equal(1))
+                expect(m2.gas.remaining).to(equal(10 - GasConstant.LOW))
             }
         }
     }

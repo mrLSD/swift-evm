@@ -8,8 +8,8 @@ final class InstructionCallDataLoadSpec: QuickSpec {
         describe("Instruction CALLDATALOAD") {
             it("index = 2") {
                 let callData: [UInt8] = [0x01, 0x02, 0x03, 0x04, 0x05]
-                 let m = TestMachine.machine(data: callData, opcode: Opcode.CALLDATALOAD, gasLimit: 10)
-                let _ = m.stack.push(value: U256(from: 2))
+                let m = TestMachine.machine(data: callData, opcode: Opcode.CALLDATALOAD, gasLimit: 10)
+                _ = m.stack.push(value: U256(from: 2))
 
                 m.evalLoop()
 
@@ -28,8 +28,8 @@ final class InstructionCallDataLoadSpec: QuickSpec {
 
             it("index more than int data count") {
                 let callData: [UInt8] = [0x01, 0x02, 0x03, 0x04, 0x05]
-                 let m = TestMachine.machine(data: callData, opcode: Opcode.CALLDATALOAD, gasLimit: 10)
-                let _ = m.stack.push(value: U256(from: 6))
+                let m = TestMachine.machine(data: callData, opcode: Opcode.CALLDATALOAD, gasLimit: 10)
+                _ = m.stack.push(value: U256(from: 6))
 
                 m.evalLoop()
 
@@ -45,8 +45,8 @@ final class InstructionCallDataLoadSpec: QuickSpec {
 
             it("index more than int max size") {
                 let callData: [UInt8] = [0x01, 0x02, 0x03, 0x04, 0x05]
-                 let m = TestMachine.machine(data: callData, opcode: Opcode.CALLDATALOAD, gasLimit: 10)
-                let _ = m.stack.push(value: U256(from: [UInt64.max, 1, 0, 0]))
+                let m = TestMachine.machine(data: callData, opcode: Opcode.CALLDATALOAD, gasLimit: 10)
+                _ = m.stack.push(value: U256(from: [UInt64.max, 1, 0, 0]))
 
                 m.evalLoop()
 
@@ -61,8 +61,8 @@ final class InstructionCallDataLoadSpec: QuickSpec {
             }
 
             it("with OutOfGas result") {
-                 let m = TestMachine.machine(data: [], opcode: Opcode.CALLDATALOAD, gasLimit: 1)
-                let _ = m.stack.push(value: U256(from: 5))
+                let m = TestMachine.machine(data: [], opcode: Opcode.CALLDATALOAD, gasLimit: 1)
+                _ = m.stack.push(value: U256(from: 5))
 
                 m.evalLoop()
 
@@ -73,7 +73,7 @@ final class InstructionCallDataLoadSpec: QuickSpec {
 
             it("check stack underflow") {
                 let callData: [UInt8] = [0x01, 0x02, 0x03, 0x04, 0x05]
-                 let m = TestMachine.machine(data: callData, opcode: Opcode.CALLDATALOAD, gasLimit: 10)
+                let m = TestMachine.machine(data: callData, opcode: Opcode.CALLDATALOAD, gasLimit: 10)
 
                 m.evalLoop()
 

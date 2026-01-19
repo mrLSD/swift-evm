@@ -109,7 +109,7 @@ final class InterpreterMemorySpec: QuickSpec {
                     expect(memory.get(offset: 32, size: 32)).to(equal([UInt8](repeating: 0, count: 32)))
                 }
 
-                it("check is new size is filled with zeros") {
+                it("resize with Int.max offset returns false") {
                     let memory = Memory(limit: 100)
                     let res1 = memory.resize(offset: Int.max, size: 3)
                     expect(res1).to(beFalse())

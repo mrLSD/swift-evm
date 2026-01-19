@@ -12,18 +12,18 @@ final class InstructionPushSpec: QuickSpec {
                     let number: [UInt8] = Array(1 ... n)
                     code.append(contentsOf: number)
 
-                     let m = TestMachine.machine(rawCode: code, gasLimit: 10)
+                    let m = TestMachine.machine(rawCode: code, gasLimit: 10)
 
                     m.evalLoop()
-                    let result = m.stack.pop()
+                    let result = m.stack.peek(indexFromTop: 0)
 
                     expect(m.machineStatus).to(equal(.Exit(.Success(.Stop))))
                     expect(result).to(beSuccess { value in
                         expect(value).to(equal(U256.fromBigEndian(from: number)))
                     })
                     expect(m.pc).to(equal(1 + Int(n)))
-                    expect(m.stack.length).to(equal(0))
-                    expect(m.gas.remaining).to(equal(7))
+                    expect(m.stack.length).to(equal(1))
+                    expect(m.gas.remaining).to(equal(10 - GasConstant.VERYLOW))
                 }
             }
 
@@ -44,23 +44,23 @@ final class InstructionPushSpec: QuickSpec {
                         (0 ..< n).map { index in index < 10 ? UInt8(index + 1) : 0 }
                     }
 
-                     let m = TestMachine.machine(rawCode: code, gasLimit: 10)
+                    let m = TestMachine.machine(rawCode: code, gasLimit: 10)
 
                     m.evalLoop()
-                    let result = m.stack.pop()
+                    let result = m.stack.peek(indexFromTop: 0)
 
                     expect(m.machineStatus).to(equal(.Exit(.Success(.Stop))))
                     expect(result).to(beSuccess { value in
                         expect(value).to(equal(U256.fromBigEndian(from: expectedNumber)))
                     })
                     expect(m.pc).to(equal(1 + Int(n)))
-                    expect(m.stack.length).to(equal(0))
-                    expect(m.gas.remaining).to(equal(7))
+                    expect(m.stack.length).to(equal(1))
+                    expect(m.gas.remaining).to(equal(10 - GasConstant.VERYLOW))
                 }
             }
 
             it("with OutOfGas result") {
-                 let m = TestMachine.machine(opcode: Opcode.PUSH1, gasLimit: 1)
+                let m = TestMachine.machine(opcode: Opcode.PUSH1, gasLimit: 1)
 
                 m.evalLoop()
 
@@ -71,15 +71,15 @@ final class InstructionPushSpec: QuickSpec {
         }
 
         it("check stack overflow") {
-             let m = TestMachine.machine(opcode: Opcode.PUSH1, gasLimit: 10)
+            let m = TestMachine.machine(opcode: Opcode.PUSH1, gasLimit: 10)
             for _ in 0 ..< m.stack.limit {
-                let _ = m.stack.push(value: U256(from: 5))
+                _ = m.stack.push(value: U256(from: 5))
             }
 
             m.evalLoop()
             expect(m.machineStatus).to(equal(.Exit(.Error(.StackOverflow))))
             expect(m.stack.length).to(equal(m.stack.limit))
-            expect(m.gas.remaining).to(equal(7))
+            expect(m.gas.remaining).to(equal(10))
         }
     }
 }

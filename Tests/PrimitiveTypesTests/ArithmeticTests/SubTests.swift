@@ -18,7 +18,7 @@ final class ArithmeticSubSpec: QuickSpec {
                     expect(selfNumber-value).to(equal(result))
                 }
 
-                it("success substitution works for a -= operation") {
+                it("success subtraction works for a -= operation") {
                     var a = U256(from: 5)
                     let b = U256(from: 3)
                     a -= b

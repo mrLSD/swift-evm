@@ -1,12 +1,19 @@
+/// `H256` is a fixed-size array of 32 bytes, commonly used to represent hashes in blockchain applications.
 public struct H256: FixedArray, Hashable {
+    /// Internal bytes storage
     private var bytes: [UInt8]
 
+    /// Number of bytes in H256
     public static let numberBytes: UInt8 = 32
+    /// Max value of H256
     public static let MAX: Self = getMax
+    /// Zero value of H256
     public static let ZERO: Self = getZero
 
+    /// Bytes of H256
     public var BYTES: [UInt8] { bytes }
 
+    /// Initializer from bytes array
     public init(from bytes: [UInt8]) {
         precondition(bytes.count == Self.numberBytes, "H256 must be initialized with \(Self.numberBytes) bytes array.")
         self.bytes = bytes
@@ -30,6 +37,7 @@ public struct H256: FixedArray, Hashable {
         }
     }
 
+    /// Hashable conformance of H256
     public func hash(into hasher: inout Hasher) {
         hasher.combine(BYTES)
     }
