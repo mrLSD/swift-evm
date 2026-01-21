@@ -79,7 +79,7 @@ public class MemoryState {
             // Optimized merge warmed accounts and storages
             if let otherAccessed = other.accessed {
                 if accessed == nil {
-                    accessed = otherAccessed // Это копирование указателей на коллекции (дешево)
+                    accessed = otherAccessed
                 } else {
                     accessed?.merge(with: otherAccessed)
                 }
@@ -109,7 +109,9 @@ public class MemoryState {
         }
 
         /// Mark multiple addresses as accessed, if access lists are enabled.
-        public mutating func accessAddresses<I: IteratorProtocol>(_ addresses: inout I) where I.Element == H160 {
+        public mutating func accessAddresses<I: IteratorProtocol>(_ addresses: inout I)
+            where I.Element == H160
+        {
             accessed?.accessAddresses(&addresses)
         }
 
@@ -119,7 +121,9 @@ public class MemoryState {
         }
 
         /// Mark multiple storage slots as accessed, if access lists are enabled.
-        public mutating func accessStorages<I: IteratorProtocol>(_ storages: inout I) where I.Element == Storage {
+        public mutating func accessStorages<I: IteratorProtocol>(_ storages: inout I)
+            where I.Element == Storage
+        {
             accessed?.addStorages(&storages)
         }
 
@@ -159,7 +163,9 @@ public class MemoryState {
         }
 
         /// Initialize `Accessed` with predefined accessed addresses, storages and authority list.
-        public init(accessedAddresses: Set<H160>, accessedStorage: Set<Storage>, authority: [H160: H160]) {
+        public init(
+            accessedAddresses: Set<H160>, accessedStorage: Set<Storage>, authority: [H160: H160]
+        ) {
             self.addresses = accessedAddresses
             self.storage = accessedStorage
             self.authority = authority
@@ -176,14 +182,18 @@ public class MemoryState {
         }
 
         /// Add addresses to the accessed address list.
-        mutating func accessAddresses<I: IteratorProtocol>(_ addresses: inout I) where I.Element == H160 {
+        mutating func accessAddresses<I: IteratorProtocol>(_ addresses: inout I)
+            where I.Element == H160
+        {
             while let address = addresses.next() {
                 self.addresses.insert(address)
             }
         }
 
         /// Add storages data to the accessed storage list.
-        mutating func addStorages<I: IteratorProtocol>(_ storages: inout I) where I.Element == Storage {
+        mutating func addStorages<I: IteratorProtocol>(_ storages: inout I)
+            where I.Element == Storage
+        {
             while let storage = storages.next() {
                 self.storage.insert(storage)
             }
@@ -306,7 +316,9 @@ public class MemoryState {
 
     /// Check is storage slot is cold by address and key.
     public func isStorageCold(address: H160, key: H256) -> Bool {
-        return recursiveIsCold { accessed in accessed.storage.contains(Storage(address: address, index: key)) }
+        return recursiveIsCold { accessed in
+            accessed.storage.contains(Storage(address: address, index: key))
+        }
     }
 
     /// Check recursively if account or storage is cold.
@@ -420,6 +432,7 @@ public class MemoryState {
         swap(&deletes, &other.deletes)
         swap(&creates, &other.creates)
         swap(&parent, &other.parent)
+        swap(&metadata, &other.metadata)
     }
 
     /// Enter a new `substate` by creating a child `MemoryState` with the current state as its parent.
@@ -451,6 +464,9 @@ public class MemoryState {
 
         // 1. Swap back: 'self' becomes the parent, 'exited' variable holds the substate data
         swapState(with: exited)
+
+        // Break the self-referencing cycle created by swapping parent pointers
+        exited.parent = nil
 
         // 2. Process metadata (gas and warmed access lists)
         metadata.swallowCommit(from: exited.metadata)
@@ -500,10 +516,13 @@ public class MemoryState {
     ///
     /// - Throws: `fatalError` if called on a root state.
     public func exitRevert() {
-        guard let exited = parent else { fatalError("Cannot discard on root substate") }
+        guard let exited = parent else { fatalError("Cannot revert on root substate") }
 
         // Swap back: restore parent data to 'self', substate moves to 'exited'
         swapState(with: exited)
+
+        // Break the self-referencing cycle created by swapping parent pointers
+        exited.parent = nil
 
         // Swallow only gas stipend from the reverted substate
         metadata.swallowRevert(other: exited.metadata)
@@ -517,6 +536,9 @@ public class MemoryState {
 
         // Swap back: restore parent data to 'self'
         swapState(with: exited)
+
+        // Break the self-referencing cycle created by swapping parent pointers
+        exited.parent = nil
     }
 
     /// Transfer value between two accounts.
