@@ -3,7 +3,7 @@ public extension BigUInt {
     /// Performs a bitwise left shift (SHL)
     @inline(__always)
     func shiftLeft(_ shift: Int) -> Self {
-        if shift == 0 {
+        if shift <= 0 {
             return self
         }
         var result = [UInt64](repeating: 0, count: self.BYTES.count)
@@ -27,7 +27,7 @@ public extension BigUInt {
     /// Performs a bitwise logical right shift (SHR)
     @inline(__always)
     func shiftRight(_ shift: Int) -> Self {
-        if shift == 0 {
+        if shift <= 0 {
             return self
         }
         var result = [UInt64](repeating: 0, count: self.BYTES.count)

@@ -84,7 +84,7 @@ enum ArithmeticInstructions {
         // After stack verification this guard will always succeed. But we keep it for safety and clarity.
         guard let op1 = m.stackPop(), let op2 = m.stackPop() else { return }
 
-        let newValue = op2.isZero ? op2 : op1 / op2
+        let newValue = op2.isZero ? U256.ZERO : op1 / op2
         m.stackPush(value: newValue)
     }
 
@@ -103,7 +103,7 @@ enum ArithmeticInstructions {
         // After stack verification this guard will always succeed. But we keep it for safety and clarity.
         guard let op1 = m.stackPop(), let op2 = m.stackPop() else { return }
 
-        let newValue = op2.isZero ? op2 : op1 % op2
+        let newValue = op2.isZero ? U256.ZERO : op1 % op2
         m.stackPush(value: newValue)
     }
 
@@ -124,7 +124,7 @@ enum ArithmeticInstructions {
 
         let iOp1 = I256.fromU256(op1)
         let iOp2 = I256.fromU256(op2)
-        let newValue = iOp1 / iOp2
+        let newValue = iOp2.isZero ? I256.ZERO : iOp1 / iOp2
         m.stackPush(value: newValue.toU256)
     }
 
@@ -145,7 +145,7 @@ enum ArithmeticInstructions {
 
         let iOp1 = I256.fromU256(op1)
         let iOp2 = I256.fromU256(op2)
-        let newValue = iOp2.isZero ? iOp2 : iOp1 % iOp2
+        let newValue = iOp2.isZero ? I256.ZERO : iOp1 % iOp2
         m.stackPush(value: newValue.toU256)
     }
 

@@ -4,9 +4,12 @@ import PrimitiveTypes
 enum HostInstructions {
     /// Pushes the balance of the account at the given address onto the stack.
     static func balance(machine m: Machine) {
-        guard let address = m.stackPopH256()?.toH160() else {
+        if !m.verifyStack(pop: 1) {
             return
         }
+
+        // After stack verification this guard will always succeed. But we keep it for safety and clarity.
+        guard let address = m.stackPopH256()?.toH160() else { return }
 
         // Calculate gas depending on hard fork
         var gasCost: UInt64 = 0
@@ -37,6 +40,10 @@ enum HostInstructions {
             return
         }
 
+        if !m.verifyStack(pop: 0, push: 1) {
+            return
+        }
+
         if !m.gasRecordCost(cost: GasConstant.LOW) {
             return
         }
@@ -46,6 +53,10 @@ enum HostInstructions {
 
     /// Pushes the gas price of the transaction onto the stack.
     static func gasPrice(machine m: Machine) {
+        if !m.verifyStack(pop: 0, push: 1) {
+            return
+        }
+
         if !m.gasRecordCost(cost: GasConstant.BASE) {
             return
         }
@@ -55,6 +66,10 @@ enum HostInstructions {
 
     /// Pushes the address of the originator (sender) of the transaction onto the stack.
     static func origin(machine m: Machine) {
+        if !m.verifyStack(pop: 0, push: 1) {
+            return
+        }
+
         if !m.gasRecordCost(cost: GasConstant.BASE) {
             return
         }
@@ -71,6 +86,10 @@ enum HostInstructions {
             return
         }
 
+        if !m.verifyStack(pop: 0, push: 1) {
+            return
+        }
+
         if !m.gasRecordCost(cost: GasConstant.BASE) {
             return
         }
@@ -80,6 +99,10 @@ enum HostInstructions {
 
     /// Pushes the address of the miner (coinbase) of the current block onto the stack.
     static func coinbase(machine m: Machine) {
+        if !m.verifyStack(pop: 0, push: 1) {
+            return
+        }
+
         if !m.gasRecordCost(cost: GasConstant.BASE) {
             return
         }

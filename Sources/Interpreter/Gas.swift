@@ -101,12 +101,14 @@ struct MemoryGas {
         guard numWords > self.numWords else {
             return .success(.Unchanged)
         }
-        self.numWords = numWords
 
         let (newGasCost, overflow1) = GasCost.memoryGas(numWords: numWords)
         if overflow1 {
             return .failure(.OutOfGas)
         }
+
+        // Set numWords only after all checks passed
+        self.numWords = numWords
 
         // As we checked `numWords`, subtraction can't overflow
         let cost = newGasCost - self.gasCost

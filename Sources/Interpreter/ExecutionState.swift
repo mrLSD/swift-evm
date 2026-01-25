@@ -1,6 +1,6 @@
 import PrimitiveTypes
 
-final class ExecutionState {
+public final class ExecutionState {
     struct StorageKey: Hashable {
         let address: H160
         let key: H256
@@ -20,7 +20,7 @@ final class ExecutionState {
     /// Execution state call depth
     var depth: UInt16 = 0
 
-    init() {
+    public init() {
         self.accessed = AccessedState(
             addresses: Set<H160>(),
             code: Set<H256>(),

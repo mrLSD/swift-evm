@@ -1,4 +1,3 @@
-
 @testable import Interpreter
 import Nimble
 import PrimitiveTypes
@@ -26,7 +25,7 @@ final class InstructionSelfbalanceSpec: QuickSpec {
                 m.evalLoop()
                 expect(m.machineStatus).to(equal(.Exit(.Error(.StackOverflow))))
                 expect(m.stack.length).to(equal(m.stack.limit))
-                expect(m.gas.remaining).to(equal(5))
+                expect(m.gas.remaining).to(equal(10))
             }
 
             it("Successful Istanbul hard fork") {

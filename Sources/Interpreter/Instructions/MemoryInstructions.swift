@@ -2,14 +2,20 @@ import PrimitiveTypes
 
 /// EVM Memory instructions
 enum MemoryInstructions {
+    /// Loads a 32-byte word from memory at the byte offset popped from the stack and pushes it as a `U256`.
+    ///
+    /// Requires 1 stack item; consumes `GasConstant.VERYLOW`; resizes memory to cover [`offset`, `offset + 32`) and charges the corresponding memory expansion gas.
     static func mload(machine m: Machine) {
+        if !m.verifyStack(pop: 1) {
+            return
+        }
+
         if !m.gasRecordCost(cost: GasConstant.VERYLOW) {
             return
         }
 
-        guard let rawIndex = m.stackPop() else {
-            return
-        }
+        // After stack verification this guard will always succeed. But we keep it for safety and clarity.
+        guard let rawIndex = m.stackPop() else { return }
 
         guard let index = m.getIntOrFail(rawIndex) else {
             return
@@ -22,18 +28,20 @@ enum MemoryInstructions {
         m.stackPush(value: U256.fromBigEndian(from: val))
     }
 
+    /// Stores a 32-byte word to memory at the byte offset popped from the stack.
+    ///
+    /// Requires 2 stack items; consumes GasConstant.VERYLOW; resizes memory to cover [offset, offset + 32) and charges the corresponding memory expansion gas; exits with the underlying memory error on failure.
     static func mstore(machine m: Machine) {
+        if !m.verifyStack(pop: 2) {
+            return
+        }
+
         if !m.gasRecordCost(cost: GasConstant.VERYLOW) {
             return
         }
 
-        // Pop data
-        guard let rawIndex = m.stackPop() else {
-            return
-        }
-        guard let value = m.stackPop() else {
-            return
-        }
+        // After stack verification this guard will always succeed. But we keep it for safety and clarity.
+        guard let rawIndex = m.stackPop(), let value = m.stackPop() else { return }
 
         guard let index = m.getIntOrFail(rawIndex) else {
             return
@@ -48,18 +56,20 @@ enum MemoryInstructions {
         }
     }
 
+    /// Stores the low byte of the value popped from the stack to memory at the byte offset popped from the stack.
+    ///
+    /// Requires 2 stack items; consumes `GasConstant.VERYLOW`; resizes memory to cover [`offset`, `offset + 1`) and charges the corresponding memory expansion gas; exits with the underlying memory error on failure.
     static func mstore8(machine m: Machine) {
+        if !m.verifyStack(pop: 2) {
+            return
+        }
+
         if !m.gasRecordCost(cost: GasConstant.VERYLOW) {
             return
         }
 
-        // Pop data
-        guard let rawIndex = m.stackPop() else {
-            return
-        }
-        guard let value = m.stackPop() else {
-            return
-        }
+        // After stack verification this guard will always succeed. But we keep it for safety and clarity.
+        guard let rawIndex = m.stackPop(), let value = m.stackPop() else { return }
 
         guard let index = m.getIntOrFail(rawIndex) else {
             return
@@ -75,7 +85,14 @@ enum MemoryInstructions {
         }
     }
 
+    /// Pushes the current effective memory size (in bytes) onto the stack.
+    ///
+    /// Requires 0 stack items and pushes 1 item; consumes `GasConstant.BASE`.
     static func msize(machine m: Machine) {
+        if !m.verifyStack(pop: 0, push: 1) {
+            return
+        }
+
         if !m.gasRecordCost(cost: GasConstant.BASE) {
             return
         }

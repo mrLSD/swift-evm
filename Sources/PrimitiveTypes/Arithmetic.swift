@@ -1,3 +1,4 @@
+/// `BigUInt` arithmetic operations.
 public extension BigUInt {
     /// Performs an overflow addition operation with the given value.
     ///
@@ -119,11 +120,21 @@ public extension BigUInt {
         return (0x40 * (index + 1)) - BYTES[index].leadingZeroBitCount
     }
 
-    // Returns the least number of words needed to represent the nonzero number
+    /// Returns the least number of words needed to represent the nonzero number
     private func leastNumberOfWords(bits: Int) -> Int {
         1 + (bits - 1) / 64
     }
 
+    /// Computes the quotient and remainder of dividing this value by `rhs`.
+    ///
+    /// - Parameter rhs: The divisor.
+    /// - Returns: A tuple containing:
+    ///   - quotient: The integer quotient of `self / rhs`.
+    ///   - remainder: The remainder of `self % rhs`.
+    /// - Precondition: `rhs` must not be zero.
+    /// - Note: If `rhs == 1`, returns `(self, .ZERO)`.
+    /// - Note: If `rhs` is larger than `self`, returns `(.ZERO, self)`.
+    /// - Note: Uses a small-word division path when `rhs` fits in `UInt64`, otherwise falls back to Knuth’s long division.
     func divMod(_ rhs: Self) -> (quotient: Self, remainder: Self) {
         precondition(!rhs.isZero, "Division by zero")
         if rhs == Self(from: 1) {
@@ -199,6 +210,7 @@ public extension BigUInt {
         return carry
     }
 
+    /// Performs a binary operation with carry.
     private static func binopCarry(_ a: UInt64, _ b: UInt64, _ c: Bool, _ binop: (UInt64, UInt64) -> (UInt64, Bool)) -> (UInt64, Bool) {
         let (res1, overflow1) = b.addingReportingOverflow(c ? 1 : 0)
         let (res2, overflow2) = binop(a, res1)
@@ -230,6 +242,7 @@ public extension BigUInt {
         return (Self(from: result), carry)
     }
 
+    /// Full multiplication by UInt64.
     private func fullMulUInt64(by: UInt64) -> [UInt64] {
         var res = [UInt64](repeating: 0, count: self.BYTES.count + 1)
         let (prod, carry) = self.overflowMulUInt64(by: by)
@@ -238,6 +251,7 @@ public extension BigUInt {
         return res
     }
 
+    /// Full shift right of an array of UInt64 by `shift` bits.
     private static func fullShr(_ u: borrowing [UInt64], _ shift: Int) -> Self {
         let n_words = u.count - 1
         var resWords = [UInt64](repeating: 0, count: n_words)
@@ -254,6 +268,7 @@ public extension BigUInt {
         return Self(from: resWords)
     }
 
+    /// Division and modulus by small UInt64 number.
     private func divModSmall(other: UInt64) -> (quotient: Self, remainder: Self) {
         var rem: UInt64 = 0
         var quotient = [UInt64](repeating: 0, count: self.BYTES.count)

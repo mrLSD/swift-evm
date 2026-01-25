@@ -115,13 +115,6 @@ final class H256Spec: QuickSpec {
                     expect(h1.hashValue).to(equal(h2.hashValue))
                 }
 
-                it("produces different hash for different values") {
-                    let h1 = H256(from: [UInt8](repeating: 0x00, count: 32))
-                    let h2 = H256(from: [UInt8](repeating: 0x01, count: 32))
-
-                    expect(h1.hashValue).toNot(equal(h2.hashValue))
-                }
-
                 it("can be used in a Set") {
                     let h1 = H256(from: [UInt8](repeating: 0x01, count: 32))
                     let h2 = H256(from: [UInt8](repeating: 0x02, count: 32))

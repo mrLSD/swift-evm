@@ -1,31 +1,42 @@
+/// ``I256``: Signed 256-bit integer type.
 public struct I256: BigUInt {
+    /// Internal storage for `I256` bytes.
     private let bytes: [UInt64]
 
+    /// Number of  bytes elements in `I256`.
     public static let numberBytes: UInt8 = 32
+    /// Maximum value for `I256` type.
     public static let MAX: Self = getMax
+    /// Zero value for `I256` type.
     public static let ZERO: Self = getZero
+    /// Sign bit mask for `I256` type.
     public static let SIGN_BIT_MASK: U256 = .init(from: [
         0xffff_ffff_ffff_ffff,
         0xffff_ffff_ffff_ffff,
         0xffff_ffff_ffff_ffff,
         0x7fff_ffff_ffff_ffff
     ])
+    ///  Sign extension flag. `true` if the number is negative.
     public private(set) var signExtend: Bool
 
+    /// Bytes array of `I256`.
     public var BYTES: [UInt64] { self.bytes }
 
+    /// Initialize `I256` from array of `UInt64` values.
     public init(from value: [UInt64]) {
         precondition(value.count == Self.numberBase, "I256 must be initialized with \(Self.numberBase) UInt64 values.")
         self.bytes = value
         self.signExtend = false
     }
 
+    /// Initialize `I256` from array of `UInt64` values with sign extension flag.
     public init(from value: [UInt64], signExtend: Bool) {
         precondition(value.count == Self.numberBase, "I256 must be initialized with \(Self.numberBase) UInt64 values.")
         self.bytes = value
         self.signExtend = signExtend
     }
 
+    /// Create an `I256` from a `U256` value.
     public static func fromU256(_ val: U256) -> Self {
         if (val & self.SIGN_BIT_MASK) == val {
             return I256(from: val.BYTES)
@@ -35,6 +46,7 @@ public struct I256: BigUInt {
         }
     }
 
+    /// Convert `I256` to `U256`.
     public var toU256: U256 {
         if self.signExtend {
             let n = ~self + Self(from: 1)
@@ -45,8 +57,8 @@ public struct I256: BigUInt {
     }
 
     /// Bitwise operations. Only shifting right, as for negative number it will be Shift Arithmetic Right (SAR).
-    func shiftRight(_ shift: Int) -> Self {
-        if self.isZero || shift >= 256 {
+    public func shiftRight(_ shift: Int) -> Self {
+        if self.isZero || shift >= 256 || shift < 0 {
             if self.signExtend {
                 // value is `< 0`, pushing `-1`
                 return Self(from: [1, 0, 0, 0], signExtend: true)
@@ -72,10 +84,6 @@ public struct I256: BigUInt {
 
     /// `I256` division operation
     func div(rhs: Self) -> Self {
-        if rhs.isZero {
-            return Self.ZERO
-        }
-
         // MIN_VALUE / 1 == MIN_VALUE; MIN_VALUE / -1 also returns MIN_VALUE per Yellow Paper (EVM overflow semantics)
         // We don't check sign of rhs, because both 1 and -1 have the same bytes representation.
         if self == Self.minValue, rhs.BYTES == [1, 0, 0, 0] {
@@ -115,6 +123,7 @@ public struct I256: BigUInt {
 /// Implementation of `Equatable`
 /// NOTE: Other `Equatable` functions related to `BigUInt`
 public extension I256 {
+    /// Operator `==`: Compare two `I256` values
     static func == (lhs: Self, rhs: Self) -> Bool {
         switch (lhs.signExtend, rhs.signExtend) {
         case (true, true):
@@ -128,11 +137,12 @@ public extension I256 {
         }
     }
 
-    /// Operator `!=`: Check if two `BigUInt` values are not equal
+    /// Operator `!=`: Check if two `I256` values are not equal
     static func != (lhs: Self, rhs: Self) -> Bool {
         !(lhs == rhs)
     }
 
+    /// Operator `<`: Compare two `I256` values
     static func < (lhs: Self, rhs: Self) -> Bool {
         switch (lhs.signExtend, rhs.signExtend) {
         case (true, true):
@@ -146,17 +156,17 @@ public extension I256 {
         }
     }
 
-    /// Operator `>`: Compare two `BigUInt` values
+    /// Operator `>`: Compare two `I256` values
     static func > (lhs: Self, rhs: Self) -> Bool {
         rhs < lhs
     }
 
-    /// Operator `<=`: Compare two `BigUInt` values for less than or equal
+    /// Operator `<=`: Compare two `I256` values for less than or equal
     static func <= (lhs: Self, rhs: Self) -> Bool {
         !(lhs > rhs)
     }
 
-    /// Operator `>=`: Compare two `BigUInt` values for less than or equal
+    /// Operator `>=`: Compare two `I256` values for greater than or equal
     static func >= (lhs: Self, rhs: Self) -> Bool {
         !(lhs < rhs)
     }
@@ -165,11 +175,13 @@ public extension I256 {
 /// Bitwise operations. Only shifting right, as for negative number it will be Shift Arithmetic Right (SAR).
 /// Other shifting operations related to `BigUInt`.
 public extension I256 {
+    /// Shift right operation for `I256`
     static func >> (lhs: Self, shift: Int) -> Self {
         lhs.shiftRight(shift)
     }
 }
 
+/// Implementation of division and remainder operations for `I256`.
 public extension I256 {
     /// Division of two values of the same type.
     static func / (lhs: Self, rhs: Self) -> Self {
