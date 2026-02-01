@@ -86,7 +86,7 @@ public class MemoryState {
             }
         }
 
-        /// Swallow revert implements part of logic for `exit_commit`:
+        /// Swallow revert implements part of logic for `exit_revert`:
         /// - Record opcode stipend.
         public mutating func swallowRevert(other: Self) {
             gasometer.recordStipend(stipend: other.gasometer.remaining)
@@ -422,6 +422,26 @@ public class MemoryState {
         accountMut(address: address).code = code
     }
 
+    /// Check if the account at the given address is empty.
+    /// An account is empty if its balance is zero, its nonce is zero, and its code is empty.
+    ///
+    /// - Parameter address: The address to check.
+    /// - Returns: `true` if the account is empty, `false` otherwise.
+    public func isEmpty(address: H160) -> Bool {
+        // First check the local/parent cache (known_empty).
+        if let knownEmptyStatus = knownEmpty(address) {
+            return knownEmptyStatus
+        }
+
+        // If not known locally, fetch data from the environment backend.
+        let basic = backend.basic(address: address)
+
+        // Account is empty if: balance == 0 AND nonce == 0 AND code is empty.
+        return basic.balance == .ZERO &&
+            basic.nonce == .ZERO &&
+            backend.code(address: address).isEmpty
+    }
+
     /// Internal helper to swap the entire state data between two instances.
     /// This is an O(1) operation for collections due to Swift's Copy-on-Write implementation.
     private func swapState(with other: MemoryState) {
@@ -605,11 +625,134 @@ public class MemoryState {
         tstorages[address]?[key] = value
     }
 
+    // MARK: - EIP-7702 Authority Logic
+
     /// Get authority target from the current state. If it's `None`, look recursively in the parent state.
     public func getAuthorityTargetRecursive(authority: H160) -> H160? {
         if let target = metadata.accessed?.getAuthorityTarget(authority) {
             return target
         }
         return parent?.getAuthorityTargetRecursive(authority: authority)
+    }
+
+    /// EIP-7702: Check if the authority is cold.
+    /// - Parameter address: The authority address to check.
+    /// - Returns: `true` or `false` if the target is found and checked, otherwise `nil`.
+    public func isAuthorityCold(address: H160) -> Bool? {
+        return getAuthorityTarget(authority: address).map { isCold($0) }
+    }
+
+    /// Get authority target (EIP-7702) delegated address.
+    ///
+    /// First, it attempts to retrieve the authority target from the cache recursively
+    /// through parent states. If not found in the cache, it retrieves the code for the
+    /// authority address and checks if it's a delegation designator. If true, it adds
+    /// the result to the cache and returns the delegated target address.
+    ///
+    /// - Parameter authority: The authority address.
+    /// - Returns: The delegated target address, if found.
+    public func getAuthorityTarget(authority: H160) -> H160? {
+        // 1. Try to read from recursive cache
+        if let targetAddress = getAuthorityTargetRecursive(authority: authority) {
+            return targetAddress
+        }
+
+        // 2. If not found in cache, get the code for the authority address.
+        // This uses the 'code' method from the Backend implementation (local cache + backend).
+        let authorityCode = code(address: authority)
+
+        // 3. Check if the code represents a delegation designator (EIP-7702 logic).
+        if let target = Authorization.getDelegatedAddress(authorityCode) {
+            // Add the found target to the local substate metadata cache.
+            metadata.addAuthority(authority: authority, address: target)
+            return target
+        }
+
+        return nil
+    }
+}
+
+extension MemoryState: Backend {
+    // MARK: - Environmental Information (Proxied to Backend)
+
+    public func gasPrice() -> U256 {
+        return backend.gasPrice()
+    }
+
+    public func origin() -> H160 {
+        return backend.origin()
+    }
+
+    public func blockHash(number: U256) -> H256 {
+        return backend.blockHash(number: number)
+    }
+
+    public func blockNumber() -> U256 {
+        return backend.blockNumber()
+    }
+
+    public func blockCoinbase() -> H160 {
+        return backend.blockCoinbase()
+    }
+
+    public func blockTimestamp() -> U256 {
+        return backend.blockTimestamp()
+    }
+
+    public func blockDifficulty() -> U256 {
+        return backend.blockDifficulty()
+    }
+
+    public func blockRandomness() -> H256? {
+        return backend.blockRandomness()
+    }
+
+    public func blockGasLimit() -> U256 {
+        return backend.blockGasLimit()
+    }
+
+    public func blockBaseFeePerGas() -> U256 {
+        return backend.blockBaseFeePerGas()
+    }
+
+    public func chainId() -> U256 {
+        return backend.chainId()
+    }
+
+    public func blobGasPrice() -> U128 {
+        return backend.blobGasPrice()
+    }
+
+    public func getBlobHash(index: UInt) -> U256? {
+        return backend.getBlobHash(index: index)
+    }
+
+    // MARK: - State Information (Cache First, then Backend)
+
+    public func exists(address: H160) -> Bool {
+        return knownAccount(address) != nil || backend.exists(address: address)
+    }
+
+    public func basic(address: H160) -> BasicAccount {
+        return knownBasic(address) ?? backend.basic(address: address)
+    }
+
+    public func code(address: H160) -> [UInt8] {
+        return knownCode(address) ?? backend.code(address: address)
+    }
+
+    public func storage(address: H160, index: H256) -> H256 {
+        return knownStorage(address: address, key: index) ?? backend.storage(address: address, index: index)
+    }
+
+    public func isEmptyStorage(address: H160) -> Bool {
+        return backend.isEmptyStorage(address: address)
+    }
+
+    public func originalStorage(address: H160, index: H256) -> H256? {
+        if let value = knownOriginalStorage(address) {
+            return value
+        }
+        return backend.originalStorage(address: address, index: index)
     }
 }
