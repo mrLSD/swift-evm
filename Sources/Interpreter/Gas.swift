@@ -41,7 +41,13 @@ public struct Gas {
     /// Records a stipend gas value.
     @inline(__always)
     mutating func recordStipend(stipend: UInt64) {
-        self.remaining += stipend
+        let (newRemaining, overflow) = self.remaining.addingReportingOverflow(stipend)
+        if overflow || newRemaining > self.limit {
+            // Clamp to the gas limit to preserve the invariant `remaining <= limit`
+            self.remaining = self.limit
+        } else {
+            self.remaining = newRemaining
+        }
     }
 
     /// Sets the final refund based on the provided `isLondon` flag - London hard fork flag.

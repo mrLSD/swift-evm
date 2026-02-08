@@ -68,7 +68,7 @@ public class MemoryState {
             self.accessed = accessed
         }
 
-        /// Swallow commit implements part of logic for `exit_commit`:
+        /// Swallow commit implements part of logic for execution `exitCommit`:
         /// - Record opcode stipend.
         /// - Record an explicit refund.
         /// - Merge warmed accounts and storages
@@ -86,9 +86,9 @@ public class MemoryState {
             }
         }
 
-        /// Swallow revert implements part of logic for `exit_revert`:
+        /// Swallow revert implements part of logic for execution  `exitRevert`:
         /// - Record opcode stipend.
-        public mutating func swallowRevert(other: Self) {
+        public mutating func swallowRevert(from other: Self) {
             gasometer.recordStipend(stipend: other.gasometer.remaining)
         }
 
@@ -545,7 +545,7 @@ public class MemoryState {
         exited.parent = nil
 
         // Swallow only gas stipend from the reverted substate
-        metadata.swallowRevert(other: exited.metadata)
+        metadata.swallowRevert(from: exited.metadata)
     }
 
     /// Exit discard. Represents discard execution of the `substate`.
