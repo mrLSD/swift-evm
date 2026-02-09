@@ -17,6 +17,22 @@ public struct BasicAccount: Equatable {
     public mutating func incNonce() {
         self.nonce += U256(from: 1)
     }
+
+    public mutating func setBalance(_ balance: U256) {
+        self.balance = balance
+    }
+
+    /// Adds the specified balance to the account's current balance, handling overflow by capping at `U256.MAX`.
+    public mutating func addBalance(_ balance: U256) {
+        let (newBalance, overflow) = self.balance.overflowAdd(balance)
+        self.balance = overflow ? U256.MAX : newBalance
+    }
+
+    /// Subtracts the specified balance from the account's current balance, handling underflow by capping at `U256.ZERO`.
+    public mutating func subBalance(_ balance: U256) {
+        let (newBalance, overflow) = self.balance.overflowSub(balance)
+        self.balance = overflow ? U256.ZERO : newBalance
+    }
 }
 
 /// Account state information.

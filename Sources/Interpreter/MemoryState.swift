@@ -279,7 +279,7 @@ public class MemoryState {
     /// Check if account is known to be empty. This function is used to check if an account is known to be empty (i.e., has zero balance, zero nonce and empty code).
     public func knownEmpty(_ address: H160) -> Bool? {
         if let account = knownAccount(address) {
-            if account.basic.balance != U256.ZERO || account.basic.nonce != U256.ZERO {
+            if !account.basic.balance.isZero || !account.basic.nonce.isZero {
                 return false
             }
 
@@ -339,7 +339,7 @@ public class MemoryState {
     }
 
     /// Get account by address and cache it.
-    public func getAccount(_ address: H160) -> StateAccount {
+    public func getAccountAndTouch(_ address: H160) -> StateAccount {
         if let existingAccount = accounts[address] {
             return existingAccount
         }
@@ -370,7 +370,7 @@ public class MemoryState {
 
     /// Increment nonce for address in the state
     public func incNonce(address: H160) -> Result<Void, Machine.ExitError> {
-        let account = getAccount(address)
+        let account = getAccountAndTouch(address)
         if account.basic.nonce >= U256(from: UInt64.max) {
             return .failure(Machine.ExitError.MaxNonce)
         }
@@ -419,6 +419,7 @@ public class MemoryState {
 
     /// Set account code.
     public func setCode(address: H160, code: [UInt8]) {
+        _ = getAccountAndTouch(address)
         accounts[address]?.code = code
     }
 
@@ -437,8 +438,8 @@ public class MemoryState {
         let basic = backend.basic(address: address)
 
         // Account is empty if: balance == 0 AND nonce == 0 AND code is empty.
-        return basic.balance == .ZERO &&
-            basic.nonce == .ZERO &&
+        return basic.balance.isZero &&
+            basic.nonce.isZero &&
             backend.code(address: address).isEmpty
     }
 
@@ -564,14 +565,14 @@ public class MemoryState {
     /// Transfer value between two accounts.
     /// - Returns: `Success` if the transfer is possible, or `OutOfFund` error.
     public func transfer(transfer: Transfer) -> Result<Void, Machine.ExitError> {
-        let source = getAccount(transfer.source)
+        let source = getAccountAndTouch(transfer.source)
         if source.basic.balance < transfer.value {
             return .failure(.OutOfFund)
         }
-        accounts[transfer.source]?.basic.balance -= transfer.value
+        accounts[transfer.source]?.basic.subBalance(transfer.value)
 
-        _ = getAccount(transfer.target)
-        accounts[transfer.target]?.basic.balance += transfer.value
+        _ = getAccountAndTouch(transfer.target)
+        accounts[transfer.target]?.basic.addBalance(transfer.value)
 
         return .success(())
     }
@@ -579,28 +580,30 @@ public class MemoryState {
     /// Withdraw value from an account.
     /// - Returns: `Success` if the withdrawal is possible, or `OutOfFund` error.
     public func withdraw(address: H160, value: U256) -> Result<Void, Machine.ExitError> {
-        let source = getAccount(address)
+        let source = getAccountAndTouch(address)
         if source.basic.balance < value {
             return .failure(.OutOfFund)
         }
-        accounts[address]?.basic.balance -= value
+        accounts[address]?.basic.subBalance(value)
 
         return .success(())
     }
 
     /// Deposit value into an account. Only needed for jsontests.
     public func deposit(address: H160, value: U256) {
-        accounts[address]?.basic.balance += value
+        _ = getAccountAndTouch(address)
+        accounts[address]?.basic.addBalance(value)
     }
 
     /// Reset account balance to zero.
     public func resetBalance(address: H160) {
-        accounts[address]?.basic.balance = .ZERO
+        _ = getAccountAndTouch(address)
+        accounts[address]?.basic.setBalance(U256.ZERO)
     }
 
     /// Mark account as touched by accessing it.
     public func touch(address: H160) {
-        _ = getAccount(address)
+        _ = getAccountAndTouch(address)
     }
 
     /// Get transient storage value for address and key.
