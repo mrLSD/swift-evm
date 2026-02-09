@@ -338,8 +338,8 @@ public class MemoryState {
         return parent?.isDeleted(address) ?? false
     }
 
-    /// Get mutable account from current or parent state and cache it if needed to known account. This function is used to retrieve a mutable reference to an account by its address.
-    public func accountMut(address: H160) -> StateAccount {
+    /// Get account by address and cache it.
+    public func getAccount(_ address: H160) -> StateAccount {
         if let existingAccount = accounts[address] {
             return existingAccount
         }
@@ -370,11 +370,11 @@ public class MemoryState {
 
     /// Increment nonce for address in the state
     public func incNonce(address: H160) -> Result<Void, Machine.ExitError> {
-        let account = accountMut(address: address)
+        let account = getAccount(address)
         if account.basic.nonce >= U256(from: UInt64.max) {
             return .failure(Machine.ExitError.MaxNonce)
         }
-        account.basic.incNonce()
+        accounts[address]?.basic.incNonce()
 
         return .success(())
     }
@@ -391,7 +391,7 @@ public class MemoryState {
     public func resetStorage(address: H160) {
         storages.removeValue(forKey: address)
 
-        accountMut(address: address).reset = true
+        accounts[address]?.reset = true
     }
 
     /// Append log entry.
@@ -419,7 +419,7 @@ public class MemoryState {
 
     /// Set account code.
     public func setCode(address: H160, code: [UInt8]) {
-        accountMut(address: address).code = code
+        accounts[address]?.code = code
     }
 
     /// Check if the account at the given address is empty.
@@ -564,44 +564,43 @@ public class MemoryState {
     /// Transfer value between two accounts.
     /// - Returns: `Success` if the transfer is possible, or `OutOfFund` error.
     public func transfer(transfer: Transfer) -> Result<Void, Machine.ExitError> {
-        let source = accountMut(address: transfer.source)
+        let source = getAccount(transfer.source)
         if source.basic.balance < transfer.value {
             return .failure(.OutOfFund)
         }
-        source.basic.balance -= transfer.value
+        accounts[transfer.source]?.basic.balance -= transfer.value
 
-        let target = accountMut(address: transfer.target)
-        target.basic.balance += transfer.value
+        _ = getAccount(transfer.target)
+        accounts[transfer.target]?.basic.balance += transfer.value
 
         return .success(())
     }
 
-    /// Withdraw value from an account. Only needed for jsontests.
+    /// Withdraw value from an account.
     /// - Returns: `Success` if the withdrawal is possible, or `OutOfFund` error.
     public func withdraw(address: H160, value: U256) -> Result<Void, Machine.ExitError> {
-        let source = accountMut(address: address)
+        let source = getAccount(address)
         if source.basic.balance < value {
             return .failure(.OutOfFund)
         }
-        source.basic.balance -= value
+        accounts[address]?.basic.balance -= value
 
         return .success(())
     }
 
     /// Deposit value into an account. Only needed for jsontests.
     public func deposit(address: H160, value: U256) {
-        let target = accountMut(address: address)
-        target.basic.balance += value
+        accounts[address]?.basic.balance += value
     }
 
     /// Reset account balance to zero.
     public func resetBalance(address: H160) {
-        accountMut(address: address).basic.balance = .ZERO
+        accounts[address]?.basic.balance = .ZERO
     }
 
     /// Mark account as touched by accessing it.
     public func touch(address: H160) {
-        _ = accountMut(address: address)
+        _ = getAccount(address)
     }
 
     /// Get transient storage value for address and key.
