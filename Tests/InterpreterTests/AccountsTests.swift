@@ -6,7 +6,6 @@ import Quick
 final class AccountSpec: QuickSpec {
     override class func spec() {
         describe("Account Types") {
-            // Тестовые константы
             let zero = U256.ZERO
             let one = U256(from: 1)
             let hundred = U256(from: 100)

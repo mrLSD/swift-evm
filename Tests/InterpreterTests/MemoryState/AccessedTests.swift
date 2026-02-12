@@ -1,4 +1,3 @@
-
 @testable import Interpreter
 import Nimble
 import PrimitiveTypes
@@ -6,7 +5,6 @@ import Quick
 
 final class AccessedSpec: QuickSpec {
     override class func spec() {
-        // Тестовые данные
         let addr1 = H160(from: [UInt8](repeating: 0x01, count: 20))
         let addr2 = H160(from: [UInt8](repeating: 0x02, count: 20))
         let addr3 = H160(from: [UInt8](repeating: 0x03, count: 20))

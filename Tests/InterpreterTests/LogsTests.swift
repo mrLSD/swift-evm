@@ -6,7 +6,6 @@ import Quick
 final class LogSpec: QuickSpec {
     override class func spec() {
         describe("Log struct") {
-            // Тестовые данные (объявлены внутри, чтобы избежать проблем с изоляцией в Swift 6)
             let addr1 = H160(from: [UInt8](repeating: 0x11, count: 20))
             let addr2 = H160(from: [UInt8](repeating: 0x22, count: 20))
 
