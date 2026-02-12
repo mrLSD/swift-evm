@@ -523,6 +523,65 @@ final class InterpreterGasSpec: QuickSpec {
                     expect(result).to(equal(expected))
                 }
             }
+
+            context("recordStipend(stipend:)") {
+                it("successfully records stipend within the gas limit") {
+                    var gas = Gas(limit: 1000)
+                    _ = gas.recordCost(cost: 500) // remaining = 500
+                    gas.recordStipend(stipend: 200)
+
+                    expect(gas.remaining).to(equal(700))
+                }
+
+                it("reaches exactly the limit when stipend matches spent gas") {
+                    var gas = Gas(limit: 1000)
+                    _ = gas.recordCost(cost: 300) // remaining = 700
+                    gas.recordStipend(stipend: 300)
+
+                    expect(gas.remaining).to(equal(1000))
+                }
+
+                it("clamps to gas limit when stipend exceeds available headroom") {
+                    var gas = Gas(limit: 1000)
+                    _ = gas.recordCost(cost: 200) // remaining = 800
+                    gas.recordStipend(stipend: 500) // 800 + 500 = 1300 (> 1000)
+
+                    expect(gas.remaining).to(equal(1000))
+                }
+
+                it("handles zero stipend correctly") {
+                    var gas = Gas(limit: 1000)
+                    _ = gas.recordCost(cost: 100) // remaining = 900
+                    gas.recordStipend(stipend: 0)
+
+                    expect(gas.remaining).to(equal(900))
+                }
+
+                it("handles UInt64 overflow by clamping to limit") {
+                    var gas = Gas(limit: 1000)
+                    _ = gas.recordCost(cost: 1) // remaining = 999
+                    // 999 + UInt64.max will trigger overflow
+                    gas.recordStipend(stipend: UInt64.max)
+
+                    expect(gas.remaining).to(equal(1000))
+                }
+
+                it("does not change remaining if it is already at limit") {
+                    var gas = Gas(limit: 500)
+                    // remaining is already 500 (at limit)
+                    gas.recordStipend(stipend: 100)
+
+                    expect(gas.remaining).to(equal(500))
+                }
+
+                it("clamps to limit if stipend is extremely large and remaining is low") {
+                    var gas = Gas(limit: 100)
+                    _ = gas.recordCost(cost: 100) // remaining = 0
+                    gas.recordStipend(stipend: UInt64.max)
+
+                    expect(gas.remaining).to(equal(100))
+                }
+            }
         }
     }
 }

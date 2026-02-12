@@ -145,7 +145,7 @@ public class MemoryState {
 
     /// Struct to store accessed addresses, storages and authority list during execution. This struct is used to track the state of accessed data
     /// during execution and can be used for various purposes such as gas calculation, access control, etc.
-    public struct Accessed {
+    public struct Accessed: Equatable, Sendable {
         /// Accessed addresses list. Contains addresses of accessed accounts.
         var addresses: Set<H160>
 
@@ -230,7 +230,7 @@ public class MemoryState {
 
     /// Struct to store accessed storage key-value pairs. This struct is used to track the state of accessed storage during execution
     /// and can be used for various purposes such as gas calculation, access control, etc.
-    public struct Storage: Hashable {
+    public struct Storage: Hashable, Equatable, Sendable {
         /// Address of accessed storage slot.
         var address: H160
 

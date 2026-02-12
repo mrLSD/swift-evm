@@ -1,7 +1,7 @@
 import PrimitiveTypes
 
 /// Basic account information.
-public struct BasicAccount: Equatable {
+public struct BasicAccount: Equatable, Sendable {
     /// Account balance.
     public var balance: U256
     /// Account nonce.
@@ -36,7 +36,7 @@ public struct BasicAccount: Equatable {
 }
 
 /// Account state information.
-public class StateAccount: Equatable {
+public struct StateAccount: Equatable, Sendable {
     /// Basic account information.
     public var basic: BasicAccount
     /// Account code.
