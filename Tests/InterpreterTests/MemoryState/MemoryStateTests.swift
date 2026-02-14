@@ -5,10 +5,10 @@ import Quick
 
 // MARK: - Mock Backend
 
-final class MockBackend: Backend, Sendable {
-    let accounts: [H160: BasicAccount] = [:]
-    let codes: [H160: [UInt8]] = [:]
-    let storages: [H160: [H256: H256]] = [:]
+final class MockBackend: Backend {
+    var accounts: [H160: BasicAccount] = [:]
+    var codes: [H160: [UInt8]] = [:]
+    var storages: [H160: [H256: H256]] = [:]
 
     func gasPrice() -> U256 {
         .ZERO
@@ -51,7 +51,7 @@ final class MockBackend: Backend, Sendable {
     }
 
     func chainId() -> U256 {
-        .ZERO
+        U256(from: 1)
     }
 
     func blobGasPrice() -> U128 {
@@ -67,15 +67,19 @@ final class MockBackend: Backend, Sendable {
     }
 
     func basic(address: H160) -> BasicAccount {
-        accounts[address] ?? BasicAccount(balance: .ZERO, nonce: .ZERO)
+        accounts[address] ?? BasicAccount(balance: U256(from: 10), nonce: U256(from: 20))
     }
 
     func code(address: H160) -> [UInt8] {
-        codes[address] ?? []
+        codes[address] = [UInt8](repeating: 0x60, count: 10)
+        return codes[address] ?? []
     }
 
     func storage(address: H160, index: H256) -> H256 {
-        storages[address]?[index] ?? .ZERO
+        var storage: [H256: H256] = [:]
+        storage[H256.ZERO] = H256(from: [123])
+        storages[address] = storage
+        return storages[address]?[index] ?? H256.ZERO
     }
 
     func isEmptyStorage(address: H160) -> Bool {
@@ -104,16 +108,14 @@ final class MemoryStateSpec: QuickSpec {
 
                     // First call - triggers getAccountAndTouch
                     let acc = state.getAccountAndTouch(addr1)
-                    // TODO:
-                    // expect(acc.basic.balance).to(equal(U256(from: 1000)))
+                    expect(acc.basic.balance).to(equal(U256(from: 10)))
 
                     // Modify locally
                     state.accounts[addr1]?.basic.setBalance(U256(from: 2000))
 
                     // Verify local state changed but backend remains same
                     expect(state.knownBasic(addr1)?.balance).to(equal(U256(from: 2000)))
-                    // TODO:
-                    // expect(backend.basic(address: addr1).balance).to(equal(U256(from: 1000)))
+                    expect(backend.basic(address: addr1).balance).to(equal(U256(from: 10)))
                 }
 
                 it("should lookup account recursively in parent states") {
@@ -141,8 +143,7 @@ final class MemoryStateSpec: QuickSpec {
                     state.resetStorage(address: addr1)
 
                     expect(state.storages[addr1]).to(beNil())
-                    // TODO:
-//                    expect(state.accounts[addr1]?.reset).to(beTrue())
+                    expect(state.accounts[addr1]?.reset).to(beTrue())
 //                    expect(state.knownStorage(address: addr1, key: key1)).to(equal(H256.ZERO))
                 }
 
@@ -226,7 +227,7 @@ final class MemoryStateSpec: QuickSpec {
 
                     // Normal increment
                     _ = state.incNonce(address: addr1)
-                    expect(state.knownAccount(addr1)?.basic.nonce).to(equal(U256(from: 1)))
+                    expect(state.knownAccount(addr1)?.basic.nonce).to(equal(U256(from: 21)))
 
                     // Mock max nonce
                     state.accounts[addr1]?.basic.nonce = U256(from: UInt64.max)
