@@ -34,15 +34,13 @@ final class MemoryStateMetadataSpec: QuickSpec {
                     let gas = Gas(limit: 5000)
                     let parent = MemoryState.Metadata(gasometer: gas, hardFork: .Berlin)
                     let child = parent.spitChild(gasLimit: 1000, isStatic: false)
-                    expect(child.depth).to(equal(0)) // nil + 1 -> 0 в логике кода (depth ?? 0)
+                    expect(child.depth).to(equal(0))
 
                     let grandchild = child.spitChild(gasLimit: 500, isStatic: false)
                     expect(grandchild.depth).to(equal(1))
                 }
 
                 it("propagates isStatic flag (sticky)") {
-                    let gas = Gas(limit: 5000)
-                    let parent = MemoryState.Metadata(gasometer: gas, hardFork: .Berlin)
                     let parentStatic = MemoryState.Metadata(gasometer: Gas(limit: 1000), isStatic: true, depth: 1, accessed: nil)
                     let child = parentStatic.spitChild(gasLimit: 500, isStatic: false)
 
@@ -175,7 +173,6 @@ final class MemoryStateMetadataSpec: QuickSpec {
 
                     parent.swallowCommit(from: child)
 
-                    // Проверяем слияние (merge)
                     expect(parent.accessedData()?.addresses).to(contain([addr1, addr2]))
                 }
             }

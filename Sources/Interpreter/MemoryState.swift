@@ -3,7 +3,7 @@ import PrimitiveTypes
 /// EVM memory state struct. This struct is used to track the state of the execution context, accessed data and storages during execution.
 public class MemoryState {
     /// Environment backend. This backend is used to retrieve account data and other information from the environment during execution.
-    let backend: Backend
+    let backend: any Backend
 
     /// State metadata. Represents the metadata of the execution context during all execution flow.
     var metadata: Metadata
@@ -32,7 +32,7 @@ public class MemoryState {
     var creates: Set<H160> = .init()
 
     /// Struct to store metadata of the execution context. This struct is used to track the state of the execution context
-    public struct Metadata {
+    public struct Metadata: Equatable, Sendable {
         /// State gasometer.
         private(set) var gasometer: Gas
 
@@ -245,13 +245,13 @@ public class MemoryState {
     }
 
     /// Initialize `MemoryState` with predefined metadata.
-    public init(gasLimit: UInt64, backend: Backend, hardFork: HardFork) {
+    public init(gasLimit: UInt64, backend: any Backend, hardFork: HardFork) {
         self.metadata = Metadata(gasometer: Gas(limit: gasLimit), hardFork: hardFork)
         self.backend = backend
     }
 
     /// Initialize `MemoryState` with predefined metadata, backend.
-    public init(metadata: Metadata, backend: Backend) {
+    public init(metadata: Metadata, backend: any Backend) {
         self.metadata = metadata
         self.backend = backend
     }
@@ -390,6 +390,7 @@ public class MemoryState {
     /// Reset storage for address and mark account as reset.
     public func resetStorage(address: H160) {
         storages.removeValue(forKey: address)
+        _ = getAccountAndTouch(address)
 
         accounts[address]?.reset = true
     }
@@ -569,6 +570,11 @@ public class MemoryState {
         if source.basic.balance < transfer.value {
             return .failure(.OutOfFund)
         }
+        // Transfer to self is allowed and should not change the state, so we can skip it.
+        if transfer.source == transfer.target {
+            return .success(())
+        }
+
         accounts[transfer.source]?.basic.subBalance(transfer.value)
 
         _ = getAccountAndTouch(transfer.target)

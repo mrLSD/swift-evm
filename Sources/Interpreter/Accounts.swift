@@ -18,6 +18,7 @@ public struct BasicAccount: Equatable, Sendable {
         self.nonce += U256(from: 1)
     }
 
+    /// Sets the account's balance to the specified value.
     public mutating func setBalance(_ balance: U256) {
         self.balance = balance
     }

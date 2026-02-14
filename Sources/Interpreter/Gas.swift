@@ -1,7 +1,7 @@
 import PrimitiveTypes
 
 /// Represents the state of gas during execution.
-public struct Gas {
+public struct Gas: Equatable, Sendable {
     /// The initial gas limit. This is constant throughout execution.
     let limit: UInt64
     var memoryGas: MemoryGas = .init()
@@ -79,7 +79,7 @@ public struct Gas {
 }
 
 /// Memory gas data
-struct MemoryGas {
+struct MemoryGas: Equatable, Sendable {
     /// Number of words in memory. Used for memory resize gas calculation
     var numWords: Int = 0
     /// Memory gas cost
@@ -89,7 +89,7 @@ struct MemoryGas {
     ///
     /// - Unchanged: Indicates that the memory size did not change, hence no additional gas cost was incurred.
     /// - Resized(UInt64): Indicates that the memory was resized, with the associated UInt64 representing the additional gas cost.
-    enum MemoryGasStatus: Equatable {
+    enum MemoryGasStatus: Equatable, Sendable {
         case Unchanged
         case Resized(UInt64)
     }

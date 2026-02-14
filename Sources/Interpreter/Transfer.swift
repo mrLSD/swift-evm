@@ -1,7 +1,7 @@
 import PrimitiveTypes
 
 /// Transfer from source to target, with given value.
-public struct Transfer {
+public struct Transfer: Equatable, Sendable {
     /// Source address.
     public let source: H160
     /// Target address.
