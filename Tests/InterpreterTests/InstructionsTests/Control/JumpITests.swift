@@ -1,5 +1,3 @@
-
-
 @testable import Interpreter
 import Nimble
 import PrimitiveTypes
@@ -64,12 +62,12 @@ final class InstructionJumpiSpec: QuickSpec {
             }
 
             it("with OutOfGas result") {
-                let m = TestMachine.machine(opcode: Opcode.JUMPI, gasLimit: 1)
+                let m = TestMachine.machine(rawCode: [Opcode.PUSH1.rawValue, 0x1, Opcode.PUSH1.rawValue, 0x6, Opcode.JUMPI.rawValue], gasLimit: 7)
 
                 m.evalLoop()
 
                 expect(m.machineStatus).to(equal(.Exit(.Error(.OutOfGas))))
-                expect(m.stack.length).to(equal(0))
+                expect(m.stack.length).to(equal(2))
                 expect(m.gas.remaining).to(equal(1))
             }
 
@@ -91,7 +89,7 @@ final class InstructionJumpiSpec: QuickSpec {
 
                 expect(m.machineStatus).to(equal(.Exit(.Error(.StackUnderflow))))
                 expect(m.stack.length).to(equal(0))
-                expect(m.gas.remaining).to(equal(0))
+                expect(m.gas.remaining).to(equal(10))
             }
 
             it("check stack underflow for empty stack - empty target") {
@@ -100,8 +98,8 @@ final class InstructionJumpiSpec: QuickSpec {
                 m.evalLoop()
 
                 expect(m.machineStatus).to(equal(.Exit(.Error(.StackUnderflow))))
-                expect(m.stack.length).to(equal(0))
-                expect(m.gas.remaining).to(equal(7))
+                expect(m.stack.length).to(equal(1))
+                expect(m.gas.remaining).to(equal(17))
             }
         }
     }

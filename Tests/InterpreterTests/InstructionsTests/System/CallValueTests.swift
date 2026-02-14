@@ -26,7 +26,7 @@ final class InstructionCallValueSpec: QuickSpec {
 
                 expect(m.machineStatus).to(equal(.Exit(.Error(.StackOverflow))))
                 expect(m.stack.length).to(equal(m.stack.limit))
-                expect(m.gas.remaining).to(equal(8))
+                expect(m.gas.remaining).to(equal(10))
             }
 
             it("value = 0") {

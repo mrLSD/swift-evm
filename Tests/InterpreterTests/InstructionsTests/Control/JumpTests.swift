@@ -1,4 +1,3 @@
-
 @testable import Interpreter
 import Nimble
 import PrimitiveTypes
@@ -52,12 +51,12 @@ final class InstructionJumpSpec: QuickSpec {
             }
 
             it("with OutOfGas result") {
-                let m = TestMachine.machine(opcode: Opcode.JUMP, gasLimit: 1)
+                let m = TestMachine.machine(rawCode: [Opcode.PUSH1.rawValue, 0x4, Opcode.JUMP.rawValue], gasLimit: 4)
 
                 m.evalLoop()
 
                 expect(m.machineStatus).to(equal(.Exit(.Error(.OutOfGas))))
-                expect(m.stack.length).to(equal(0))
+                expect(m.stack.length).to(equal(1))
                 expect(m.gas.remaining).to(equal(1))
             }
 
@@ -65,9 +64,6 @@ final class InstructionJumpSpec: QuickSpec {
                 let m = TestMachine.machine(rawCode: [Opcode.PUSH1.rawValue, 0x4, Opcode.JUMP.rawValue, Opcode.PC.rawValue, Opcode.JUMPDEST.rawValue], gasLimit: 11)
 
                 m.evalLoop()
-
-                m.evalLoop()
-
                 expect(m.pc).to(equal(4))
                 expect(m.machineStatus).to(equal(.Exit(.Error(.OutOfGas))))
                 expect(m.stack.length).to(equal(0))
@@ -80,7 +76,7 @@ final class InstructionJumpSpec: QuickSpec {
                 m.evalLoop()
                 expect(m.machineStatus).to(equal(.Exit(.Error(.StackUnderflow))))
                 expect(m.stack.length).to(equal(0))
-                expect(m.gas.remaining).to(equal(2))
+                expect(m.gas.remaining).to(equal(10))
             }
         }
     }

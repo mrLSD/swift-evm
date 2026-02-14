@@ -49,6 +49,7 @@ public protocol BigUInt: CustomStringConvertible, Equatable, Sendable, Hashable 
     var toBigEndian: [UInt8] { get }
 }
 
+/// Implementation of `BigUInt` common functionality
 public extension BigUInt {
     /// Init `BigUInt` form `UInt64`
     init(from value: UInt64) {

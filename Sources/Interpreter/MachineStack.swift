@@ -104,11 +104,11 @@ struct Stack {
         }
     }
 
-    /// Peeks a value at a given index from the top of the stack and converts it to `Int`.
+    /// Peeks a value at a given index from the top of the stack and converts it to `UInt`.
     /// If the value is larger than `UInt.max`, `ExitError.OutOfOffset` is returned (possible only for 32-bit context like `wasm32`).
     ///
     /// - Parameter indexFromTop: The index from the top of the stack.
-    /// - Returns: A `Result` containing the `Int` value if successful, or an `ExitError` if an error occurs.
+    /// - Returns: A `Result` containing the `UInt` value if successful, or an `ExitError` if an error occurs.
     @inline(__always)
     func peekUInt(indexFromTop: Int) -> Result<UInt, Machine.ExitError> {
         switch self.peek(indexFromTop: indexFromTop) {

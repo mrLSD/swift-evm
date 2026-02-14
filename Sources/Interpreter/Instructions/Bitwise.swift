@@ -1,47 +1,63 @@
 import PrimitiveTypes
 
-/// EVM Bitwise instructions
+/// EVM bitwise and comparison instruction implementations.
+///
+/// Groups helpers for opcodes such as `LT`, `GT`, `SLT`, `SGT`, `EQ`, `ISZERO`, `AND`, `OR`, `XOR`, `NOT`, `BYTE`, `SHL`, `SHR`, `SAR`.
+/// Each instruction validates stack requirements, charges gas (typically `GasConstant.VERYLOW`), and returns early on failure.
 enum BitwiseInstructions {
+    /// Pushes `1` if `a < b`, otherwise pushes `0`.
+    ///
+    /// Requires 2 stack items; fails with `StackUnderflow` or `OutOfGas` (`GasConstant.VERYLOW`).
     static func lt(machine m: Machine) {
+        if !m.verifyStack(pop: 2) {
+            return
+        }
+
         if !m.gasRecordCost(cost: GasConstant.VERYLOW) {
             return
         }
-        guard let op1 = m.stackPop() else {
-            return
-        }
-        guard let op2 = m.stackPop() else {
-            return
-        }
+
+        // After stack verification this guard will always succeed. But we keep it for safety and clarity.
+        guard let op1 = m.stackPop(), let op2 = m.stackPop() else { return }
 
         let newValue: UInt64 = (op1 < op2) ? 1 : 0
         m.stackPush(value: U256(from: newValue))
     }
 
+    /// Pushes `1` if `a > b`, otherwise pushes `0`.
+    ///
+    /// Requires 2 stack items; fails with `StackUnderflow` or `OutOfGas` (`GasConstant.VERYLOW`).
     static func gt(machine m: Machine) {
+        if !m.verifyStack(pop: 2) {
+            return
+        }
+
         if !m.gasRecordCost(cost: GasConstant.VERYLOW) {
             return
         }
-        guard let op1 = m.stackPop() else {
-            return
-        }
-        guard let op2 = m.stackPop() else {
-            return
-        }
+
+        // After stack verification this guard will always succeed. But we keep it for safety and clarity.
+        guard let op1 = m.stackPop(), let op2 = m.stackPop() else { return }
 
         let newValue: UInt64 = (op1 > op2) ? 1 : 0
         m.stackPush(value: U256(from: newValue))
     }
 
+    /// Pushes `1` if signed `a < b`, otherwise pushes `0`.
+    ///
+    /// Interprets operands as two's-complement signed 256\-bit integers.
+    /// Requires 2 stack items; fails with `StackUnderflow` or `OutOfGas` (`GasConstant.VERYLOW`).
     static func slt(machine m: Machine) {
+        if !m.verifyStack(pop: 2) {
+            return
+        }
+
         if !m.gasRecordCost(cost: GasConstant.VERYLOW) {
             return
         }
-        guard let op1 = m.stackPop() else {
-            return
-        }
-        guard let op2 = m.stackPop() else {
-            return
-        }
+
+        // After stack verification this guard will always succeed. But we keep it for safety and clarity.
+        guard let op1 = m.stackPop(), let op2 = m.stackPop() else { return }
 
         let iOp1 = I256.fromU256(op1)
         let iOp2 = I256.fromU256(op2)
@@ -50,16 +66,21 @@ enum BitwiseInstructions {
         m.stackPush(value: U256(from: newValue))
     }
 
+    /// Pushes `1` if signed `a > b`, otherwise pushes `0`.
+    ///
+    /// Interprets operands as two's-complement signed 256\-bit integers.
+    /// Requires 2 stack items; fails with `StackUnderflow` or `OutOfGas` (`GasConstant.VERYLOW`).
     static func sgt(machine m: Machine) {
+        if !m.verifyStack(pop: 2) {
+            return
+        }
+
         if !m.gasRecordCost(cost: GasConstant.VERYLOW) {
             return
         }
-        guard let op1 = m.stackPop() else {
-            return
-        }
-        guard let op2 = m.stackPop() else {
-            return
-        }
+
+        // After stack verification this guard will always succeed. But we keep it for safety and clarity.
+        guard let op1 = m.stackPop(), let op2 = m.stackPop() else { return }
 
         let iOp1 = I256.fromU256(op1)
         let iOp2 = I256.fromU256(op2)
@@ -68,100 +89,134 @@ enum BitwiseInstructions {
         m.stackPush(value: U256(from: newValue))
     }
 
+    /// Pushes `1` if `a == b`, otherwise pushes `0`.
+    ///
+    /// Requires 2 stack items; fails with `StackUnderflow` or `OutOfGas` (`GasConstant.VERYLOW`).
     static func eq(machine m: Machine) {
+        if !m.verifyStack(pop: 2) {
+            return
+        }
+
         if !m.gasRecordCost(cost: GasConstant.VERYLOW) {
             return
         }
-        guard let op1 = m.stackPop() else {
-            return
-        }
-        guard let op2 = m.stackPop() else {
-            return
-        }
+
+        // After stack verification this guard will always succeed. But we keep it for safety and clarity.
+        guard let op1 = m.stackPop(), let op2 = m.stackPop() else { return }
 
         let newValue: UInt64 = (op1 == op2) ? 1 : 0
         m.stackPush(value: U256(from: newValue))
     }
 
+    /// Pushes `1` if `a == 0`, otherwise pushes `0`.
+    ///
+    /// Requires 1 stack item; fails with `StackUnderflow` or `OutOfGas` (`GasConstant.VERYLOW`).
     static func isZero(machine m: Machine) {
+        if !m.verifyStack(pop: 1) {
+            return
+        }
+
         if !m.gasRecordCost(cost: GasConstant.VERYLOW) {
             return
         }
-        guard let op1 = m.stackPop() else {
-            return
-        }
+
+        // After stack verification this guard will always succeed. But we keep it for safety and clarity.
+        guard let op1 = m.stackPop() else { return }
 
         let newValue: UInt64 = (op1.isZero) ? 1 : 0
         m.stackPush(value: U256(from: newValue))
     }
 
+    /// Pushes `a & b` onto the stack.
+    ///
+    /// Requires 2 stack items; fails with `StackUnderflow` or `OutOfGas` (`GasConstant.VERYLOW`).
     static func and(machine m: Machine) {
+        if !m.verifyStack(pop: 2) {
+            return
+        }
+
         if !m.gasRecordCost(cost: GasConstant.VERYLOW) {
             return
         }
-        guard let op1 = m.stackPop() else {
-            return
-        }
-        guard let op2 = m.stackPop() else {
-            return
-        }
+
+        // After stack verification this guard will always succeed. But we keep it for safety and clarity.
+        guard let op1 = m.stackPop(), let op2 = m.stackPop() else { return }
 
         let newValue = op1 & op2
         m.stackPush(value: newValue)
     }
 
+    /// Pushes `a | b` onto the stack.
+    ///
+    /// Requires 2 stack items; fails with `StackUnderflow` or `OutOfGas` (`GasConstant.VERYLOW`).
     static func or(machine m: Machine) {
+        if !m.verifyStack(pop: 2) {
+            return
+        }
+
         if !m.gasRecordCost(cost: GasConstant.VERYLOW) {
             return
         }
-        guard let op1 = m.stackPop() else {
-            return
-        }
-        guard let op2 = m.stackPop() else {
-            return
-        }
+
+        // After stack verification this guard will always succeed. But we keep it for safety and clarity.
+        guard let op1 = m.stackPop(), let op2 = m.stackPop() else { return }
 
         let newValue = op1 | op2
         m.stackPush(value: newValue)
     }
 
+    /// Pushes `a ^ b` onto the stack.
+    ///
+    /// Requires 2 stack items; fails with `StackUnderflow` or `OutOfGas` (`GasConstant.VERYLOW`).
     static func xor(machine m: Machine) {
+        if !m.verifyStack(pop: 2) {
+            return
+        }
+
         if !m.gasRecordCost(cost: GasConstant.VERYLOW) {
             return
         }
-        guard let op1 = m.stackPop() else {
-            return
-        }
-        guard let op2 = m.stackPop() else {
-            return
-        }
+
+        // After stack verification this guard will always succeed. But we keep it for safety and clarity.
+        guard let op1 = m.stackPop(), let op2 = m.stackPop() else { return }
 
         let newValue = op1 ^ op2
         m.stackPush(value: newValue)
     }
 
+    /// Pushes `~a` onto the stack.
+    ///
+    /// Requires 1 stack item; fails with `StackUnderflow` or `OutOfGas` (`GasConstant.VERYLOW`).
     static func not(machine m: Machine) {
+        if !m.verifyStack(pop: 1) {
+            return
+        }
+
         if !m.gasRecordCost(cost: GasConstant.VERYLOW) {
             return
         }
-        guard let op1 = m.stackPop() else {
-            return
-        }
+
+        // After stack verification this guard will always succeed. But we keep it for safety and clarity.
+        guard let op1 = m.stackPop() else { return }
 
         let newValue = ~op1
         m.stackPush(value: newValue)
     }
 
+    /// Pushes the `n`th byte of `x` onto the stack (0 = most significant byte); pushes `0` if `n >= 32`.
+    ///
+    /// Requires 2 stack items; fails with `StackUnderflow` or `OutOfGas` (`GasConstant.VERYLOW`).
     static func byte(machine m: Machine) {
+        if !m.verifyStack(pop: 2) {
+            return
+        }
+
         if !m.gasRecordCost(cost: GasConstant.VERYLOW) {
             return
         }
-        guard let op1 = m.stackPop() else {
-            return
-        }
-        guard let op2 = m.stackPop() else {
-            return
-        }
+
+        // After stack verification this guard will always succeed. But we keep it for safety and clarity.
+        guard let op1 = m.stackPop(), let op2 = m.stackPop() else { return }
 
         var newValue = U256.ZERO
         if op1 < U256(from: 32) {
@@ -176,16 +231,20 @@ enum BitwiseInstructions {
         m.stackPush(value: newValue)
     }
 
+    /// Pushes `x << shift` onto the stack; pushes `0` if `x == 0` or `shift >= 256`.
+    ///
+    /// Requires 2 stack items; fails with `StackUnderflow` or `OutOfGas` (`GasConstant.VERYLOW`).
     static func shl(machine m: Machine) {
+        if !m.verifyStack(pop: 2) {
+            return
+        }
+
         if !m.gasRecordCost(cost: GasConstant.VERYLOW) {
             return
         }
-        guard let op1 = m.stackPop() else {
-            return
-        }
-        guard let op2 = m.stackPop() else {
-            return
-        }
+
+        // After stack verification this guard will always succeed. But we keep it for safety and clarity.
+        guard let op1 = m.stackPop(), let op2 = m.stackPop() else { return }
 
         var newValue = U256.ZERO
         if !op2.isZero, op1 < U256(from: 256) {
@@ -196,16 +255,20 @@ enum BitwiseInstructions {
         m.stackPush(value: newValue)
     }
 
+    /// Pushes `x >> shift` onto the stack; pushes `0` if `x == 0` or `shift >= 256`.
+    ///
+    /// Requires 2 stack items; fails with `StackUnderflow` or `OutOfGas` (`GasConstant.VERYLOW`).
     static func shr(machine m: Machine) {
+        if !m.verifyStack(pop: 2) {
+            return
+        }
+
         if !m.gasRecordCost(cost: GasConstant.VERYLOW) {
             return
         }
-        guard let op1 = m.stackPop() else {
-            return
-        }
-        guard let op2 = m.stackPop() else {
-            return
-        }
+
+        // After stack verification this guard will always succeed. But we keep it for safety and clarity.
+        guard let op1 = m.stackPop(), let op2 = m.stackPop() else { return }
 
         var newValue = U256.ZERO
         if !op2.isZero, op1 < U256(from: 256) {
@@ -216,16 +279,21 @@ enum BitwiseInstructions {
         m.stackPush(value: newValue)
     }
 
+    /// Pushes `x >> shift` (arithmetic, sign-extending) onto the stack; pushes `0` if `x == 0` or `shift >= 255`, or `2^256 - 1` if `x < 0` and `shift >= 255`.
+    ///
+    /// Interprets `x` as a two's-complement signed 256-bit integer.
+    /// Requires 2 stack items; fails with `StackUnderflow` or `OutOfGas` (`GasConstant.VERYLOW`).
     static func sar(machine m: Machine) {
+        if !m.verifyStack(pop: 2) {
+            return
+        }
+
         if !m.gasRecordCost(cost: GasConstant.VERYLOW) {
             return
         }
-        guard let op1 = m.stackPop() else {
-            return
-        }
-        guard let op2 = m.stackPop() else {
-            return
-        }
+
+        // After stack verification this guard will always succeed. But we keep it for safety and clarity.
+        guard let op1 = m.stackPop(), let op2 = m.stackPop() else { return }
 
         let iOp2 = I256.fromU256(op2)
 

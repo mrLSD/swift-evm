@@ -29,6 +29,7 @@ public protocol FixedArray: CustomStringConvertible, Equatable, Sendable {
     func hexString(uppercase: Bool) -> String
 }
 
+/// Implementation of common `FixedArray` functionality
 public extension FixedArray {
     /// Calculate Max value
     static var getMax: Self {

@@ -7,6 +7,10 @@ import PrimitiveTypes
 enum SystemInstructions {
     /// Pushes the size of the current code onto the stack.
     static func codeSize(machine m: Machine) {
+        if !m.verifyStack(pop: 0, push: 1) {
+            return
+        }
+
         if !m.gasRecordCost(cost: GasConstant.BASE) {
             return
         }
@@ -18,16 +22,13 @@ enum SystemInstructions {
     /// Performs a code copy operation by reading parameters from the machine's stack,
     /// calculating the associated gas costs, and executing the memory copy.
     static func codeCopy(machine m: Machine) {
+        if !m.verifyStack(pop: 3) {
+            return
+        }
+
+        // After stack verification this guard will always succeed. But we keep it for safety and clarity.
         // Pop the required values from the stack: memory offset, code offset, and size.
-        guard let rawMemoryOffset = m.stackPop() else {
-            return
-        }
-        guard let rawCodeOffset = m.stackPop() else {
-            return
-        }
-        guard let rawSize = m.stackPop() else {
-            return
-        }
+        guard let rawMemoryOffset = m.stackPop(), let rawCodeOffset = m.stackPop(), let rawSize = m.stackPop() else { return }
 
         // This situation possible only for 32-bit context (for example wasm32)
         guard let size = m.getIntOrFail(rawSize) else {
@@ -67,6 +68,10 @@ enum SystemInstructions {
 
     /// Pushes the size of the call data onto the stack.
     static func callDataSize(machine m: Machine) {
+        if !m.verifyStack(pop: 0, push: 1) {
+            return
+        }
+
         if !m.gasRecordCost(cost: GasConstant.BASE) {
             return
         }
@@ -77,16 +82,13 @@ enum SystemInstructions {
 
     /// Copies call data into memory at the specified offset and size.
     static func callDataCopy(machine m: Machine) {
-        // Pop the required values from the stack: memory offset, code offset, and size.
-        guard let rawMemoryOffset = m.stackPop() else {
+        if !m.verifyStack(pop: 3) {
             return
         }
-        guard let rawDataOffset = m.stackPop() else {
-            return
-        }
-        guard let rawSize = m.stackPop() else {
-            return
-        }
+
+        // After stack verification this guard will always succeed. But we keep it for safety and clarity.
+        // Peek the required values from the stack: memory offset, code offset, and size.
+        guard let rawMemoryOffset = m.stackPeek(indexFromTop: 0), let rawDataOffset = m.stackPeek(indexFromTop: 1), let rawSize = m.stackPeek(indexFromTop: 2) else { return }
 
         // This situation possible only for 32-bit context (for example wasm32)
         guard let size = m.getIntOrFail(rawSize) else {
@@ -100,6 +102,9 @@ enum SystemInstructions {
         if !m.gasRecordCost(cost: cost) {
             return
         }
+
+        // After stack verification this guard will always succeed. But we keep it for safety and clarity.
+        guard let _ = m.stackPop(), let _ = m.stackPop(), let _ = m.stackPop() else { return }
 
         // If the size is zero, no copying is required.
         if size == 0 {
@@ -126,13 +131,16 @@ enum SystemInstructions {
 
     /// Loads 32 bytes from call data at the specified index and pushes it onto the stack.
     static func callDataLoad(machine m: Machine) {
+        if !m.verifyStack(pop: 1) {
+            return
+        }
+
         if !m.gasRecordCost(cost: GasConstant.VERYLOW) {
             return
         }
 
-        guard let index = m.stackPop() else {
-            return
-        }
+        // After stack verification this guard will always succeed. But we keep it for safety and clarity.
+        guard let index = m.stackPop() else { return }
 
         var load = [UInt8](repeating: 0, count: 32)
         let dataCount = m.data.count
@@ -149,6 +157,10 @@ enum SystemInstructions {
 
     /// Pushes the call value onto the stack.
     static func callValue(machine m: Machine) {
+        if !m.verifyStack(pop: 0, push: 1) {
+            return
+        }
+
         if !m.gasRecordCost(cost: GasConstant.BASE) {
             return
         }
@@ -157,6 +169,10 @@ enum SystemInstructions {
 
     /// Pushes the address of the currently executing account onto the stack.
     static func address(machine m: Machine) {
+        if !m.verifyStack(pop: 0, push: 1) {
+            return
+        }
+
         if !m.gasRecordCost(cost: GasConstant.BASE) {
             return
         }
@@ -168,6 +184,10 @@ enum SystemInstructions {
 
     /// Pushes the caller address onto the stack.
     static func caller(machine m: Machine) {
+        if !m.verifyStack(pop: 0, push: 1) {
+            return
+        }
+
         if !m.gasRecordCost(cost: GasConstant.BASE) {
             return
         }
@@ -179,13 +199,13 @@ enum SystemInstructions {
 
     /// Computes the Keccak-256 hash of a memory region and pushes the result onto the stack.
     static func keccak256(machine m: Machine) {
-        // Pop the required values from the stack: memory offset and size.
-        guard let rawMemoryOffset = m.stackPop() else {
+        if !m.verifyStack(pop: 2) {
             return
         }
-        guard let rawSize = m.stackPop() else {
-            return
-        }
+
+        // After stack verification this guard will always succeed. But we keep it for safety and clarity.
+        // Peek the required values from the stack: memory offset and size.
+        guard let rawMemoryOffset = m.stackPeek(indexFromTop: 0), let rawSize = m.stackPeek(indexFromTop: 1) else { return }
 
         // This situation possible only for 32-bit context (for example wasm32)
         guard let size = m.getIntOrFail(rawSize) else {
@@ -199,6 +219,9 @@ enum SystemInstructions {
         if !m.gasRecordCost(cost: cost) {
             return
         }
+
+        // After stack verification this guard will always succeed. But we keep it for safety and clarity.
+        guard let _ = m.stackPop(), let _ = m.stackPop() else { return }
 
         // This situation possible only for 32-bit context (for example wasm32)
         guard let memoryOffset = m.getIntOrFail(rawMemoryOffset) else {

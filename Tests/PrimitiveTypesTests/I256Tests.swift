@@ -593,11 +593,11 @@ final class I256Spec: QuickSpec {
 
             context("div operation") {
                 it("by zero") {
-                    let i256Value = I256(from: [0, 0, 0, 1], signExtend: false)
-                    let result = i256Value / I256.ZERO
-                    let expected = I256.ZERO
-
-                    expect(result.BYTES).to(equal(expected.BYTES))
+                    expect(captureStandardError {
+                        expect {
+                            _ = I256(from: [0, 0, 0, 1], signExtend: false) / I256.ZERO
+                        }.to(throwAssertion())
+                    }).to(contain("Division by zero"))
                 }
 
                 it("I256.minValue / 1") {
@@ -651,6 +651,14 @@ final class I256Spec: QuickSpec {
             }
 
             context("rem operation") {
+                it("by zero") {
+                    expect(captureStandardError {
+                        expect {
+                            _ = I256(from: [0, 0, 0, 1], signExtend: false) % I256.ZERO
+                        }.to(throwAssertion())
+                    }).to(contain("Division by zero"))
+                }
+
                 it("from zero") {
                     let i256Value = I256(from: [0, 0, 0, 1], signExtend: false)
                     let result = I256.ZERO % i256Value

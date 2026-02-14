@@ -21,14 +21,14 @@ final class InstructionMulModSpec: QuickSpec {
                 _ = m.stack.push(value: U256(from: 6))
                 _ = m.stack.push(value: U256(from: 2))
                 m.evalLoop()
-                let result = m.stack.pop()
+                let result = m.stack.peek(indexFromTop: 0)
 
                 expect(m.machineStatus).to(equal(.Exit(.Success(.Stop))))
                 expect(result).to(beSuccess { value in
                     expect(value).to(equal(U256(from: 2)))
                 })
-                expect(m.stack.length).to(equal(0))
-                expect(m.gas.remaining).to(equal(2))
+                expect(m.stack.length).to(equal(1))
+                expect(m.gas.remaining).to(equal(10 - GasConstant.MID))
             }
 
             it("`(a * b) % c`, when `c` not in the stack") {
@@ -50,14 +50,14 @@ final class InstructionMulModSpec: QuickSpec {
                 _ = m.stack.push(value: U256(from: 6))
                 _ = m.stack.push(value: U256(from: 2))
                 m.evalLoop()
-                let result = m.stack.pop()
+                let result = m.stack.peek(indexFromTop: 0)
 
                 expect(m.machineStatus).to(equal(.Exit(.Success(.Stop))))
                 expect(result).to(beSuccess { value in
                     expect(value).to(equal(U256(from: 0)))
                 })
-                expect(m.stack.length).to(equal(0))
-                expect(m.gas.remaining).to(equal(2))
+                expect(m.stack.length).to(equal(1))
+                expect(m.gas.remaining).to(equal(10 - GasConstant.MID))
             }
 
             it("MulMod with OutOfGas result") {
@@ -77,17 +77,23 @@ final class InstructionMulModSpec: QuickSpec {
                 let m = Self.machine
                 m.evalLoop()
                 expect(m.machineStatus).to(equal(.Exit(.Error(.StackUnderflow))))
+                expect(m.stack.length).to(equal(0))
+                expect(m.gas.remaining).to(equal(10))
 
                 let m1 = Self.machine
                 _ = m1.stack.push(value: U256(from: 5))
                 m1.evalLoop()
                 expect(m1.machineStatus).to(equal(.Exit(.Error(.StackUnderflow))))
+                expect(m1.stack.length).to(equal(1))
+                expect(m1.gas.remaining).to(equal(10))
 
                 let m2 = Self.machine
                 _ = m2.stack.push(value: U256(from: 5))
                 _ = m2.stack.push(value: U256(from: 5))
                 m2.evalLoop()
                 expect(m2.machineStatus).to(equal(.Exit(.Error(.StackUnderflow))))
+                expect(m2.stack.length).to(equal(2))
+                expect(m2.gas.remaining).to(equal(10))
 
                 let m3 = Self.machine
                 _ = m3.stack.push(value: U256(from: 2))
@@ -95,6 +101,8 @@ final class InstructionMulModSpec: QuickSpec {
                 _ = m3.stack.push(value: U256(from: 2))
                 m3.evalLoop()
                 expect(m3.machineStatus).to(equal(.Exit(.Success(.Stop))))
+                expect(m3.stack.length).to(equal(1))
+                expect(m3.gas.remaining).to(equal(10 - GasConstant.MID))
             }
         }
     }

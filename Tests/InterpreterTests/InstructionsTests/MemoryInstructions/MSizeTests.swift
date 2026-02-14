@@ -41,13 +41,13 @@ final class MSizeSpec: QuickSpec {
                 expect(m.memory.effectiveLength).to(equal(64))
 
                 for _ in 0 ..< m.stack.limit {
-                    let _ = m.stack.push(value: U256(from: 5))
+                    _ = m.stack.push(value: U256(from: 5))
                 }
 
                 m.evalLoop()
                 expect(m.machineStatus).to(equal(.Exit(.Error(.StackOverflow))))
                 expect(m.stack.length).to(equal(m.stack.limit))
-                expect(m.gas.remaining).to(equal(8))
+                expect(m.gas.remaining).to(equal(10))
             }
         }
     }

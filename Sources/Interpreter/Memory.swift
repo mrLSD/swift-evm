@@ -284,29 +284,43 @@ public class Memory {
         }
 
         // Ensure the dataOffset is within bounds (allow dataOffset == data.count when size == 0 is already handled above).
-        guard dataOffset >= 0, dataOffset < data.count else {
+        guard dataOffset >= 0 else {
             return .failure(.Error(.MemoryOperation(.CopyDataOffsetOutOfBounds)))
         }
 
-        // Calculate how many bytes are available starting from dataOffset.
-        let available = data.count - dataOffset
-        let copyLength = min(size, available)
-
+        // NOTE: limit can't be huge as physical memory is limited
+        // Yellow Paper: For CallData/CodeCopy, access beyond bounds is NOT an error. It implies zero-fill.
+        // We only verify that memoryOffset doesn't exceed implementation limits.
         if size > self.limit - memoryOffset {
             return .failure(.Error(.MemoryOperation(.CopyDataLimitExceeded)))
         }
         // NOTE: after the above check, we can be sure that offset + size won't overflow
         let requiredLength = memoryOffset + size
 
+        // Calculate actual bytes to copy from data.
+        // If dataOffset is beyond data bounds, copyLength becomes 0.
+        let copyLength: Int
+        if dataOffset >= data.count {
+            copyLength = 0
+        } else {
+            // dataOffset is within valid bounds [0, count-1]
+            let available = data.count - dataOffset
+            copyLength = min(size, available)
+        }
+
         // Ensure the internal buffer is resized to accommodate the required length.
         guard self.resize(end: requiredLength) else { return .failure(.Fatal(.ReadMemory)) }
         guard let buf = self.buffer else { return .failure(.Fatal(.ReadMemory)) }
 
         return data.withUnsafeBytes { rawBuffer in
-            // SAFETY: As we validated data length, we can unwrap `rawBuffer.baseAddress`
-            let srcPtr = rawBuffer.baseAddress!.advanced(by: dataOffset)
             let dstPtr = buf.advanced(by: memoryOffset)
-            Self.memCpy(dstPtr: dstPtr, srcPtr: srcPtr, count: copyLength)
+
+            // Only perform memcpy if we have data to copy AND the offset is valid
+            if copyLength > 0 {
+                // SAFETY: We checked `dataOffset < data.count` implicitly above via copyLength calculation
+                let srcPtr = rawBuffer.baseAddress!.advanced(by: dataOffset)
+                Self.memCpy(dstPtr: dstPtr, srcPtr: srcPtr, count: copyLength)
+            }
 
             // If the requested length exceeds the available data, zero-fill the remainder.
             if size > copyLength {
