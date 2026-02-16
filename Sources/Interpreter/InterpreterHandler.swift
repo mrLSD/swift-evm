@@ -7,9 +7,14 @@ public protocol InterpreterHandler {
     func beforeOpcodeExecution(machine: Machine, opcode: Opcode?) -> Machine
         .ExitError?
 
+    /// Get environmental account balance for given address.
     func balance(address: H160) -> U256
+    /// Get environmental gas price.
     func gasPrice() -> U256
+    /// Get environmental transaction origin (sender) address.
     func origin() -> H160
+    /// Get environmental transaction chain ID.
     func chainId() -> U256
+    /// Get environmental transaction coinbase address.
     func coinbase() -> H160
 }
