@@ -13,7 +13,8 @@ public class MemoryState {
 
     /// Parent State reference. This reference is used to track the parent state during execution and
     /// can be used for various purposes such as reverting state changes, etc.
-    weak var parent: MemoryState?
+    /// - Note: We can't use `weak` reference here because parent state can be deallocated during execution and we need to keep it alive until the end of execution.
+    var parent: MemoryState?
 
     /// Accounts mapping. This mapping is used to store the state of accounts during execution and can be used for various purposes such as balance tracking, nonce tracking, etc.
     var accounts: [H160: StateAccount] = [:]
@@ -39,22 +40,102 @@ public class MemoryState {
         /// A static call is a call that does not allow state modifications and is used for read-only operations. This flag
         /// can be used to enforce restrictions on certain operations that are not allowed in static calls, such as modifying
         /// storage, emitting events, etc.
-        let isStatic: Bool = false
+        let isStatic: Bool
 
         /// Optional depth of the call stack. This can be used to track the depth of nested calls and can be useful
         /// for various purposes such as gas calculation, access control, etc.
-        let depth: UInt? = nil
+        let depth: UInt?
 
         /// Optional accessed data struct. This struct can be used to track the state of accessed data during
         /// execution and can be used for various purposes such as gas calculation, access control, etc.
         /// The presence of this struct indicates that the current execution context is a Berlin hard fork or later, where
         /// access lists are introduced.
-        let accessed: Accessed?
+        var accessed: Accessed?
 
         /// Initialize `Metadata` with predefined static call flag and optional depth.
-        public init(gasometr: Gas, hardFork: HardFork) {
+        public init(gasometer: Gas, hardFork: HardFork) {
             self.accessed = hardFork.isBerlin() ? Accessed() : nil
-            self.gasometer = gasometr
+            self.gasometer = gasometer
+            self.depth = nil
+            self.isStatic = false
+        }
+
+        /// Initialize `Metadata` with predefined gasometer, static call flag, optional depth and optional accessed data struct.
+        public init(gasometer: Gas, isStatic: Bool, depth: UInt?, accessed: Accessed?) {
+            self.gasometer = gasometer
+            self.depth = depth
+            self.isStatic = isStatic
+            self.accessed = accessed
+        }
+
+        /// Swallow commit implements part of logic for `exit_commit`:
+        /// - Record opcode stipend.
+        /// - Record an explicit refund.
+        /// - Merge warmed accounts and storages
+        public mutating func swallowCommit(from other: borrowing Self) {
+            gasometer.recordStipend(stipend: other.gasometer.remaining)
+            gasometer.recordRefund(refund: other.gasometer.refunded)
+
+            // Optimized merge warmed accounts and storages
+            if let otherAccessed = other.accessed {
+                if accessed == nil {
+                    accessed = otherAccessed // Это копирование указателей на коллекции (дешево)
+                } else {
+                    accessed?.merge(with: otherAccessed)
+                }
+            }
+        }
+
+        /// Swallow revert implements part of logic for `exit_commit`:
+        /// - Record opcode stipend.
+        public mutating func swallowRevert(other: Self) {
+            gasometer.recordStipend(stipend: other.gasometer.remaining)
+        }
+
+        /// Create a child `Metadata` with a fresh gasometer, propagated static flag, incremented depth, and reset
+        /// accessed data when present.
+        public func spitChild(gasLimit: UInt64, isStatic: Bool) -> Self {
+            return Self(
+                gasometer: Gas(limit: gasLimit),
+                isStatic: isStatic || self.isStatic,
+                depth: depth.map { $0 + 1 } ?? 0,
+                accessed: accessed.map { _ in Accessed() }
+            )
+        }
+
+        /// Mark a single address as accessed, if access lists are enabled.
+        public mutating func accessAddress(_ address: H160) {
+            accessed?.setAccessAddress(address)
+        }
+
+        /// Mark multiple addresses as accessed, if access lists are enabled.
+        public mutating func accessAddresses<I: IteratorProtocol>(_ addresses: inout I) where I.Element == H160 {
+            accessed?.accessAddresses(&addresses)
+        }
+
+        /// Mark a single storage slot as accessed, if access lists are enabled.
+        public mutating func accessStorage(address: H160, key: H256) {
+            accessed?.storage.insert(Storage(address: address, index: key))
+        }
+
+        /// Mark multiple storage slots as accessed, if access lists are enabled.
+        public mutating func accessStorages<I: IteratorProtocol>(_ storages: inout I) where I.Element == Storage {
+            accessed?.addStorages(&storages)
+        }
+
+        /// Read accessed data (used for gas calculation logic).
+        public func accessedData() -> Accessed? {
+            return accessed
+        }
+
+        /// Add authority to accessed list (EIP\-7702).
+        public mutating func addAuthority(authority: H160, address: H160) {
+            accessed?.addAuthority(authority: authority, address: address)
+        }
+
+        /// Remove authority from accessed list (EIP\-7702).
+        public mutating func removeAuthority(_ authority: H160) {
+            accessed?.removeAuthority(authority)
         }
     }
 
@@ -127,6 +208,14 @@ public class MemoryState {
         func isAuthority(_ authority: H160) -> Bool {
             return self.authority.keys.contains(authority)
         }
+
+        /// Merge accessed data with other accessed data.
+        mutating func merge(with other: borrowing Accessed) {
+            addresses.formUnion(other.addresses)
+            storage.formUnion(other.storage)
+
+            authority.merge(other.authority) { _, new in new }
+        }
     }
 
     /// Struct to store accessed storage key-value pairs. This struct is used to track the state of accessed storage during execution
@@ -147,7 +236,13 @@ public class MemoryState {
 
     /// Initialize `MemoryState` with predefined metadata.
     public init(gasLimit: UInt64, backend: Backend, hardFork: HardFork) {
-        self.metadata = Metadata(gasometr: Gas(limit: gasLimit), hardFork: hardFork)
+        self.metadata = Metadata(gasometer: Gas(limit: gasLimit), hardFork: hardFork)
+        self.backend = backend
+    }
+
+    /// Initialize `MemoryState` with predefined metadata, backend.
+    public init(metadata: Metadata, backend: Backend) {
+        self.metadata = metadata
         self.backend = backend
     }
 
@@ -313,5 +408,186 @@ public class MemoryState {
     /// Set account code.
     public func setCode(address: H160, code: [UInt8]) {
         accountMut(address: address).code = code
+    }
+
+    /// Internal helper to swap the entire state data between two instances.
+    /// This is an O(1) operation for collections due to Swift's Copy-on-Write implementation.
+    private func swapState(with other: MemoryState) {
+        swap(&logs, &other.logs)
+        swap(&accounts, &other.accounts)
+        swap(&storages, &other.storages)
+        swap(&tstorages, &other.tstorages)
+        swap(&deletes, &other.deletes)
+        swap(&creates, &other.creates)
+        swap(&parent, &other.parent)
+    }
+
+    /// Enter a new `substate` by creating a child `MemoryState` with the current state as its parent.
+    /// The current state data is "pushed" into a parent state, and 'self' becomes a fresh substate.
+    public func enter(gasLimit: UInt64, isStatic: Bool) {
+        let oldState = MemoryState(metadata: metadata, backend: backend)
+
+        // Push current data to oldState
+        swapState(with: oldState)
+
+        // Re-establish the link: self is now the child of oldState
+        metadata = metadata.spitChild(gasLimit: gasLimit, isStatic: isStatic)
+        parent = oldState
+    }
+
+    /// Exit commit represents successful execution of the `substate`.
+    ///
+    /// It includes:
+    /// - swallow commit:
+    ///   - gas recording
+    ///   - warmed accesses merging
+    /// - logs merging
+    /// - for account existed from substate with reset flag, remove storages by keys
+    /// - merge substate data: accounts, storages, tstorages, deletes, creates
+    ///
+    /// - Throws: `fatalError` if called on a root state.
+    public func exitCommit() {
+        guard let exited = parent else { fatalError("Cannot commit on root substate") }
+
+        // 1. Swap back: 'self' becomes the parent, 'exited' variable holds the substate data
+        swapState(with: exited)
+
+        // 2. Process metadata (gas and warmed access lists)
+        metadata.swallowCommit(from: exited.metadata)
+
+        // 3. Merge logs
+        logs.append(contentsOf: exited.logs)
+
+        // 4. Handle Storage Resets
+        // If an account in the substate has the 'reset' flag, we clear the storage
+        // for that address in the parent state (which is now 'self').
+        for (address, account) in exited.accounts {
+            if account.reset {
+                storages[address] = nil
+            }
+        }
+
+        // 5. Merge substate data into current state
+        // Merge Accounts
+        accounts.merge(exited.accounts) { _, new in new }
+
+        // Merge Storages (Dictionary of Dictionaries)
+        for (address, subStorage) in exited.storages {
+            if storages[address] == nil {
+                storages[address] = subStorage
+            } else {
+                storages[address]?.merge(subStorage) { _, new in new }
+            }
+        }
+
+        // Merge TStorages
+        for (address, subTStorage) in exited.tstorages {
+            if tstorages[address] == nil {
+                tstorages[address] = subTStorage
+            } else {
+                tstorages[address]?.merge(subTStorage) { _, new in new }
+            }
+        }
+
+        // Merge Sets
+        deletes.formUnion(exited.deletes)
+        creates.formUnion(exited.creates)
+
+        // NOTE: Memory of 'exited' (the substate) is freed here as it leaves scope
+    }
+
+    /// Exit revert. Represents revert execution of the `substate`.
+    ///
+    /// - Throws: `fatalError` if called on a root state.
+    public func exitRevert() {
+        guard let exited = parent else { fatalError("Cannot discard on root substate") }
+
+        // Swap back: restore parent data to 'self', substate moves to 'exited'
+        swapState(with: exited)
+
+        // Swallow only gas stipend from the reverted substate
+        metadata.swallowRevert(other: exited.metadata)
+    }
+
+    /// Exit discard. Represents discard execution of the `substate`.
+    ///
+    /// - Throws: `fatalError` if called on a root state.
+    public func exitDiscard() {
+        guard let exited = parent else { fatalError("Cannot discard on root substate") }
+
+        // Swap back: restore parent data to 'self'
+        swapState(with: exited)
+    }
+
+    /// Transfer value between two accounts.
+    /// - Returns: `Success` if the transfer is possible, or `OutOfFund` error.
+    public func transfer(transfer: Transfer) -> Result<Void, Machine.ExitError> {
+        let source = accountMut(address: transfer.source)
+        if source.basic.balance < transfer.value {
+            return .failure(.OutOfFund)
+        }
+        source.basic.balance -= transfer.value
+
+        let target = accountMut(address: transfer.target)
+        target.basic.balance += transfer.value
+
+        return .success(())
+    }
+
+    /// Withdraw value from an account. Only needed for jsontests.
+    /// - Returns: `Success` if the withdrawal is possible, or `OutOfFund` error.
+    public func withdraw(address: H160, value: U256) -> Result<Void, Machine.ExitError> {
+        let source = accountMut(address: address)
+        if source.basic.balance < value {
+            return .failure(.OutOfFund)
+        }
+        source.basic.balance -= value
+
+        return .success(())
+    }
+
+    /// Deposit value into an account. Only needed for jsontests.
+    public func deposit(address: H160, value: U256) {
+        let target = accountMut(address: address)
+        target.basic.balance += value
+    }
+
+    /// Reset account balance to zero.
+    public func resetBalance(address: H160) {
+        accountMut(address: address).basic.balance = .ZERO
+    }
+
+    /// Mark account as touched by accessing it.
+    public func touch(address: H160) {
+        _ = accountMut(address: address)
+    }
+
+    /// Get transient storage value for address and key.
+    public func getTStorage(address: H160, key: H256) -> H256 {
+        return knownTStorage(address: address, key: key) ?? .ZERO
+    }
+
+    /// Retrieve transient storage value recursively from current or parent states.
+    public func knownTStorage(address: H160, key: H256) -> H256? {
+        if let accountTStorage = tstorages[address], let value = accountTStorage[key] {
+            return value
+        }
+        return parent?.knownTStorage(address: address, key: key)
+    }
+
+    /// Set transient storage value for address and key.
+    public func setTStorage(address: H160, key: H256, value: H256) {
+        if tstorages[address] == nil {
+            tstorages[address] = [:]
+        }
+        tstorages[address]?[key] = value
+    }
+
+    /// Get authority target from the current state. If it's `None`, look recursively in the parent state.
+    public func getAuthorityTargetRecursive(authority: H160) -> H160? {
+        if let target = metadata.accessed?.getAuthorityTarget(authority) {
+            return target
+        }
+        return parent?.getAuthorityTargetRecursive(authority: authority)
     }
 }

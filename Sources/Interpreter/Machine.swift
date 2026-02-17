@@ -28,7 +28,7 @@ public final class Machine {
     private(set) var memory: Memory = .init()
     /// Machine Stack
     var stack: Stack = .init()
-    /// Machine Gasometr
+    /// Machine Gasometer
     var gas: Gas
     /// Calculate Code Size
     var codeSize: Int {

@@ -9,4 +9,11 @@ public struct Log: Equatable {
     public let topics: [H256]
     /// The data of the log, which contains the non-indexed event parameters. This is a byte array that can be of arbitrary length.
     public let data: [UInt8]
+
+    /// Initialize `Log` with address, topics and data.
+    public init(address: H160, topics: [H256], data: [UInt8]) {
+        self.address = address
+        self.topics = topics
+        self.data = data
+    }
 }

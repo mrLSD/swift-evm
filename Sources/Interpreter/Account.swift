@@ -2,8 +2,8 @@ import PrimitiveTypes
 
 /// Basic account information.
 public struct BasicAccount: Equatable {
-    /// Acacount balance.
-    public let balance: U256
+    /// Account balance.
+    public var balance: U256
     /// Account nonce.
     public var nonce: U256
 

@@ -11,7 +11,9 @@ public struct Gas {
     private(set) var refunded: Int64
     /// Returns the total amount of gas spent.
     @inline(__always)
-    var spent: UInt64 { self.limit - self.remaining }
+    var spent: UInt64 {
+        self.limit - self.remaining
+    }
 
     /// Creates a new `Gas` struct with the given gas limit.
     init(limit: UInt64) {
@@ -34,6 +36,12 @@ public struct Gas {
     @inline(__always)
     mutating func recordRefund(refund: Int64) {
         self.refunded += refund
+    }
+
+    /// Records a stipend gas value.
+    @inline(__always)
+    mutating func recordStipend(stipend: UInt64) {
+        self.remaining += stipend
     }
 
     /// Sets the final refund based on the provided `isLondon` flag - London hard fork flag.
