@@ -102,8 +102,25 @@ final class AuthorizationSpec: QuickSpec {
                 it("should not be equal if any property differs") {
                     let auth1 = Authorization(authority: authorityAddr, address: targetAddr, nonce: nonce, isValid: true)
                     let auth2 = Authorization(authority: authorityAddr, address: targetAddr, nonce: 1, isValid: true)
-
                     expect(auth1).toNot(equal(auth2))
+
+                    let auth3 = Authorization(authority: authorityAddr, address: targetAddr, nonce: 1, isValid: true)
+                    let auth4 = Authorization(authority: authorityAddr, address: targetAddr, nonce: 1, isValid: false)
+                    expect(auth3).toNot(equal(auth4))
+
+                    let auth5 = Authorization(authority: authorityAddr, address: targetAddr, nonce: 1, isValid: true)
+                    let auth6 = Authorization(authority: authorityAddr, address: targetAddr, nonce: 1, isValid: true)
+                    expect(auth5).to(equal(auth6))
+
+                    let targetAddr2 = H160(from: [UInt8](repeating: 0x33, count: 20))
+                    let auth7 = Authorization(authority: authorityAddr, address: targetAddr, nonce: 1, isValid: true)
+                    let auth8 = Authorization(authority: authorityAddr, address: targetAddr2, nonce: 1, isValid: true)
+                    expect(auth7).toNot(equal(auth8))
+
+                    let authorityAddr2 = H160(from: [UInt8](repeating: 0xaa, count: 20))
+                    let auth9 = Authorization(authority: authorityAddr, address: targetAddr, nonce: 1, isValid: true)
+                    let auth10 = Authorization(authority: authorityAddr2, address: targetAddr, nonce: 1, isValid: true)
+                    expect(auth9).toNot(equal(auth10))
                 }
             }
         }

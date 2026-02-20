@@ -71,14 +71,18 @@ final class MockBackend: Backend {
     }
 
     func code(address: H160) -> [UInt8] {
-        codes[address] = [UInt8](repeating: 0x60, count: 10)
+        if codes[address] == nil {
+            codes[address] = [UInt8](repeating: 0x60, count: 10)
+        }
         return codes[address] ?? []
     }
 
     func storage(address: H160, index: H256) -> H256 {
-        var storage: [H256: H256] = [:]
-        storage[H256.ZERO] = H256(from: [123])
-        storages[address] = storage
+        if storages[address] == nil {
+            var storage: [H256: H256] = [:]
+            storage[H256.ZERO] = H256(from: [123])
+            storages[address] = storage
+        }
         return storages[address]?[index] ?? H256.ZERO
     }
 
@@ -244,11 +248,11 @@ final class MemoryStateSpec: QuickSpec {
 
                     // Account with balance is not empty
                     state.accounts[addr1] = StateAccount(basic: BasicAccount(balance: U256(from: 1), nonce: .ZERO), code: nil, reset: false)
-                    expect(state.knownEmpty(addr1)).to(beFalse())
+                    expect(state.isEmpty(address: addr1)).to(beFalse())
 
                     // Account with no balance, no nonce, and empty code is empty
                     state.accounts[addr2] = StateAccount(basic: BasicAccount(balance: .ZERO, nonce: .ZERO), code: [], reset: false)
-                    expect(state.knownEmpty(addr2)).to(beTrue())
+                    expect(state.isEmpty(address: addr2)).to(beTrue())
                 }
             }
         }

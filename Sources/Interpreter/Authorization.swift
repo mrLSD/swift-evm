@@ -7,7 +7,7 @@ import PrimitiveTypes
 /// - `isValid`: is the flag that indicates the validity of the authorization.
 ///   It is used to charge gas for each authorization item, but if it's invalid
 ///   it is excluded from the EVM `authority_list` flow.
-public struct Authorization: Equatable {
+public struct Authorization: Equatable, Sendable {
     public let authority: H160
     public let address: H160
     public let nonce: UInt64

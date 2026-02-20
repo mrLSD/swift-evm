@@ -122,12 +122,7 @@ final class MemoryStateMetadataSpec: QuickSpec {
             }
 
             context("Additional coverage for accessStorages and swallowCommit") {
-                let addr1 = H160(from: [UInt8](repeating: 0x01, count: 20))
-                let addr2 = H160(from: [UInt8](repeating: 0x02, count: 20))
-                let key1 = H256(from: [UInt8](repeating: 0xaa, count: 32))
                 let key2 = H256(from: [UInt8](repeating: 0xbb, count: 32))
-
-                let storage1 = MemoryState.Storage(address: addr1, index: key1)
                 let storage2 = MemoryState.Storage(address: addr2, index: key2)
 
                 it("records multiple storage slots via iterator using accessStorages") {

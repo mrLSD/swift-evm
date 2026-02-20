@@ -276,20 +276,6 @@ public class MemoryState {
         return knownAccount(address)?.code
     }
 
-    /// Check if account is known to be empty. This function is used to check if an account is known to be empty (i.e., has zero balance, zero nonce and empty code).
-    public func knownEmpty(_ address: H160) -> Bool? {
-        if let account = knownAccount(address) {
-            if !account.basic.balance.isZero || !account.basic.nonce.isZero {
-                return false
-            }
-
-            if let code = account.code {
-                return code.isEmpty
-            }
-        }
-        return nil
-    }
-
     /// Get known storage value by address and key. This function is used to retrieve the value of a storage slot by its address and key.
     public func knownStorage(address: H160, key: H256) -> H256? {
         if let accountStorage = storages[address], let value = accountStorage[key] {
@@ -430,9 +416,15 @@ public class MemoryState {
     /// - Parameter address: The address to check.
     /// - Returns: `true` if the account is empty, `false` otherwise.
     public func isEmpty(address: H160) -> Bool {
-        // First check the local/parent cache (known_empty).
-        if let knownEmptyStatus = knownEmpty(address) {
-            return knownEmptyStatus
+        if let account = knownAccount(address) {
+            if !account.basic.balance.isZero || !account.basic.nonce.isZero {
+                return false
+            }
+
+            if let code = account.code {
+                return code.isEmpty
+            }
+            return backend.code(address: address).isEmpty
         }
 
         // If not known locally, fetch data from the environment backend.

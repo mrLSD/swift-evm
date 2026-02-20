@@ -52,10 +52,3 @@ public struct StateAccount: Equatable, Sendable {
         self.reset = reset
     }
 }
-
-public extension StateAccount {
-    /// Equatable conformance for `StateAccount`.
-    static func == (lhs: StateAccount, rhs: StateAccount) -> Bool {
-        return lhs.basic == rhs.basic && lhs.code == rhs.code && lhs.reset == rhs.reset
-    }
-}
