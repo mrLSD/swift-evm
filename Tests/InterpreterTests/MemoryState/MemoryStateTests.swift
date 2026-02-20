@@ -255,6 +255,237 @@ final class MemoryStateSpec: QuickSpec {
                     expect(state.isEmpty(address: addr2)).to(beTrue())
                 }
             }
+
+            context("Account code state") {
+                it("should handle code management (setCode, knownCode)") {
+                    let addr1 = H160(from: [UInt8](repeating: 0x01, count: 20))
+                    let backend = MockBackend()
+                    let state = MemoryState(gasLimit: 10000, backend: backend, hardFork: .Berlin)
+
+                    // Case: Unknown code (should be nil in local state logic, though knownAccount usually handles lookup)
+                    // Note: knownCode uses knownAccount internally. If not in state/parent, returns nil.
+                    // But our MockBackend returns code.
+                    // Let's verify setCode overrides backend.
+
+                    let newCode: [UInt8] = [0xfe, 0xfe]
+                    state.setCode(address: addr1, code: newCode)
+
+                    expect(state.knownCode(addr1)).to(equal(newCode))
+
+                    // Verify it touched the account
+                    expect(state.accounts[addr1]).toNot(beNil())
+                    expect(state.accounts[addr1]?.code).to(equal(newCode))
+                }
+            }
+            /*
+             context("Account code state") {
+                 let addr1 = H160(from: [UInt8](repeating: 0x01, count: 20))
+                 let addr2 = H160(from: [UInt8](repeating: 0x02, count: 20))
+                 let key1 = H256.ZERO
+                 let val1 = H256(from: [UInt8](repeating: 0xff, count: 32))
+
+                 it("should handle storage lookups recursively (knownStorage)") {
+                     let backend = MockBackend()
+                     let parent = MemoryState(gasLimit: 10000, backend: backend, hardFork: .Berlin)
+
+                     // Setup parent storage
+                     parent.setStorage(address: addr1, key: key1, value: val1)
+
+                     let child = MemoryState(metadata: parent.metadata.spitChild(gasLimit: 5000, isStatic: false), backend: backend)
+                     child.parent = parent
+
+                     // Case 1: Fetch from parent
+                     expect(child.knownStorage(address: addr1, key: key1)).to(equal(val1))
+
+                     // Case 2: Value in current state
+                     let newVal = H256(from: [0xaa])
+                     child.setStorage(address: addr1, key: key1, value: newVal)
+                     expect(child.knownStorage(address: addr1, key: key1)).to(equal(newVal))
+
+                     // Case 3: Account reset in current state (should return ZERO even if parent has value)
+                     child.resetStorage(address: addr1)
+                     expect(child.knownStorage(address: addr1, key: key1)).to(equal(H256.ZERO))
+                 }
+
+                 it("should handle original storage lookups (knownOriginalStorage)") {
+                     let backend = MockBackend()
+                     let parent = MemoryState(gasLimit: 10000, backend: backend, hardFork: .Berlin)
+
+                     // Mock backend storage access via parent
+                     // We need to inject into backend or parent to test the fallback
+                     // MemoryState.knownOriginalStorage falls back to parent.knownOriginalStorage
+
+                     let child = MemoryState(metadata: parent.metadata.spitChild(gasLimit: 5000, isStatic: false), backend: backend)
+                     child.parent = parent
+
+                     // Case 1: Account reset in child -> returns ZERO
+                     child.resetStorage(address: addr1)
+                     expect(child.knownOriginalStorage(addr1)).to(equal(H256.ZERO))
+
+                     // Case 2: Normal lookup (mocks backend interaction via recursion)
+                     // Since MockBackend.originalStorage returns value, and we didn't reset in a fresh state:
+                     let freshState = MemoryState(gasLimit: 10000, backend: backend, hardFork: .Berlin)
+                     // The MemoryState wrapper implementation of Backend calls knownOriginalStorage.
+                     // If we call freshState.knownOriginalStorage directly:
+                     // It returns parent?.knownOriginalStorage. If parent is nil, it returns nil.
+                     expect(freshState.knownOriginalStorage(addr1)).to(beNil())
+                 }
+
+                 it("should track deleted accounts (setDeleted, isDeleted)") {
+                     let backend = MockBackend()
+                     let parent = MemoryState(gasLimit: 10000, backend: backend, hardFork: .Berlin)
+                     parent.setDeleted(address: addr1)
+
+                     let child = MemoryState(metadata: parent.metadata.spitChild(gasLimit: 5000, isStatic: false), backend: backend)
+                     child.parent = parent
+
+                     // Case 1: Inherited from parent
+                     expect(child.isDeleted(addr1)).to(beTrue())
+
+                     // Case 2: Set in child
+                     child.setDeleted(address: addr2)
+                     expect(child.isDeleted(addr2)).to(beTrue())
+
+                     // Case 3: Not deleted
+                     let addr3 = H160(from: [0x03])
+                     expect(child.isDeleted(addr3)).to(beFalse())
+                 }
+
+                 it("should track created accounts (setCreated, isCreated)") {
+                     let backend = MockBackend()
+                     let parent = MemoryState(gasLimit: 10000, backend: backend, hardFork: .Berlin)
+                     parent.setCreated(address: addr1)
+
+                     let child = MemoryState(metadata: parent.metadata.spitChild(gasLimit: 5000, isStatic: false), backend: backend)
+                     child.parent = parent
+
+                     // Case 1: Inherited from parent
+                     expect(child.isCreated(addr1)).to(beTrue())
+
+                     // Case 2: Set in child
+                     child.setCreated(address: addr2)
+                     expect(child.isCreated(addr2)).to(beTrue())
+
+                     // Case 3: Not created
+                     let addr3 = H160(from: [0x03])
+                     expect(child.isCreated(addr3)).to(beFalse())
+                 }
+
+                 it("should handle balance operations (deposit, withdraw, resetBalance)") {
+                     let backend = MockBackend()
+                     let state = MemoryState(gasLimit: 10000, backend: backend, hardFork: .Berlin)
+
+                     // Deposit
+                     state.deposit(address: addr1, value: U256(from: 100))
+                     expect(state.knownBasic(addr1)?.balance).to(equal(U256(from: 110))) // 10 (mock) + 100
+
+                     // Withdraw Success
+                     let res = state.withdraw(address: addr1, value: U256(from: 50))
+                     expect(res).to(beSuccess())
+                     expect(state.knownBasic(addr1)?.balance).to(equal(U256(from: 60)))
+
+                     // Withdraw Fail (Out of Fund)
+                     let resFail = state.withdraw(address: addr1, value: U256(from: 1000))
+                     expect(resFail).to(beFailure { error in
+                         expect(error).to(equal(.OutOfFund))
+                     })
+
+                     // Reset Balance
+                     state.resetBalance(address: addr1)
+                     expect(state.knownBasic(addr1)?.balance).to(equal(U256.ZERO))
+                 }
+
+                 it("should handle transfers") {
+                     let backend = MockBackend()
+                     let state = MemoryState(gasLimit: 10000, backend: backend, hardFork: .Berlin)
+
+                     // Initial setup
+                     state.accounts[addr1] = StateAccount(basic: BasicAccount(balance: U256(from: 100), nonce: .ZERO), code: nil, reset: false)
+                     state.accounts[addr2] = StateAccount(basic: BasicAccount(balance: U256(from: 0), nonce: .ZERO), code: nil, reset: false)
+
+                     // Case 1: Transfer to self (should succeed and do nothing)
+                     let transferSelf = Transfer(source: addr1, target: addr1, value: U256(from: 50))
+                     let resSelf = state.transfer(transfer: transferSelf)
+                     expect(resSelf).to(beSuccess())
+                     expect(state.knownBasic(addr1)?.balance).to(equal(U256(from: 100)))
+
+                     // Case 2: Out of funds
+                     let transferOOF = Transfer(source: addr1, target: addr2, value: U256(from: 200))
+                     let resOOF = state.transfer(transfer: transferOOF)
+                     expect(resOOF).to(beFailure { error in expect(error).to(equal(.OutOfFund)) })
+
+                     // Case 3: Successful transfer
+                     let transferOk = Transfer(source: addr1, target: addr2, value: U256(from: 40))
+                     let resOk = state.transfer(transfer: transferOk)
+                     expect(resOk).to(beSuccess())
+                     expect(state.knownBasic(addr1)?.balance).to(equal(U256(from: 60)))
+                     expect(state.knownBasic(addr2)?.balance).to(equal(U256(from: 40)))
+                 }
+
+                 it("should touch accounts explicitly") {
+                     let backend = MockBackend()
+                     let state = MemoryState(gasLimit: 10000, backend: backend, hardFork: .Berlin)
+
+                     expect(state.accounts[addr1]).to(beNil())
+                     state.touch(address: addr1)
+                     expect(state.accounts[addr1]).toNot(beNil())
+                 }
+
+                 it("should retrieve environmental data (gasPrice)") {
+                     let backend = MockBackend()
+                     let state = MemoryState(gasLimit: 10000, backend: backend, hardFork: .Berlin)
+                     // MockBackend gasPrice returns ZERO
+                     expect(state.gasPrice()).to(equal(U256.ZERO))
+                 }
+
+                 it("should determine if account is empty correctly") {
+                     let backend = MockBackend()
+                     let state = MemoryState(gasLimit: 10000, backend: backend, hardFork: .Berlin)
+
+                     // 1. Locally known: Has Balance
+                     state.accounts[addr1] = StateAccount(basic: BasicAccount(balance: U256(from: 1), nonce: .ZERO), code: [], reset: false)
+                     expect(state.isEmpty(address: addr1)).to(beFalse())
+
+                     // 2. Locally known: Has Nonce
+                     state.accounts[addr1] = StateAccount(basic: BasicAccount(balance: .ZERO, nonce: U256(from: 1)), code: [], reset: false)
+                     expect(state.isEmpty(address: addr1)).to(beFalse())
+
+                     // 3. Locally known: Has Code
+                     state.accounts[addr1] = StateAccount(basic: BasicAccount(balance: .ZERO, nonce: .ZERO), code: [0x00], reset: false)
+                     expect(state.isEmpty(address: addr1)).to(beFalse())
+
+                     // 4. Locally known: Empty
+                     state.accounts[addr1] = StateAccount(basic: BasicAccount(balance: .ZERO, nonce: .ZERO), code: [], reset: false)
+                     expect(state.isEmpty(address: addr1)).to(beTrue())
+
+                     // 5. Unknown locally: Fetch from backend
+                     // MockBackend returns default account with balance 10 -> Not Empty
+                     expect(state.isEmpty(address: addr2)).to(beFalse())
+                 }
+
+                 it("should handle getAccountAndTouch edge cases") {
+                     let backend = MockBackend()
+                     let parent = MemoryState(gasLimit: 10000, backend: backend, hardFork: .Berlin)
+
+                     // Case: Parent has account
+                     parent.accounts[addr1] = StateAccount(basic: BasicAccount(balance: U256(from: 99), nonce: .ZERO), code: [], reset: true)
+
+                     let child = MemoryState(metadata: parent.metadata.spitChild(gasLimit: 5000, isStatic: false), backend: backend)
+                     child.parent = parent
+
+                     // Trigger fetch from parent
+                     let acc = child.getAccountAndTouch(addr1)
+
+                     // Should be cloned
+                     expect(acc.basic.balance).to(equal(U256(from: 99)))
+                     // Should NOT trigger reset in child copy immediately, but reset flag logic in getAccountAndTouch sets `reset: false` for the new copy
+                     expect(acc.reset).to(beFalse())
+
+                     // Check local cache is populated
+                     expect(child.accounts[addr1]).toNot(beNil())
+                 }
+             }
+             */
         }
     }
 }

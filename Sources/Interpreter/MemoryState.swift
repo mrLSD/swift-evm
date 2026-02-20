@@ -216,7 +216,7 @@ public class MemoryState {
 
         /// Check if authority is in the accessed authority list (EIP-7702).
         func isAuthority(_ authority: H160) -> Bool {
-            return self.authority.keys.contains(authority)
+            return self.authority[authority] != nil
         }
 
         /// Merge accessed data with other accessed data.
