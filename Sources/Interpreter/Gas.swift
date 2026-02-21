@@ -1,7 +1,7 @@
 import PrimitiveTypes
 
 /// Represents the state of gas during execution.
-public struct Gas {
+public struct Gas: Equatable, Sendable {
     /// The initial gas limit. This is constant throughout execution.
     let limit: UInt64
     var memoryGas: MemoryGas = .init()
@@ -11,7 +11,9 @@ public struct Gas {
     private(set) var refunded: Int64
     /// Returns the total amount of gas spent.
     @inline(__always)
-    var spent: UInt64 { self.limit - self.remaining }
+    var spent: UInt64 {
+        self.limit - self.remaining
+    }
 
     /// Creates a new `Gas` struct with the given gas limit.
     init(limit: UInt64) {
@@ -34,6 +36,18 @@ public struct Gas {
     @inline(__always)
     mutating func recordRefund(refund: Int64) {
         self.refunded += refund
+    }
+
+    /// Records a stipend gas value.
+    @inline(__always)
+    mutating func recordStipend(stipend: UInt64) {
+        let (newRemaining, overflow) = self.remaining.addingReportingOverflow(stipend)
+        if overflow || newRemaining > self.limit {
+            // Clamp to the gas limit to preserve the invariant `remaining <= limit`
+            self.remaining = self.limit
+        } else {
+            self.remaining = newRemaining
+        }
     }
 
     /// Sets the final refund based on the provided `isLondon` flag - London hard fork flag.
@@ -65,7 +79,7 @@ public struct Gas {
 }
 
 /// Memory gas data
-struct MemoryGas {
+struct MemoryGas: Equatable, Sendable {
     /// Number of words in memory. Used for memory resize gas calculation
     var numWords: Int = 0
     /// Memory gas cost
@@ -75,7 +89,7 @@ struct MemoryGas {
     ///
     /// - Unchanged: Indicates that the memory size did not change, hence no additional gas cost was incurred.
     /// - Resized(UInt64): Indicates that the memory was resized, with the associated UInt64 representing the additional gas cost.
-    enum MemoryGasStatus: Equatable {
+    enum MemoryGasStatus: Equatable, Sendable {
         case Unchanged
         case Resized(UInt64)
     }
