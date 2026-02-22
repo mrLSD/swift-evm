@@ -36,6 +36,11 @@ public struct BasicAccount: Equatable, Sendable {
     }
 }
 
+extension BasicAccount {
+    /// A default `BasicAccount` instance with a balance of zero and a nonce of zero.
+    static let `default` = BasicAccount(balance: U256.ZERO, nonce: U256.ZERO)
+}
+
 /// Account state information.
 public struct StateAccount: Equatable, Sendable {
     /// Basic account information.

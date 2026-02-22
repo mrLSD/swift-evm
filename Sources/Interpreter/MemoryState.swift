@@ -266,16 +266,6 @@ public class MemoryState {
         return parent?.knownAccount(address)
     }
 
-    /// Get known basic account data by address. This function is used to retrieve the basic data of an account by its address.
-    public func knownBasic(_ address: H160) -> BasicAccount? {
-        return knownAccount(address)?.basic
-    }
-
-    /// Get known account code by address. This function is used to retrieve the code of an account by its address.
-    public func knownCode(_ address: H160) -> [UInt8]? {
-        return knownAccount(address)?.code
-    }
-
     /// Get known storage value by address and key. This function is used to retrieve the value of a storage slot by its address and key.
     public func knownStorage(address: H160, key: H256) -> H256? {
         if let accountStorage = storages[address], let value = accountStorage[key] {
@@ -734,15 +724,31 @@ extension MemoryState: Backend {
     }
 
     public func basic(address: H160) -> BasicAccount {
-        return knownBasic(address) ?? backend.basic(address: address)
+        guard let basic = knownAccount(address)?.basic else {
+            let account = getAccountAndTouch(address)
+            return account.basic
+        }
+        return basic
     }
 
     public func code(address: H160) -> [UInt8] {
-        return knownCode(address) ?? backend.code(address: address)
+        guard let code = knownAccount(address)?.code else {
+            let code = backend.code(address: address)
+            // Cache code in the state for future accesses.
+            setCode(address: address, code: code)
+            return code
+        }
+        return code
     }
 
     public func storage(address: H160, index: H256) -> H256 {
-        return knownStorage(address: address, key: index) ?? backend.storage(address: address, index: index)
+        guard let value = knownStorage(address: address, key: index) else {
+            let value = backend.storage(address: address, index: index)
+            // Cache storage value in the state for future accesses.
+            setStorage(address: address, key: index, value: value)
+            return value
+        }
+        return value
     }
 
     public func isEmptyStorage(address: H160) -> Bool {
