@@ -612,6 +612,23 @@ final class MemoryStateSpec: QuickSpec {
                     _ = state.getAccountAndTouch(backend.sender)
                     expect(state.exists(address: backend.sender)).to(beTrue())
                 }
+
+                it("isEmptyStorage") {
+                    let backend = MockBackend()
+                    let state = MemoryState(gasLimit: 10000, backend: backend, hardFork: .Berlin)
+                    expect(state.isEmptyStorage(address: backend.sender)).to(beTrue())
+
+                    state.setStorage(address: backend.sender, key: backend.storageKey1, value: H256(from: U256(from: 555).toBigEndian))
+                    expect(state.storage(address: backend.sender, index: backend.storageKey1)).to(equal(H256(from: U256(from: 555).toBigEndian)))
+                    expect(state.isEmptyStorage(address: backend.sender)).to(beFalse())
+                }
+
+                it("originalStorage") {
+                    let backend = MockBackend()
+                    let state = MemoryState(gasLimit: 10000, backend: backend, hardFork: .Berlin)
+                    expect(state.originalStorage(address: backend.sender, index: backend.storageKey1)).to(beNil())
+                }
+
             }
 
             context("Handle transfers") {
@@ -693,6 +710,50 @@ final class MemoryStateSpec: QuickSpec {
                     // Not cashed
                     expect(state.isEmpty(address: backend.sender)).to(beFalse())
                     expect(state.isEmpty(address: addr2)).to(beTrue())
+                }
+            }
+
+            context("TStorage Management") {
+                let key1 = H256(from: U256(from: 10).toBigEndian)
+                let val1 = H256(from: [UInt8](repeating: 0xf2, count: 32))
+                let expectedVal = H256(from: U256(from: 555).toBigEndian)
+
+                it("should handle tstorage for current state") {
+                    let backend = MockBackend()
+                    let state = MemoryState(gasLimit: 10000, backend: backend, hardFork: .Berlin)
+
+                    expect(state.knownTStorage(address: backend.address1, key: key1)).to(beNil())
+                    expect(state.getTStorage(address: backend.address1, key: key1)).to(equal(H256.ZERO))
+
+                    state.setTStorage(address: backend.address1, key: key1, value: val1)
+                    expect(state.knownTStorage(address: backend.address1, key: key1)).to(equal(val1))
+                    expect(state.getTStorage(address: backend.address1, key: key1)).to(equal(val1))
+                }
+
+                it("should handle tstorage for substate") {
+                    let backend = MockBackend()
+                    let parentState = MemoryState(gasLimit: 10000, backend: backend, hardFork: .Berlin)
+                    let childState = MemoryState(metadata: parentState.metadata.spitChild(gasLimit: 5000, isStatic: false), backend: backend)
+                    childState.parent = parentState
+
+                    expect(parentState.knownTStorage(address: backend.sender, key: backend.storageKey1)).to(beNil())
+                    expect(childState.knownTStorage(address: backend.sender, key: backend.storageKey1)).to(beNil())
+                    expect(parentState.getTStorage(address: backend.sender, key: key1)).to(equal(H256.ZERO))
+                    expect(childState.getTStorage(address: backend.sender, key: key1)).to(equal(H256.ZERO))
+
+                    parentState.setTStorage(address: backend.sender, key: key1, value: val1)
+                    expect(parentState.knownTStorage(address: backend.sender, key: key1)).to(equal(val1))
+                    expect(childState.knownTStorage(address: backend.sender, key: key1)).to(equal(val1))
+                    expect(parentState.getTStorage(address: backend.sender, key: key1)).to(equal(val1))
+                    expect(childState.getTStorage(address: backend.sender, key: key1)).to(equal(val1))
+
+                    let val2 = H256(from: [UInt8](repeating: 0xee, count: 32))
+
+                    childState.setTStorage(address: backend.sender, key: key1, value: val2)
+                    expect(parentState.knownTStorage(address: backend.sender, key: key1)).to(equal(val1))
+                    expect(childState.knownTStorage(address: backend.sender, key: key1)).to(equal(val2))
+                    expect(parentState.getTStorage(address: backend.sender, key: key1)).to(equal(val1))
+                    expect(childState.getTStorage(address: backend.sender, key: key1)).to(equal(val2))
                 }
             }
 

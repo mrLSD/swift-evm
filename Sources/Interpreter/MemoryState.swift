@@ -277,14 +277,6 @@ public class MemoryState {
         return parent?.knownStorage(address: address, key: key)
     }
 
-    /// Get known original storage value by address. This function is used to retrieve the original value of a storage slot by its address.
-    public func knownOriginalStorage(_ address: H160) -> H256? {
-        if let account = accounts[address], account.reset {
-            return H256.ZERO
-        }
-        return parent?.knownOriginalStorage(address)
-    }
-
     /// Check is account address is cold by address.
     public func isCold(_ address: H160) -> Bool {
         return recursiveIsCold { accessed in accessed.addresses.contains(address) }
@@ -752,13 +744,10 @@ extension MemoryState: Backend {
     }
 
     public func isEmptyStorage(address: H160) -> Bool {
-        return backend.isEmptyStorage(address: address)
+        backend.isEmptyStorage(address: address)
     }
 
     public func originalStorage(address: H160, index: H256) -> H256? {
-        if let value = knownOriginalStorage(address) {
-            return value
-        }
-        return backend.originalStorage(address: address, index: index)
+        backend.originalStorage(address: address, index: index)
     }
 }
