@@ -93,11 +93,17 @@ final class MockBackend: Backend {
     }
 
     func isEmptyStorage(address: H160) -> Bool {
-        storages[address]?.isEmpty ?? true
+        if address == sender {
+            return false
+        }
+        return storages[address]?.isEmpty ?? true
     }
 
     func originalStorage(address: H160, index: H256) -> H256? {
-        storages[address]?[index]
+        if address == sender, index == storageKey1 {
+            return H256(from: U256(from: 555).toBigEndian)
+        }
+        return storages[address]?[index]
     }
 }
 
@@ -616,19 +622,16 @@ final class MemoryStateSpec: QuickSpec {
                 it("isEmptyStorage") {
                     let backend = MockBackend()
                     let state = MemoryState(gasLimit: 10000, backend: backend, hardFork: .Berlin)
-                    expect(state.isEmptyStorage(address: backend.sender)).to(beTrue())
-
-                    state.setStorage(address: backend.sender, key: backend.storageKey1, value: H256(from: U256(from: 555).toBigEndian))
-                    expect(state.storage(address: backend.sender, index: backend.storageKey1)).to(equal(H256(from: U256(from: 555).toBigEndian)))
+                    expect(state.isEmptyStorage(address: backend.address1)).to(beTrue())
                     expect(state.isEmptyStorage(address: backend.sender)).to(beFalse())
                 }
 
                 it("originalStorage") {
                     let backend = MockBackend()
                     let state = MemoryState(gasLimit: 10000, backend: backend, hardFork: .Berlin)
-                    expect(state.originalStorage(address: backend.sender, index: backend.storageKey1)).to(beNil())
+                    expect(state.originalStorage(address: backend.sender, index: backend.storageKey1)).to(equal(H256(from: U256(from: 555).toBigEndian)))
+                    expect(state.originalStorage(address: backend.address1, index: backend.storageKey1)).to(beNil())
                 }
-
             }
 
             context("Handle transfers") {
@@ -757,6 +760,87 @@ final class MemoryStateSpec: QuickSpec {
                 }
             }
 
+            context("Authorization list") {
+                let addr1 = H160(from: [UInt8](repeating: 0x01, count: 20))
+                let addr2 = H160(from: [UInt8](repeating: 0x02, count: 20))
+
+                it("getAuthorityTargetRecursive with substate") {
+                    let backend = MockBackend()
+                    let parentState = MemoryState(gasLimit: 10000, backend: backend, hardFork: .Berlin)
+                    let childState = MemoryState(metadata: parentState.metadata.spitChild(gasLimit: 5000, isStatic: false), backend: backend)
+                    childState.parent = parentState
+
+                    expect(parentState.getAuthorityTargetRecursive(authority: addr1)).to(beNil())
+                    expect(childState.getAuthorityTargetRecursive(authority: addr1)).to(beNil())
+                    expect(parentState.getAuthorityTargetRecursive(authority: addr2)).to(beNil())
+                    expect(childState.getAuthorityTargetRecursive(authority: addr2)).to(beNil())
+
+                    parentState.metadata.addAuthority(authority: addr1, address: addr2)
+                    childState.metadata.addAuthority(authority: addr2, address: addr1)
+
+                    expect(parentState.getAuthorityTargetRecursive(authority: addr1)).to(equal(addr2))
+                    expect(childState.getAuthorityTargetRecursive(authority: addr1)).to(equal(addr2))
+                    expect(parentState.getAuthorityTargetRecursive(authority: addr2)).to(beNil())
+                    expect(childState.getAuthorityTargetRecursive(authority: addr2)).to(equal(addr1))
+
+                    expect(parentState.getAuthorityTarget(authority: addr1)).to(equal(addr2))
+                    expect(childState.getAuthorityTarget(authority: addr1)).to(equal(addr2))
+                    expect(parentState.getAuthorityTarget(authority: addr2)).to(beNil())
+                    expect(childState.getAuthorityTarget(authority: addr2)).to(equal(addr1))
+                }
+
+                it("getAuthorityTarget with substate") {
+                    let backend = MockBackend()
+                    let parentState = MemoryState(gasLimit: 10000, backend: backend, hardFork: .Berlin)
+                    let childState = MemoryState(metadata: parentState.metadata.spitChild(gasLimit: 5000, isStatic: false), backend: backend)
+                    childState.parent = parentState
+
+                    expect(parentState.getAuthorityTarget(authority: addr1)).to(beNil())
+                    expect(parentState.getAuthorityTarget(authority: addr2)).to(beNil())
+
+                    var code: [UInt8] = [0xef, 0x01, 0x00]
+                    code.append(contentsOf: addr2.BYTES)
+                    parentState.setCode(address: addr1, code: code)
+
+                    var code2: [UInt8] = [0xef, 0x01, 0x00]
+                    code2.append(contentsOf: addr1.BYTES)
+                    childState.setCode(address: addr2, code: code2)
+
+                    // After delegation address detected - set authority, also available for child
+                    expect(parentState.getAuthorityTarget(authority: addr1)).to(equal(addr2))
+                    expect(childState.getAuthorityTarget(authority: addr1)).to(equal(addr2))
+
+                    expect(parentState.getAuthorityTarget(authority: addr2)).to(beNil())
+                    expect(childState.getAuthorityTarget(authority: addr2)).to(equal(addr1))
+                }
+
+                it("getAuthorityTarget with substate") {
+                    let backend = MockBackend()
+                    let parentState = MemoryState(gasLimit: 10000, backend: backend, hardFork: .Berlin)
+                    let childState = MemoryState(metadata: parentState.metadata.spitChild(gasLimit: 5000, isStatic: false), backend: backend)
+                    childState.parent = parentState
+
+                    expect(parentState.isAuthorityCold(address: addr1)).to(beNil())
+                    expect(childState.isAuthorityCold(address: addr1)).to(beNil())
+                    parentState.metadata.accessed?.setAccessAddress(addr2)
+                    expect(parentState.isAuthorityCold(address: addr1)).to(beNil())
+
+                    parentState.metadata.addAuthority(authority: addr1, address: addr2)
+                    expect(parentState.isAuthorityCold(address: addr1)).to(beFalse())
+                    expect(childState.isAuthorityCold(address: addr1)).to(beFalse())
+
+                    expect(parentState.isAuthorityCold(address: addr2)).to(beNil())
+                    expect(childState.isAuthorityCold(address: addr2)).to(beNil())
+
+                    childState.metadata.addAuthority(authority: addr2, address: addr1)
+                    expect(parentState.isAuthorityCold(address: addr2)).to(beNil())
+                    expect(childState.isAuthorityCold(address: addr2)).to(beTrue())
+
+                    childState.metadata.accessed?.setAccessAddress(addr1)
+                    expect(childState.isAuthorityCold(address: addr1)).to(beFalse())
+                }
+            }
+
             // TODO:
             context("Cold/Warm Access (EIP-2929)") {
                 let addr1 = H160(from: [UInt8](repeating: 0x01, count: 20))
@@ -821,34 +905,6 @@ final class MemoryStateSpec: QuickSpec {
                     expect(state.isCreated(addr2)).to(beTrue())
                 }
             }
-
-            /*
-             context("Account code state") {
-                 it("should handle original storage lookups (knownOriginalStorage)") {
-                     let backend = MockBackend()
-                     let parent = MemoryState(gasLimit: 10000, backend: backend, hardFork: .Berlin)
-
-                     // Mock backend storage access via parent
-                     // We need to inject into backend or parent to test the fallback
-                     // MemoryState.knownOriginalStorage falls back to parent.knownOriginalStorage
-
-                     let child = MemoryState(metadata: parent.metadata.spitChild(gasLimit: 5000, isStatic: false), backend: backend)
-                     child.parent = parent
-
-                     // Case 1: Account reset in child -> returns ZERO
-                     child.resetStorage(address: addr1)
-                     expect(child.knownOriginalStorage(addr1)).to(equal(H256.ZERO))
-
-                     // Case 2: Normal lookup (mocks backend interaction via recursion)
-                     // Since MockBackend.originalStorage returns value, and we didn't reset in a fresh state:
-                     let freshState = MemoryState(gasLimit: 10000, backend: backend, hardFork: .Berlin)
-                     // The MemoryState wrapper implementation of Backend calls knownOriginalStorage.
-                     // If we call freshState.knownOriginalStorage directly:
-                     // It returns parent?.knownOriginalStorage. If parent is nil, it returns nil.
-                     expect(freshState.knownOriginalStorage(addr1)).to(beNil())
-                 }
-             }
-             */
         }
     }
 }
