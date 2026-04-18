@@ -56,12 +56,11 @@ public struct Authorization: Equatable, Sendable {
 
 public extension Authorization {
     /// Provides a default/zero instance of `Authorization`.
-    static var `default`: Authorization {
-        return Authorization(
+    static let `default` =
+        Authorization(
             authority: .ZERO,
             address: .ZERO,
             nonce: 0,
             isValid: false
         )
-    }
 }

@@ -93,7 +93,7 @@ final class MemoryStateMetadataSpec: QuickSpec {
                 }
             }
 
-            context("Access List Management") {
+            context("Access dataw Management") {
                 it("manages authority (EIP-7702)") {
                     var metadata = MemoryState.Metadata(gasometer: Gas(limit: 1000), hardFork: .Berlin)
                     metadata.addAuthority(authority: addr1, address: addr2)
