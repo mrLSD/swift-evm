@@ -841,10 +841,11 @@ final class MemoryStateSpec: QuickSpec {
                 }
             }
 
-            // TODO:
             context("Cold/Warm Access (EIP-2929)") {
                 let addr1 = H160(from: [UInt8](repeating: 0x01, count: 20))
                 let addr2 = H160(from: [UInt8](repeating: 0x02, count: 20))
+                let key1 = H256(from: U256(from: 10).toBigEndian)
+                let key2 = H256(from: U256(from: 20).toBigEndian)
 
                 it("should correctly identify cold vs warm addresses") {
                     let backend = MockBackend()
@@ -872,11 +873,58 @@ final class MemoryStateSpec: QuickSpec {
                     // addr2 is cold everywhere
                     expect(childState.isCold(addr2)).to(beTrue())
                 }
+
+                it("should treat absent metadata.accessed as cold (recursiveIsCold nil branch)") {
+                    let backend = MockBackend()
+                    // Frontier hardFork => metadata.accessed is nil
+                    let state = MemoryState(gasLimit: 10000, backend: backend, hardFork: .Frontier)
+                    expect(state.metadata.accessedData()).to(beNil())
+
+                    // With no accessed data, every address is treated as cold
+                    expect(state.isCold(addr1)).to(beTrue())
+                    expect(state.isStorageCold(address: addr1, key: key1)).to(beTrue())
+                }
+
+                it("should correctly identify cold vs warm storage slots") {
+                    let backend = MockBackend()
+                    let state = MemoryState(gasLimit: 10000, backend: backend, hardFork: .Berlin)
+
+                    // Initially cold
+                    expect(state.isStorageCold(address: addr1, key: key1)).to(beTrue())
+
+                    // Mark a different slot accessed - the original one stays cold
+                    state.metadata.accessStorage(address: addr1, key: key2)
+                    expect(state.isStorageCold(address: addr1, key: key1)).to(beTrue())
+
+                    // Mark target slot accessed - it becomes warm
+                    state.metadata.accessStorage(address: addr1, key: key1)
+                    expect(state.isStorageCold(address: addr1, key: key1)).to(beFalse())
+                }
+
+                it("should check storage cold status recursively in parent states") {
+                    let backend = MockBackend()
+                    let parentState = MemoryState(gasLimit: 10000, backend: backend, hardFork: .Berlin)
+                    parentState.metadata.accessStorage(address: addr1, key: key1)
+
+                    let childState = MemoryState(metadata: parentState.metadata.spitChild(gasLimit: 5000, isStatic: false), backend: backend)
+                    childState.parent = parentState
+
+                    // Storage slot in parent is warm for the child as well
+                    expect(childState.isStorageCold(address: addr1, key: key1)).to(beFalse())
+                    // Different slot/address remains cold
+                    expect(childState.isStorageCold(address: addr1, key: key2)).to(beTrue())
+                    expect(childState.isStorageCold(address: addr2, key: key1)).to(beTrue())
+                }
             }
 
             context("State Transitions (Enter/Exit)") {
                 let addr1 = H160(from: [UInt8](repeating: 0x01, count: 20))
                 let addr2 = H160(from: [UInt8](repeating: 0x02, count: 20))
+                let key1 = H256(from: U256(from: 10).toBigEndian)
+                let key2 = H256(from: U256(from: 20).toBigEndian)
+                let val1 = H256(from: [UInt8](repeating: 0xaa, count: 32))
+                let val2 = H256(from: [UInt8](repeating: 0xbb, count: 32))
+                let val3 = H256(from: [UInt8](repeating: 0xcc, count: 32))
 
                 it("should swap state correctly on enter") {
                     let backend = MockBackend()
@@ -903,6 +951,161 @@ final class MemoryStateSpec: QuickSpec {
                     expect(state.parent).to(beNil())
                     expect(state.logs.count).to(equal(1))
                     expect(state.isCreated(addr2)).to(beTrue())
+                }
+
+                it("should merge accounts, storages, tstorages on exitCommit and clear storages for reset accounts") {
+                    let backend = MockBackend()
+                    let state = MemoryState(gasLimit: 10000, backend: backend, hardFork: .Berlin)
+
+                    // Pre-populate parent with data that should be merged/overwritten by child
+                    state.accounts[addr1] = StateAccount(basic: BasicAccount(balance: U256(from: 100), nonce: U256(from: 1)), code: nil, reset: false)
+                    state.setStorage(address: addr1, key: key1, value: val1)
+                    state.setTStorage(address: addr1, key: key1, value: val1)
+                    state.setDeleted(address: addr1)
+
+                    state.enter(gasLimit: 8000, isStatic: false)
+
+                    // Substate: same address with reset flag, must clear parent storage on exit
+                    state.accounts[addr1] = StateAccount(basic: BasicAccount(balance: U256(from: 200), nonce: U256(from: 2)), code: nil, reset: true)
+                    // Substate: storage on same address, but parent storages are wiped due to reset, then merged from substate (else branch)
+                    state.setStorage(address: addr1, key: key2, value: val2)
+                    // Substate: tstorage merging on the same address (else branch)
+                    state.setTStorage(address: addr1, key: key2, value: val2)
+                    // Substate: storage on a fresh address (then branch)
+                    state.setStorage(address: addr2, key: key1, value: val3)
+                    // Substate: tstorage on a fresh address (then branch)
+                    state.setTStorage(address: addr2, key: key1, value: val3)
+                    state.setCreated(address: addr2)
+
+                    state.exitCommit()
+
+                    expect(state.parent).to(beNil())
+                    // Account merge: parent's addr1 overridden by substate (and reset)
+                    expect(state.accounts[addr1]?.basic.balance).to(equal(U256(from: 200)))
+                    expect(state.accounts[addr1]?.reset).to(beTrue())
+                    // Reset removed parent storage for addr1, then substate addr1 storage was merged in
+                    expect(state.storages[addr1]?[key1]).to(beNil())
+                    expect(state.storages[addr1]?[key2]).to(equal(val2))
+                    // New address storage merged in (then branch)
+                    expect(state.storages[addr2]?[key1]).to(equal(val3))
+                    // TStorages merged: addr1 (else - same address) and addr2 (then - new address)
+                    expect(state.tstorages[addr1]?[key1]).to(equal(val1))
+                    expect(state.tstorages[addr1]?[key2]).to(equal(val2))
+                    expect(state.tstorages[addr2]?[key1]).to(equal(val3))
+                    // Sets merged
+                    expect(state.deletes).to(contain(addr1))
+                    expect(state.creates).to(contain(addr2))
+                }
+
+                it("should merge storages and tstorages with conflict resolution on exitCommit") {
+                    let backend = MockBackend()
+                    let state = MemoryState(gasLimit: 10000, backend: backend, hardFork: .Berlin)
+
+                    // Parent: storage at addr1[key1]=val1, addr1[key2]=val1, tstorage addr1[key1]=val1
+                    state.setStorage(address: addr1, key: key1, value: val1)
+                    state.setStorage(address: addr1, key: key2, value: val1)
+                    state.setTStorage(address: addr1, key: key1, value: val1)
+
+                    state.enter(gasLimit: 8000, isStatic: false)
+
+                    // Substate: same address, no reset flag => parent storage NOT cleared
+                    // - same key (key1): conflict, child wins
+                    // - new key on existing tstorage: must hit else branch with merge closure
+                    state.setStorage(address: addr1, key: key1, value: val2)
+                    state.setTStorage(address: addr1, key: key1, value: val2)
+
+                    state.exitCommit()
+
+                    expect(state.parent).to(beNil())
+                    // Storage merge: parent's untouched key2 preserved, key1 overwritten by substate
+                    expect(state.storages[addr1]?[key1]).to(equal(val2))
+                    expect(state.storages[addr1]?[key2]).to(equal(val1))
+                    // TStorage merge: same-key conflict - substate wins
+                    expect(state.tstorages[addr1]?[key1]).to(equal(val2))
+                }
+
+                it("should restore parent state on exitRevert and merge gas stipend only") {
+                    let backend = MockBackend()
+
+                    // Spend some parent gas so remaining < limit and stipend doesn't get clamped
+                    var parentGas = Gas(limit: 10000)
+                    _ = parentGas.recordCost(cost: 5000) // 5000 left
+                    let parentMetadata = MemoryState.Metadata(gasometer: parentGas, isStatic: false, depth: nil, accessed: MemoryState.Accessed())
+                    let state = MemoryState(metadata: parentMetadata, backend: backend)
+
+                    // Parent state: log, account, storage, deletes
+                    state.log(address: addr1, topics: [], data: [0x01])
+                    state.accounts[addr1] = StateAccount(basic: BasicAccount(balance: U256(from: 100), nonce: U256(from: 1)), code: nil, reset: false)
+                    state.setStorage(address: addr1, key: key1, value: val1)
+                    state.setDeleted(address: addr1)
+
+                    state.enter(gasLimit: 4000, isStatic: false)
+
+                    // Substate work that must be discarded on revert
+                    state.log(address: addr2, topics: [], data: [0x02])
+                    state.accounts[addr2] = StateAccount(basic: BasicAccount(balance: U256(from: 999), nonce: .ZERO), code: nil, reset: false)
+                    state.setStorage(address: addr2, key: key1, value: val2)
+                    state.setCreated(address: addr2)
+
+                    // Use some gas in substate so swallowRevert merges only stipend
+                    var subGas = Gas(limit: 4000)
+                    _ = subGas.recordCost(cost: 1000) // 3000 left
+                    state.metadata = MemoryState.Metadata(gasometer: subGas, isStatic: false, depth: 0, accessed: MemoryState.Accessed())
+
+                    state.exitRevert()
+
+                    expect(state.parent).to(beNil())
+                    // Substate work fully discarded
+                    expect(state.logs.count).to(equal(1))
+                    expect(state.logs.first?.address).to(equal(addr1))
+                    expect(state.accounts[addr2]).to(beNil())
+                    expect(state.storages[addr2]).to(beNil())
+                    expect(state.creates.contains(addr2)).to(beFalse())
+                    // Parent state preserved
+                    expect(state.accounts[addr1]?.basic.balance).to(equal(U256(from: 100)))
+                    expect(state.storages[addr1]?[key1]).to(equal(val1))
+                    expect(state.deletes).to(contain(addr1))
+                    // Gas stipend merged: parent (5000) + substate remaining (3000) = 8000
+                    expect(state.metadata.gasometer.remaining).to(equal(8000))
+                }
+
+                it("should restore parent state on exitDiscard without merging gas") {
+                    let backend = MockBackend()
+
+                    var parentGas = Gas(limit: 10000)
+                    _ = parentGas.recordCost(cost: 5000) // 5000 left
+                    let parentMetadata = MemoryState.Metadata(gasometer: parentGas, isStatic: false, depth: nil, accessed: MemoryState.Accessed())
+                    let state = MemoryState(metadata: parentMetadata, backend: backend)
+
+                    state.log(address: addr1, topics: [], data: [0x01])
+                    state.accounts[addr1] = StateAccount(basic: BasicAccount(balance: U256(from: 100), nonce: .ZERO), code: nil, reset: false)
+                    state.setStorage(address: addr1, key: key1, value: val1)
+
+                    state.enter(gasLimit: 4000, isStatic: false)
+
+                    // Substate work that must be discarded on discard
+                    state.log(address: addr2, topics: [], data: [0x02])
+                    state.accounts[addr2] = StateAccount(basic: BasicAccount(balance: U256(from: 50), nonce: .ZERO), code: nil, reset: false)
+                    state.setStorage(address: addr2, key: key1, value: val2)
+                    state.setCreated(address: addr2)
+
+                    var subGas = Gas(limit: 4000)
+                    _ = subGas.recordCost(cost: 1000)
+                    state.metadata = MemoryState.Metadata(gasometer: subGas, isStatic: false, depth: 0, accessed: MemoryState.Accessed())
+
+                    state.exitDiscard()
+
+                    expect(state.parent).to(beNil())
+                    // Substate work fully discarded
+                    expect(state.logs.count).to(equal(1))
+                    expect(state.accounts[addr2]).to(beNil())
+                    expect(state.storages[addr2]).to(beNil())
+                    expect(state.creates.contains(addr2)).to(beFalse())
+                    // Parent state preserved
+                    expect(state.accounts[addr1]?.basic.balance).to(equal(U256(from: 100)))
+                    expect(state.storages[addr1]?[key1]).to(equal(val1))
+                    // Discard does not merge gas back from the substate (parent had 5000 remaining)
+                    expect(state.metadata.gasometer.remaining).to(equal(5000))
                 }
             }
         }
