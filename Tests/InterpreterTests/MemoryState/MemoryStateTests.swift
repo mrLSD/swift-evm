@@ -1107,6 +1107,27 @@ final class MemoryStateSpec: QuickSpec {
                     // Discard does not merge gas back from the substate (parent had 5000 remaining)
                     expect(state.metadata.gasometer.remaining).to(equal(5000))
                 }
+
+                it("exitCommit on root substate triggers fatalError") {
+                    let backend = MockBackend()
+                    let state = MemoryState(gasLimit: 10000, backend: backend, hardFork: .Berlin)
+                    expect(state.parent).to(beNil())
+                    expect { state.exitCommit() }.to(throwAssertion())
+                }
+
+                it("exitRevert on root substate triggers fatalError") {
+                    let backend = MockBackend()
+                    let state = MemoryState(gasLimit: 10000, backend: backend, hardFork: .Berlin)
+                    expect(state.parent).to(beNil())
+                    expect { state.exitRevert() }.to(throwAssertion())
+                }
+
+                it("exitDiscard on root substate triggers fatalError") {
+                    let backend = MockBackend()
+                    let state = MemoryState(gasLimit: 10000, backend: backend, hardFork: .Berlin)
+                    expect(state.parent).to(beNil())
+                    expect { state.exitDiscard() }.to(throwAssertion())
+                }
             }
         }
     }
