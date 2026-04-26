@@ -73,7 +73,7 @@ final class MockBackend: Backend {
 
     func basic(address: H160) -> BasicAccount {
         if address == sender {
-            return BasicAccount(balance: U256(from: 3003), nonce: U256(from: 10))
+            return BasicAccount(balance: U256(from: 3003), nonce: 10)
         }
         return accounts[address] ?? BasicAccount.default
     }
@@ -122,19 +122,19 @@ final class MemoryStateSpec: QuickSpec {
                     expect(acc.basic.balance).to(equal(U256.ZERO))
 
                     // Modify locally. It's only for testing that local state is separate from backend.
-                    state.accounts[backend.address1]?.basic = BasicAccount(balance: U256(from: 2000), nonce: U256(from: 5))
+                    state.accounts[backend.address1]?.basic = BasicAccount(balance: U256(from: 2000), nonce: 5)
 
                     // Verify local state changed but backend remains same
                     expect(state.basic(address: backend.address1).balance).to(equal(U256(from: 2000)))
                     expect(backend.basic(address: backend.address1).balance).to(equal(U256.ZERO))
-                    expect(state.basic(address: backend.address1).nonce).to(equal(U256(from: 5)))
-                    expect(backend.basic(address: backend.address1).nonce).to(equal(U256.ZERO))
+                    expect(state.basic(address: backend.address1).nonce).to(equal(UInt64(5)))
+                    expect(backend.basic(address: backend.address1).nonce).to(equal(UInt64(0)))
                 }
 
                 it("should lookup account recursively in parent states") {
                     let backend = MockBackend()
                     let parentState = MemoryState(gasLimit: 10000, backend: backend, hardFork: .Berlin)
-                    parentState.accounts[backend.address1] = StateAccount(basic: BasicAccount(balance: U256(from: 500), nonce: U256(from: 10)), code: [10, 20], reset: true)
+                    parentState.accounts[backend.address1] = StateAccount(basic: BasicAccount(balance: U256(from: 500), nonce: 10), code: [10, 20], reset: true)
 
                     let childState = MemoryState(metadata: parentState.metadata.spitChild(gasLimit: 5000, isStatic: false), backend: backend)
                     childState.parent = parentState
@@ -142,12 +142,12 @@ final class MemoryStateSpec: QuickSpec {
                     let knownAcc = childState.knownAccount(backend.address1)
                     expect(knownAcc).toNot(beNil())
                     expect(knownAcc?.basic.balance).to(equal(U256(from: 500)))
-                    expect(knownAcc?.basic.nonce).to(equal(U256(from: 10)))
+                    expect(knownAcc?.basic.nonce).to(equal(UInt64(10)))
                     expect(knownAcc?.code).to(equal([10, 20]))
                     expect(knownAcc?.reset).to(equal(true))
 
                     expect(childState.knownAccount(backend.address1)?.basic.balance).to(equal(U256(from: 500)))
-                    expect(childState.knownAccount(backend.address1)?.basic.nonce).to(equal(U256(from: 10)))
+                    expect(childState.knownAccount(backend.address1)?.basic.nonce).to(equal(UInt64(10)))
                 }
             }
 
@@ -162,16 +162,16 @@ final class MemoryStateSpec: QuickSpec {
                     state.deposit(address: backend.sender, value: U256(from: 1000))
                     expect(state.basic(address: backend.sender).balance).to(equal(U256(from: 4003)))
                     expect(backend.basic(address: backend.sender).balance).to(equal(U256(from: 3003)))
-                    expect(state.basic(address: backend.sender).nonce).to(equal(U256(from: 10)))
-                    expect(backend.basic(address: backend.sender).nonce).to(equal(U256(from: 10)))
+                    expect(state.basic(address: backend.sender).nonce).to(equal(UInt64(10)))
+                    expect(backend.basic(address: backend.sender).nonce).to(equal(UInt64(10)))
 
                     let res = state.withdraw(address: backend.sender, value: U256(from: 2003))
                     expect(res).to(beSuccess())
 
                     expect(state.basic(address: backend.sender).balance).to(equal(U256(from: 2000)))
                     expect(backend.basic(address: backend.sender).balance).to(equal(U256(from: 3003)))
-                    expect(state.basic(address: backend.sender).nonce).to(equal(U256(from: 10)))
-                    expect(backend.basic(address: backend.sender).nonce).to(equal(U256(from: 10)))
+                    expect(state.basic(address: backend.sender).nonce).to(equal(UInt64(10)))
+                    expect(backend.basic(address: backend.sender).nonce).to(equal(UInt64(10)))
                 }
 
                 it("Deposit and withdraw for substate") {
@@ -184,31 +184,31 @@ final class MemoryStateSpec: QuickSpec {
                     expect(parentState.basic(address: backend.sender).balance).to(equal(U256(from: 4003)))
                     expect(childState.basic(address: backend.sender).balance).to(equal(U256(from: 4003)))
                     expect(backend.basic(address: backend.sender).balance).to(equal(U256(from: 3003)))
-                    expect(childState.basic(address: backend.sender).nonce).to(equal(U256(from: 10)))
-                    expect(backend.basic(address: backend.sender).nonce).to(equal(U256(from: 10)))
+                    expect(childState.basic(address: backend.sender).nonce).to(equal(UInt64(10)))
+                    expect(backend.basic(address: backend.sender).nonce).to(equal(UInt64(10)))
 
                     childState.deposit(address: backend.sender, value: U256(from: 1700))
                     expect(parentState.basic(address: backend.sender).balance).to(equal(U256(from: 4003)))
                     expect(childState.basic(address: backend.sender).balance).to(equal(U256(from: 5703)))
                     expect(backend.basic(address: backend.sender).balance).to(equal(U256(from: 3003)))
-                    expect(childState.basic(address: backend.sender).nonce).to(equal(U256(from: 10)))
-                    expect(backend.basic(address: backend.sender).nonce).to(equal(U256(from: 10)))
+                    expect(childState.basic(address: backend.sender).nonce).to(equal(UInt64(10)))
+                    expect(backend.basic(address: backend.sender).nonce).to(equal(UInt64(10)))
 
                     let res1 = parentState.withdraw(address: backend.sender, value: U256(from: 2003))
                     expect(res1).to(beSuccess())
                     expect(parentState.basic(address: backend.sender).balance).to(equal(U256(from: 2000)))
                     expect(childState.basic(address: backend.sender).balance).to(equal(U256(from: 5703)))
                     expect(backend.basic(address: backend.sender).balance).to(equal(U256(from: 3003)))
-                    expect(childState.basic(address: backend.sender).nonce).to(equal(U256(from: 10)))
-                    expect(backend.basic(address: backend.sender).nonce).to(equal(U256(from: 10)))
+                    expect(childState.basic(address: backend.sender).nonce).to(equal(UInt64(10)))
+                    expect(backend.basic(address: backend.sender).nonce).to(equal(UInt64(10)))
 
                     let res2 = childState.withdraw(address: backend.sender, value: U256(from: 1323))
                     expect(res2).to(beSuccess())
                     expect(parentState.basic(address: backend.sender).balance).to(equal(U256(from: 2000)))
                     expect(childState.basic(address: backend.sender).balance).to(equal(U256(from: 4380)))
                     expect(backend.basic(address: backend.sender).balance).to(equal(U256(from: 3003)))
-                    expect(childState.basic(address: backend.sender).nonce).to(equal(U256(from: 10)))
-                    expect(backend.basic(address: backend.sender).nonce).to(equal(U256(from: 10)))
+                    expect(childState.basic(address: backend.sender).nonce).to(equal(UInt64(10)))
+                    expect(backend.basic(address: backend.sender).nonce).to(equal(UInt64(10)))
                 }
 
                 it("Deposit and Reset balance for current state") {
@@ -266,8 +266,8 @@ final class MemoryStateSpec: QuickSpec {
 
                     expect(state.basic(address: backend.sender).balance).to(equal(U256(from: 3003)))
                     expect(backend.basic(address: backend.sender).balance).to(equal(U256(from: 3003)))
-                    expect(state.basic(address: backend.sender).nonce).to(equal(U256(from: 10)))
-                    expect(backend.basic(address: backend.sender).nonce).to(equal(U256(from: 10)))
+                    expect(state.basic(address: backend.sender).nonce).to(equal(UInt64(10)))
+                    expect(backend.basic(address: backend.sender).nonce).to(equal(UInt64(10)))
                 }
 
                 it("Increment nonce for current state") {
@@ -275,15 +275,15 @@ final class MemoryStateSpec: QuickSpec {
                     let state = MemoryState(gasLimit: 10000, backend: MockBackend(), hardFork: .Berlin)
 
                     let acc = state.getAccountAndTouch(backend.sender)
-                    expect(acc.basic.nonce).to(equal(U256(from: 10)))
+                    expect(acc.basic.nonce).to(equal(UInt64(10)))
 
                     let res = state.incNonce(address: backend.sender)
                     expect(res).to(beSuccess())
 
                     expect(state.basic(address: backend.sender).balance).to(equal(U256(from: 3003)))
                     expect(backend.basic(address: backend.sender).balance).to(equal(U256(from: 3003)))
-                    expect(state.basic(address: backend.sender).nonce).to(equal(U256(from: 11)))
-                    expect(backend.basic(address: backend.sender).nonce).to(equal(U256(from: 10)))
+                    expect(state.basic(address: backend.sender).nonce).to(equal(UInt64(11)))
+                    expect(backend.basic(address: backend.sender).nonce).to(equal(UInt64(10)))
                 }
 
                 it("Increment nonce for substate") {
@@ -294,15 +294,15 @@ final class MemoryStateSpec: QuickSpec {
 
                     let res1 = parentState.incNonce(address: backend.sender)
                     expect(res1).to(beSuccess())
-                    expect(parentState.basic(address: backend.sender).nonce).to(equal(U256(from: 11)))
-                    expect(childState.basic(address: backend.sender).nonce).to(equal(U256(from: 11)))
-                    expect(backend.basic(address: backend.sender).nonce).to(equal(U256(from: 10)))
+                    expect(parentState.basic(address: backend.sender).nonce).to(equal(UInt64(11)))
+                    expect(childState.basic(address: backend.sender).nonce).to(equal(UInt64(11)))
+                    expect(backend.basic(address: backend.sender).nonce).to(equal(UInt64(10)))
 
                     let res2 = childState.incNonce(address: backend.sender)
                     expect(res2).to(beSuccess())
-                    expect(parentState.basic(address: backend.sender).nonce).to(equal(U256(from: 11)))
-                    expect(childState.basic(address: backend.sender).nonce).to(equal(U256(from: 12)))
-                    expect(backend.basic(address: backend.sender).nonce).to(equal(U256(from: 10)))
+                    expect(parentState.basic(address: backend.sender).nonce).to(equal(UInt64(11)))
+                    expect(childState.basic(address: backend.sender).nonce).to(equal(UInt64(12)))
+                    expect(backend.basic(address: backend.sender).nonce).to(equal(UInt64(10)))
                 }
 
                 it("Increment nonce with overflow for current state") {
@@ -310,18 +310,18 @@ final class MemoryStateSpec: QuickSpec {
                     let state = MemoryState(gasLimit: 10000, backend: MockBackend(), hardFork: .Berlin)
 
                     let acc = state.getAccountAndTouch(backend.sender)
-                    expect(acc.basic.nonce).to(equal(U256(from: 10)))
+                    expect(acc.basic.nonce).to(equal(UInt64(10)))
 
                     // Force nonce to max value to test overflow
-                    state.accounts[backend.sender]?.basic.nonce = U256(from: UInt64.max)
+                    state.accounts[backend.sender]?.basic.nonce = UInt64.max
 
                     let res = state.incNonce(address: backend.sender)
                     expect(res).to(beFailure { error in expect(error).to(equal(.MaxNonce)) })
 
                     expect(state.basic(address: backend.sender).balance).to(equal(U256(from: 3003)))
                     expect(backend.basic(address: backend.sender).balance).to(equal(U256(from: 3003)))
-                    expect(state.basic(address: backend.sender).nonce).to(equal(U256(from: UInt64.max)))
-                    expect(backend.basic(address: backend.sender).nonce).to(equal(U256(from: 10)))
+                    expect(state.basic(address: backend.sender).nonce).to(equal(UInt64.max))
+                    expect(backend.basic(address: backend.sender).nonce).to(equal(UInt64(10)))
                 }
 
                 it("Account code for current state") {
@@ -678,11 +678,11 @@ final class MemoryStateSpec: QuickSpec {
                     let state = MemoryState(gasLimit: 10000, backend: backend, hardFork: .Berlin)
 
                     // Account with balance is not empty
-                    state.accounts[addr1] = StateAccount(basic: BasicAccount(balance: U256(from: 1), nonce: .ZERO), code: nil, reset: false)
+                    state.accounts[addr1] = StateAccount(basic: BasicAccount(balance: U256(from: 1), nonce: 0), code: nil, reset: false)
                     expect(state.isEmpty(address: addr1)).to(beFalse())
 
                     // Account with no balance, no nonce, and empty code is empty
-                    state.accounts[addr2] = StateAccount(basic: BasicAccount(balance: .ZERO, nonce: .ZERO), code: [], reset: false)
+                    state.accounts[addr2] = StateAccount(basic: BasicAccount(balance: .ZERO, nonce: 0), code: [], reset: false)
                     expect(state.isEmpty(address: addr2)).to(beTrue())
                 }
 
@@ -691,23 +691,23 @@ final class MemoryStateSpec: QuickSpec {
                     let state = MemoryState(gasLimit: 10000, backend: backend, hardFork: .Berlin)
 
                     // 1. Locally known: Has Balance
-                    state.accounts[addr1] = StateAccount(basic: BasicAccount(balance: U256(from: 1), nonce: .ZERO), code: [], reset: false)
+                    state.accounts[addr1] = StateAccount(basic: BasicAccount(balance: U256(from: 1), nonce: 0), code: [], reset: false)
                     expect(state.isEmpty(address: addr1)).to(beFalse())
 
                     // 2. Locally known: Has Nonce
-                    state.accounts[addr1] = StateAccount(basic: BasicAccount(balance: .ZERO, nonce: U256(from: 1)), code: [], reset: false)
+                    state.accounts[addr1] = StateAccount(basic: BasicAccount(balance: .ZERO, nonce: 1), code: [], reset: false)
                     expect(state.isEmpty(address: addr1)).to(beFalse())
 
                     // 3. Locally known: Has Code
-                    state.accounts[addr1] = StateAccount(basic: BasicAccount(balance: .ZERO, nonce: .ZERO), code: [0x00], reset: false)
+                    state.accounts[addr1] = StateAccount(basic: BasicAccount(balance: .ZERO, nonce: 0), code: [0x00], reset: false)
                     expect(state.isEmpty(address: addr1)).to(beFalse())
 
                     // 4. Locally known: Empty
-                    state.accounts[addr1] = StateAccount(basic: BasicAccount(balance: .ZERO, nonce: .ZERO), code: [], reset: false)
+                    state.accounts[addr1] = StateAccount(basic: BasicAccount(balance: .ZERO, nonce: 0), code: [], reset: false)
                     expect(state.isEmpty(address: addr1)).to(beTrue())
 
                     // 5. Locally known: Empty with code nil
-                    state.accounts[addr1] = StateAccount(basic: BasicAccount(balance: .ZERO, nonce: .ZERO), code: nil, reset: false)
+                    state.accounts[addr1] = StateAccount(basic: BasicAccount(balance: .ZERO, nonce: 0), code: nil, reset: false)
                     expect(state.isEmpty(address: addr1)).to(beTrue())
 
                     // Not cashed
@@ -958,7 +958,7 @@ final class MemoryStateSpec: QuickSpec {
                     let state = MemoryState(gasLimit: 10000, backend: backend, hardFork: .Berlin)
 
                     // Pre-populate parent with data that should be merged/overwritten by child
-                    state.accounts[addr1] = StateAccount(basic: BasicAccount(balance: U256(from: 100), nonce: U256(from: 1)), code: nil, reset: false)
+                    state.accounts[addr1] = StateAccount(basic: BasicAccount(balance: U256(from: 100), nonce: 1), code: nil, reset: false)
                     state.setStorage(address: addr1, key: key1, value: val1)
                     state.setTStorage(address: addr1, key: key1, value: val1)
                     state.setDeleted(address: addr1)
@@ -966,7 +966,7 @@ final class MemoryStateSpec: QuickSpec {
                     state.enter(gasLimit: 8000, isStatic: false)
 
                     // Substate: same address with reset flag, must clear parent storage on exit
-                    state.accounts[addr1] = StateAccount(basic: BasicAccount(balance: U256(from: 200), nonce: U256(from: 2)), code: nil, reset: true)
+                    state.accounts[addr1] = StateAccount(basic: BasicAccount(balance: U256(from: 200), nonce: 2), code: nil, reset: true)
                     // Substate: storage on same address, but parent storages are wiped due to reset, then merged from substate (else branch)
                     state.setStorage(address: addr1, key: key2, value: val2)
                     // Substate: tstorage merging on the same address (else branch)
@@ -1035,7 +1035,7 @@ final class MemoryStateSpec: QuickSpec {
 
                     // Parent state: log, account, storage, deletes
                     state.log(address: addr1, topics: [], data: [0x01])
-                    state.accounts[addr1] = StateAccount(basic: BasicAccount(balance: U256(from: 100), nonce: U256(from: 1)), code: nil, reset: false)
+                    state.accounts[addr1] = StateAccount(basic: BasicAccount(balance: U256(from: 100), nonce: 1), code: nil, reset: false)
                     state.setStorage(address: addr1, key: key1, value: val1)
                     state.setDeleted(address: addr1)
 
@@ -1043,7 +1043,7 @@ final class MemoryStateSpec: QuickSpec {
 
                     // Substate work that must be discarded on revert
                     state.log(address: addr2, topics: [], data: [0x02])
-                    state.accounts[addr2] = StateAccount(basic: BasicAccount(balance: U256(from: 999), nonce: .ZERO), code: nil, reset: false)
+                    state.accounts[addr2] = StateAccount(basic: BasicAccount(balance: U256(from: 999), nonce: 0), code: nil, reset: false)
                     state.setStorage(address: addr2, key: key1, value: val2)
                     state.setCreated(address: addr2)
 
@@ -1078,14 +1078,14 @@ final class MemoryStateSpec: QuickSpec {
                     let state = MemoryState(metadata: parentMetadata, backend: backend)
 
                     state.log(address: addr1, topics: [], data: [0x01])
-                    state.accounts[addr1] = StateAccount(basic: BasicAccount(balance: U256(from: 100), nonce: .ZERO), code: nil, reset: false)
+                    state.accounts[addr1] = StateAccount(basic: BasicAccount(balance: U256(from: 100), nonce: 0), code: nil, reset: false)
                     state.setStorage(address: addr1, key: key1, value: val1)
 
                     state.enter(gasLimit: 4000, isStatic: false)
 
                     // Substate work that must be discarded on discard
                     state.log(address: addr2, topics: [], data: [0x02])
-                    state.accounts[addr2] = StateAccount(basic: BasicAccount(balance: U256(from: 50), nonce: .ZERO), code: nil, reset: false)
+                    state.accounts[addr2] = StateAccount(basic: BasicAccount(balance: U256(from: 50), nonce: 0), code: nil, reset: false)
                     state.setStorage(address: addr2, key: key1, value: val2)
                     state.setCreated(address: addr2)
 

@@ -4,18 +4,19 @@ import PrimitiveTypes
 public struct BasicAccount: Equatable, Sendable {
     /// Account balance.
     public var balance: U256
-    /// Account nonce.
-    public var nonce: U256
+    /// Account nonce. EVM uses a 64-bit nonce in practice (max ~18·10¹⁸ transactions per account).
+    public var nonce: UInt64
 
     /// Initializes a new `BasicAccount` with the provided balance and nonce.
-    public init(balance: U256, nonce: U256) {
+    public init(balance: U256, nonce: UInt64) {
         self.balance = balance
         self.nonce = nonce
     }
 
     /// Increment account nonce by 1.
+    /// - Precondition: caller must ensure `nonce < UInt64.max` (see `MemoryState.incNonce`).
     public mutating func incNonce() {
-        self.nonce += U256(from: 1)
+        self.nonce &+= 1
     }
 
     /// Sets the account's balance to the specified value.
@@ -38,7 +39,7 @@ public struct BasicAccount: Equatable, Sendable {
 
 extension BasicAccount {
     /// A default `BasicAccount` instance with a balance of zero and a nonce of zero.
-    static let `default` = BasicAccount(balance: U256.ZERO, nonce: U256.ZERO)
+    static let `default` = BasicAccount(balance: U256.ZERO, nonce: 0)
 }
 
 /// Account state information.

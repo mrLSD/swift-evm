@@ -51,14 +51,14 @@ public extension U256 {
     /// On 64-bit systems always succeeds when the upper three limbs are zero.
     @inlinable @inline(__always)
     var getUInt: UInt? {
-        guard l1 == 0 && h0 == 0 && h1 == 0 else { return nil }
+        guard l1 == 0, h0 == 0, h1 == 0 else { return nil }
         return UInt(exactly: l0)
     }
 
     /// Get `Int` value from `U256` (or `nil` if value does not fit).
     @inlinable @inline(__always)
     var getInt: Int? {
-        guard l1 == 0 && h0 == 0 && h1 == 0 else { return nil }
+        guard l1 == 0, h0 == 0, h1 == 0 else { return nil }
         return Int(exactly: l0)
     }
 
@@ -84,7 +84,7 @@ public extension U256 {
     /// Construct `U256` from a big-endian byte array (length ≤ 32). Packs bytes directly into
     /// limb fields; no intermediate `[UInt64]` buffer.
     static func fromBigEndian(from val: [UInt8]) -> U256 {
-        precondition(val.count <= Int(Self.numberBytes), "BigUInt must be initialized with not more than \(Self.numberBytes) bytes.")
+        precondition(val.count <= Int(numberBytes), "BigUInt must be initialized with not more than \(numberBytes) bytes.")
         var l0: UInt64 = 0, l1: UInt64 = 0, h0: UInt64 = 0, h1: UInt64 = 0
         let n = val.count
         // val[n-1] is the LSB byte (lowest position), val[0] is the MSB byte (highest position).
@@ -119,6 +119,11 @@ public extension U256 {
 
     @inlinable @inline(__always)
     static func < (lhs: U256, rhs: U256) -> Bool {
+        // Small-value fast-path: both operands fit in the low limb (top 3 limbs zero).
+        // Common in EVM (offsets, indices, gas costs, small balances).
+        if (lhs.l1 | lhs.h0 | lhs.h1 | rhs.l1 | rhs.h0 | rhs.h1) == 0 {
+            return lhs.l0 < rhs.l0
+        }
         if lhs.h1 != rhs.h1 { return lhs.h1 < rhs.h1 }
         if lhs.h0 != rhs.h0 { return lhs.h0 < rhs.h0 }
         if lhs.l1 != rhs.l1 { return lhs.l1 < rhs.l1 }
@@ -152,6 +157,13 @@ public extension U256 {
     /// Addition with overflow flag (full-width 256-bit add).
     @inlinable @inline(__always)
     func overflowAdd(_ value: U256) -> (U256, Bool) {
+        // Small-value fast-path: both operands fit in the low limb. A u64+u64 sum is at most
+        // (2^64-1)*2 < 2^65, so the U256 result always fits in the lower two limbs and the
+        // U256-level overflow flag is always false.
+        if (l1 | h0 | h1 | value.l1 | value.h0 | value.h1) == 0 {
+            let (s, ovf) = l0.addingReportingOverflow(value.l0)
+            return (U256(l0: s, l1: ovf ? 1 : 0, h0: 0, h1: 0), false)
+        }
         let (s0, c0) = l0.addingReportingOverflow(value.l0)
         let (s1a, c1a) = l1.addingReportingOverflow(value.l1)
         let (s1, c1b) = s1a.addingReportingOverflow(c0 ? 1 : 0)
