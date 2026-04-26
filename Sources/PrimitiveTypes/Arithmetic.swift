@@ -1,110 +1,12 @@
 /// `BigUInt` arithmetic operations.
+///
+/// Add/Sub/Mul are specialized per concrete type (U128, U256, U512) to operate on stored fields
+/// without allocating array views. Knuth long division (used for `/` and `%`) remains generic.
 public extension BigUInt {
-    /// Performs an overflow addition operation with the given value.
-    ///
-    /// - Parameter value: The value to be added.
-    ///
-    /// - Returns: A tuple containing the result of the addition and a boolean value indicating whether an overflow occurred.
-    func overflowAdd(_ value: Self) -> (Self, Bool) {
-        var result = [UInt64](repeating: 0, count: self.BYTES.count)
-        var carry = false
-
-        for i in 0 ..< self.BYTES.count {
-            let sum = self.BYTES[i].addingReportingOverflow(value.BYTES[i])
-            let total = sum.partialValue.addingReportingOverflow(carry ? 1 : 0)
-
-            result[i] = total.partialValue
-            carry = sum.overflow || total.overflow
-        }
-        let isOverflow = carry
-        return (Self(from: result), isOverflow)
-    }
-
-    /// Performs an overflow subtraction operation on the current value with the given value.
-    ///
-    /// - Parameter value: The value to subtract from the current value.
-    ///
-    /// - Returns: A tuple containing the result of the subtraction operation and a boolean value indicating whether an overflow occurred.
-    func overflowSub(_ value: Self) -> (Self, Bool) {
-        var result = [UInt64](repeating: 0, count: self.BYTES.count)
-        var borrow = false
-
-        for i in 0 ..< self.BYTES.count {
-            let sub = self.BYTES[i].subtractingReportingOverflow(value.BYTES[i])
-            let total = sub.partialValue.subtractingReportingOverflow(borrow ? 1 : 0)
-            result[i] = total.partialValue
-            borrow = sub.overflow || total.overflow
-        }
-        let isOverflow = borrow
-        return (Self(from: result), isOverflow)
-    }
-
-    /// Performs an overflow multiplication operation with the given value.
-    ///
-    /// Algorithm based on `mac` (multiply-accumulate) operation. It's optimised to avoid
-    /// redundant operations with matrix. In common cases multiplication is `2*Width`. For
-    /// 256-bit, in common cases result will be 512-bit - `high` and `low` part. `Low` contains
-    /// result itself, `high` contains overflowed number. We've optimised the algorithm to return only `Width`,
-    /// itself, to avoid redundant calculations, and just calculating `overflow` flag.
-    ///
-    /// - Parameter value: The value to be multiplying.
-    ///
-    /// - Returns: A tuple containing the result of the operation and a boolean value indicating whether an overflow occurred.
+    /// Multiply-accumulate primitive: `lhs += a*b + carry`, returns the high carry.
+    /// Used by per-type multiplication implementations and by Knuth division helpers.
     @inline(__always)
-    func overflowMul(_ value: Self) -> (Self, Bool) {
-        var result = [UInt64](repeating: 0, count: 2 * self.BYTES.count)
-
-        // Matrix multiplication
-        for i in 0 ..< self.BYTES.count {
-            var carry: UInt64 = 0
-            for j in 0 ..< self.BYTES.count {
-                carry = Self.mac(&result[i + j], self.BYTES[i], value.BYTES[j], carry)
-            }
-            result[i + self.BYTES.count] = carry
-        }
-        let isOverflow = result[self.BYTES.count ..< 2 * self.BYTES.count].contains { $0 != 0 }
-        let lowResult = Array(result[0 ..< self.BYTES.count])
-        return (Self(from: lowResult), isOverflow)
-    }
-
-    /// Performs multiplication operation with the given value without overflow check.
-    ///
-    /// Algorithm base on `mac` (multiply-accumulate) operation. It's optimised to avoid
-    /// redundant operations with matrix. In common cases multiplication `2*Width`. For
-    /// 256-bit in common cases result will be 512-bit - `high` and `low` part. `Low` contains
-    /// result itself, `high` contains overflowed number. We're optimized algorithm to return only `Width`,
-    /// itself, to avoid redundant calculations, but for that we can't correctly calculate overflow status (for that
-    /// we should perform full multiplication).
-    ///
-    /// - Parameter value: The value to be multiplying.
-    ///
-    /// - Returns: The result of the multiplication (overflow is discarded).
-    @inline(__always)
-    func mul(_ value: Self) -> Self {
-        var result = [UInt64](repeating: 0, count: self.BYTES.count)
-
-        // Matrix multiplication
-        for i in 0 ..< self.BYTES.count {
-            var carry: UInt64 = 0
-            // Restrict multiplication operations to `Self.numberBase` and carry overflow status.
-            for j in 0 ... (self.BYTES.count - 1 - i) {
-                carry = Self.mac(&result[i + j], self.BYTES[i], value.BYTES[j], carry)
-            }
-        }
-        return Self(from: result)
-    }
-
-    ///  Calculates the multiply-accumulate operation.
-    ///
-    ///  - Parameters:
-    ///     - lhs: The left-hand side value to be updated with the result.
-    ///     - a: The first operand of the multiplication.
-    ///     - b: The second operand of the multiplication.
-    ///     - carry: The carry value to be added.
-    ///
-    ///  - Returns: The result of the multiply-accumulate operation.
-    @inline(__always)
-    internal static func mac(_ lhs: inout UInt64, _ a: UInt64, _ b: UInt64, _ carry: UInt64) -> UInt64 {
+    static func mac(_ lhs: inout UInt64, _ a: UInt64, _ b: UInt64, _ carry: UInt64) -> UInt64 {
         let (productHigh, productLow) = a.multipliedFullWidth(by: b)
         let (sumLow1, carry1) = productLow.addingReportingOverflow(carry)
         let (sumLow2, carry2) = sumLow1.addingReportingOverflow(lhs)
@@ -389,67 +291,6 @@ public extension BigUInt {
     @inline(__always)
     func divRem(divisor: Self) -> (quotient: Self, remainder: Self) {
         self.divMod(divisor)
-    }
-
-    /// Adds two values of the same type together and returns the result.
-    ///
-    /// - Parameters:
-    ///   - lhs: The left-hand side value to be added.
-    ///   - rhs: The right-hand side value to be added.
-    ///
-    /// - Returns: The sum of the two values.
-    static func + (lhs: Self, rhs: Self) -> Self {
-        let (result, _) = lhs.overflowAdd(rhs)
-        return result
-    }
-
-    /// Performs `addition` and updates the left-hand side with the result.
-    ///
-    /// - Parameters:
-    ///   - lhs: The left-hand side value to be modified.
-    ///   - rhs: The right-hand side value to be operated.
-    static func += (lhs: inout Self, rhs: Self) {
-        lhs = lhs + rhs
-    }
-
-    /// Subtracts two values of the same type.
-    ///
-    /// - Parameters:
-    ///   - lhs: The value to subtract from.
-    ///   - rhs: The value to subtract.
-    ///
-    /// - Returns: The result of subtracting `rhs` from `lhs`.
-    static func - (lhs: Self, rhs: Self) -> Self {
-        let (result, _) = lhs.overflowSub(rhs)
-        return result
-    }
-
-    /// Performs subtraction and updates the left-hand side with the result.
-    ///
-    /// - Parameters:
-    ///   - lhs: The left-hand side value to be modified.
-    ///   - rhs: The right-hand side value to be operated.
-    static func -= (lhs: inout Self, rhs: Self) {
-        lhs = lhs - rhs
-    }
-
-    /// Multiply two values of the same type.
-    ///
-    ///   - lhs: The left-hand side value to be multiplied.
-    ///   - rhs: The right-hand side value to be multiplied.
-    ///
-    /// - Returns: The multiply of the two values.
-    static func * (lhs: Self, rhs: Self) -> Self {
-        lhs.mul(rhs)
-    }
-
-    /// Performs `multiply` and updates the left-hand side with the result.
-    ///
-    /// - Parameters:
-    ///   - lhs: The left-hand side value to be modified.
-    ///   - rhs: The right-hand side value to be operated.
-    static func *= (lhs: inout Self, rhs: Self) {
-        lhs = lhs * rhs
     }
 
     /// Division of two values of the same type.

@@ -170,6 +170,21 @@ final class U128Spec: QuickSpec {
                 }
             }
 
+            context("addition carry propagation") {
+                it("propagates carry from l0 to h0") {
+                    let a = U128(from: [UInt64.max, 0])
+                    let b = U128(from: [1, 0])
+                    let (sum, overflow) = a.overflowAdd(b)
+                    expect(sum).to(equal(U128(from: [0, 1])))
+                    expect(overflow).to(beFalse())
+                }
+                it("reports overflow when h0 overflows") {
+                    let (sum, overflow) = U128.MAX.overflowAdd(U128(from: [1, 0]))
+                    expect(sum).to(equal(U128.ZERO))
+                    expect(overflow).to(beTrue())
+                }
+            }
+
             describe("U128.divRem(divisor:)") {
                 context("when divisor is zero") {
                     it("should trigger a precondition failure") {

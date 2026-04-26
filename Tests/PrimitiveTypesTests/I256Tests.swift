@@ -258,6 +258,16 @@ final class I256Spec: QuickSpec {
                     let val11 = I256(from: [2, 0, 0, 0])
                     let val12 = I256(from: [1, 0, 0, 0])
                     expect(val11 < val12).to(beFalse())
+
+                    // Differs only at h0 limb
+                    let val13 = I256(from: [9, 9, 1, 9])
+                    let val14 = I256(from: [9, 9, 2, 9])
+                    expect(val13 < val14).to(beTrue())
+
+                    // Differs only at l1 limb
+                    let val15 = I256(from: [9, 1, 9, 9])
+                    let val16 = I256(from: [9, 2, 9, 9])
+                    expect(val15 < val16).to(beTrue())
                 }
 
                 it("< [sign extend, not sign extend]") {

@@ -252,6 +252,31 @@ final class U512Spec: QuickSpec {
                     expect(val5 > val6).to(beFalse())
                 }
 
+                it("addition propagates carry through all limbs") {
+                    // l0 = max → carry into l1; l1 = max → carry into l2; ... ; h3 = max → final overflow.
+                    let max = U512.MAX
+                    let one = U512(from: [1, 0, 0, 0, 0, 0, 0, 0])
+                    let (sum, overflow) = max.overflowAdd(one)
+                    expect(sum).to(equal(U512.ZERO))
+                    expect(overflow).to(beTrue())
+                }
+
+                it("< exercises every limb-difference path") {
+                    // Each pair differs only at one specific limb position; ensures every short-circuit
+                    // branch in the chained comparison is hit.
+                    let base: [UInt64] = [9, 9, 9, 9, 9, 9, 9, 9]
+                    for limb in 0 ..< 8 {
+                        var lower = base
+                        var higher = base
+                        lower[limb] = 1
+                        higher[limb] = 2
+                        let lo = U512(from: lower)
+                        let hi = U512(from: higher)
+                        expect(lo < hi).to(beTrue())
+                        expect(hi < lo).to(beFalse())
+                    }
+                }
+
                 it("<, > combinations") {
                     let lower = U512(from: [0, 0, 0, 0, 0, 0, 0, 1])
                     let higher = U512(from: [0, 0, 0, 0, 0, 0, 0, 2])
