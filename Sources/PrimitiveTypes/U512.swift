@@ -21,12 +21,15 @@ public struct U512: BigUInt {
     public static let ZERO: Self = .init(l0: 0, l1: 0, l2: 0, l3: 0, h0: 0, h1: 0, h2: 0, h3: 0)
 
     /// Computed array view (allocates). Prefer field access in hot paths.
-    public var BYTES: [UInt64] { [l0, l1, l2, l3, h0, h1, h2, h3] }
+    public var BYTES: [UInt64] {
+        [l0, l1, l2, l3, h0, h1, h2, h3]
+    }
 
     /// Direct field initializer (no allocation).
     @inlinable @inline(__always)
     public init(l0: UInt64, l1: UInt64, l2: UInt64, l3: UInt64,
-                h0: UInt64, h1: UInt64, h2: UInt64, h3: UInt64) {
+                h0: UInt64, h1: UInt64, h2: UInt64, h3: UInt64)
+    {
         self.l0 = l0
         self.l1 = l1
         self.l2 = l2
@@ -74,7 +77,9 @@ public extension U512 {
     }
 
     @inlinable @inline(__always)
-    static func != (lhs: U512, rhs: U512) -> Bool { !(lhs == rhs) }
+    static func != (lhs: U512, rhs: U512) -> Bool {
+        !(lhs == rhs)
+    }
 
     @inlinable @inline(__always)
     static func < (lhs: U512, rhs: U512) -> Bool {
@@ -89,11 +94,19 @@ public extension U512 {
     }
 
     @inlinable @inline(__always)
-    static func > (lhs: U512, rhs: U512) -> Bool { rhs < lhs }
+    static func > (lhs: U512, rhs: U512) -> Bool {
+        rhs < lhs
+    }
+
     @inlinable @inline(__always)
-    static func <= (lhs: U512, rhs: U512) -> Bool { !(lhs > rhs) }
+    static func <= (lhs: U512, rhs: U512) -> Bool {
+        !(lhs > rhs)
+    }
+
     @inlinable @inline(__always)
-    static func >= (lhs: U512, rhs: U512) -> Bool { !(lhs < rhs) }
+    static func >= (lhs: U512, rhs: U512) -> Bool {
+        !(lhs < rhs)
+    }
 
     @inlinable @inline(__always)
     var isZero: Bool {
@@ -144,7 +157,7 @@ public extension U512 {
         carry = U512.mac(&r.4, a.0, b.4, carry)
         carry = U512.mac(&r.5, a.0, b.5, carry)
         carry = U512.mac(&r.6, a.0, b.6, carry)
-        _      = U512.mac(&r.7, a.0, b.7, carry)
+        _ = U512.mac(&r.7, a.0, b.7, carry)
         // i=1
         carry = 0
         carry = U512.mac(&r.1, a.1, b.0, carry)
@@ -153,7 +166,7 @@ public extension U512 {
         carry = U512.mac(&r.4, a.1, b.3, carry)
         carry = U512.mac(&r.5, a.1, b.4, carry)
         carry = U512.mac(&r.6, a.1, b.5, carry)
-        _      = U512.mac(&r.7, a.1, b.6, carry)
+        _ = U512.mac(&r.7, a.1, b.6, carry)
         // i=2
         carry = 0
         carry = U512.mac(&r.2, a.2, b.0, carry)
@@ -161,29 +174,29 @@ public extension U512 {
         carry = U512.mac(&r.4, a.2, b.2, carry)
         carry = U512.mac(&r.5, a.2, b.3, carry)
         carry = U512.mac(&r.6, a.2, b.4, carry)
-        _      = U512.mac(&r.7, a.2, b.5, carry)
+        _ = U512.mac(&r.7, a.2, b.5, carry)
         // i=3
         carry = 0
         carry = U512.mac(&r.3, a.3, b.0, carry)
         carry = U512.mac(&r.4, a.3, b.1, carry)
         carry = U512.mac(&r.5, a.3, b.2, carry)
         carry = U512.mac(&r.6, a.3, b.3, carry)
-        _      = U512.mac(&r.7, a.3, b.4, carry)
+        _ = U512.mac(&r.7, a.3, b.4, carry)
         // i=4
         carry = 0
         carry = U512.mac(&r.4, a.4, b.0, carry)
         carry = U512.mac(&r.5, a.4, b.1, carry)
         carry = U512.mac(&r.6, a.4, b.2, carry)
-        _      = U512.mac(&r.7, a.4, b.3, carry)
+        _ = U512.mac(&r.7, a.4, b.3, carry)
         // i=5
         carry = 0
         carry = U512.mac(&r.5, a.5, b.0, carry)
         carry = U512.mac(&r.6, a.5, b.1, carry)
-        _      = U512.mac(&r.7, a.5, b.2, carry)
+        _ = U512.mac(&r.7, a.5, b.2, carry)
         // i=6
         carry = 0
         carry = U512.mac(&r.6, a.6, b.0, carry)
-        _      = U512.mac(&r.7, a.6, b.1, carry)
+        _ = U512.mac(&r.7, a.6, b.1, carry)
         // i=7
         _ = U512.mac(&r.7, a.7, b.0, 0)
 
@@ -191,7 +204,12 @@ public extension U512 {
     }
 
     @inlinable @inline(__always)
-    static func + (lhs: U512, rhs: U512) -> U512 { lhs.overflowAdd(rhs).0 }
+    static func + (lhs: U512, rhs: U512) -> U512 {
+        lhs.overflowAdd(rhs).0
+    }
+
     @inlinable @inline(__always)
-    static func * (lhs: U512, rhs: U512) -> U512 { lhs.mul(rhs) }
+    static func * (lhs: U512, rhs: U512) -> U512 {
+        lhs.mul(rhs)
+    }
 }

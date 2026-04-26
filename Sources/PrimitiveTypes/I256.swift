@@ -27,7 +27,9 @@ public struct I256: BigUInt {
     public private(set) var signExtend: Bool
 
     /// Computed array view (allocates).
-    public var BYTES: [UInt64] { [l0, l1, h0, h1] }
+    public var BYTES: [UInt64] {
+        [l0, l1, h0, h1]
+    }
 
     /// Direct field initializer.
     @inline(__always)
@@ -61,7 +63,7 @@ public struct I256: BigUInt {
 
     /// Create an `I256` from a `U256` value.
     public static func fromU256(_ val: U256) -> Self {
-        if (val & Self.SIGN_BIT_MASK) == val {
+        if (val & SIGN_BIT_MASK) == val {
             return I256(l0: val.l0, l1: val.l1, h0: val.h0, h1: val.h1, signExtend: false)
         } else {
             let n = ~val + U256(from: 1)
@@ -71,7 +73,7 @@ public struct I256: BigUInt {
 
     /// Convert `I256` to `U256`.
     public var toU256: U256 {
-        if self.signExtend {
+        if signExtend {
             // ~self + 1 — but using field arithmetic keeps allocation off the critical path.
             let inv = U256(l0: ~l0, l1: ~l1, h0: ~h0, h1: ~h1)
             let one = U256(l0: 1, l1: 0, h0: 0, h1: 0)
@@ -83,8 +85,8 @@ public struct I256: BigUInt {
 
     /// Bitwise operations. Only shifting right, as for negative number it will be Shift Arithmetic Right (SAR).
     public func shiftRight(_ shift: Int) -> Self {
-        if self.isZero || shift >= 256 || shift < 0 {
-            if self.signExtend {
+        if isZero || shift >= 256 || shift < 0 {
+            if signExtend {
                 // value is `< 0`, pushing `-1`
                 return Self(l0: 1, l1: 0, h0: 0, h1: 0, signExtend: true)
             } else {
@@ -93,12 +95,12 @@ public struct I256: BigUInt {
             }
         } else {
             // `Value < 0`
-            if self.signExtend {
+            if signExtend {
                 let me = U256(l0: l0, l1: l1, h0: h0, h1: h1)
                 let val = ((me - U256(from: 1)) >> shift) + U256(from: 1)
                 return Self(l0: val.l0, l1: val.l1, h0: val.h0, h1: val.h1, signExtend: true)
             } else {
-                let val = self.toU256 >> shift
+                let val = toU256 >> shift
                 return Self(l0: val.l0, l1: val.l1, h0: val.h0, h1: val.h1, signExtend: false)
             }
         }
@@ -119,12 +121,12 @@ public struct I256: BigUInt {
             return Self.minValue
         }
 
-        var d = self.divRem(divisor: rhs).quotient & I256(from: Self.SIGN_BIT_MASK.BYTES)
+        var d = divRem(divisor: rhs).quotient & I256(from: Self.SIGN_BIT_MASK.BYTES)
         if d.isZero {
             return Self.ZERO
         }
 
-        switch (self.signExtend, rhs.signExtend) {
+        switch (signExtend, rhs.signExtend) {
         case (true, true):
             return d
         case (false, false):
@@ -138,11 +140,11 @@ public struct I256: BigUInt {
 
     /// `I256` remainder operation.
     func rem(rhs: Self) -> Self {
-        var r = self.divRem(divisor: rhs).remainder & I256(from: Self.SIGN_BIT_MASK.BYTES)
+        var r = divRem(divisor: rhs).remainder & I256(from: Self.SIGN_BIT_MASK.BYTES)
         if r.isZero {
             return Self.ZERO
         }
-        r.signExtend = self.signExtend
+        r.signExtend = signExtend
         return r
     }
 }
@@ -159,7 +161,9 @@ public extension I256 {
         }
     }
 
-    static func != (lhs: Self, rhs: Self) -> Bool { !(lhs == rhs) }
+    static func != (lhs: Self, rhs: Self) -> Bool {
+        !(lhs == rhs)
+    }
 
     /// Unsigned-style limb compare (helper for signed comparison and BigUInt fallback).
     @inlinable @inline(__always)
@@ -184,23 +188,40 @@ public extension I256 {
         }
     }
 
-    static func > (lhs: Self, rhs: Self) -> Bool { rhs < lhs }
-    static func <= (lhs: Self, rhs: Self) -> Bool { !(lhs > rhs) }
-    static func >= (lhs: Self, rhs: Self) -> Bool { !(lhs < rhs) }
+    static func > (lhs: Self, rhs: Self) -> Bool {
+        rhs < lhs
+    }
+
+    static func <= (lhs: Self, rhs: Self) -> Bool {
+        !(lhs > rhs)
+    }
+
+    static func >= (lhs: Self, rhs: Self) -> Bool {
+        !(lhs < rhs)
+    }
 
     @inlinable @inline(__always)
-    var isZero: Bool { l0 == 0 && l1 == 0 && h0 == 0 && h1 == 0 }
+    var isZero: Bool {
+        l0 == 0 && l1 == 0 && h0 == 0 && h1 == 0
+    }
 }
 
 // MARK: - Shift operator
 
 public extension I256 {
-    static func >> (lhs: Self, shift: Int) -> Self { lhs.shiftRight(shift) }
+    static func >> (lhs: Self, shift: Int) -> Self {
+        lhs.shiftRight(shift)
+    }
 }
 
 // MARK: - Division / Remainder
 
 public extension I256 {
-    static func / (lhs: Self, rhs: Self) -> Self { lhs.div(rhs: rhs) }
-    static func % (lhs: Self, rhs: Self) -> Self { lhs.rem(rhs: rhs) }
+    static func / (lhs: Self, rhs: Self) -> Self {
+        lhs.div(rhs: rhs)
+    }
+
+    static func % (lhs: Self, rhs: Self) -> Self {
+        lhs.rem(rhs: rhs)
+    }
 }

@@ -31,16 +31,6 @@ public protocol FixedArray: CustomStringConvertible, Equatable, Sendable {
 
 /// Implementation of common `FixedArray` functionality
 public extension FixedArray {
-    /// Calculate Max value
-    static var getMax: Self {
-        Self(from: [UInt8](repeating: UInt8.max, count: Int(self.numberBytes)))
-    }
-
-    /// Calculate Zero valued
-    static var getZero: Self {
-        Self(from: [UInt8](repeating: 0, count: Int(numberBytes)))
-    }
-
     /// Calculate is value zero
     var isZero: Bool {
         return BYTES.allSatisfy { $0 == 0 }

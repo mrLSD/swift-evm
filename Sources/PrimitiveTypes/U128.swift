@@ -18,7 +18,9 @@ public struct U128: BigUInt {
     public static let ZERO: Self = .init(l0: 0, h0: 0)
 
     /// Computed array view (allocates). Prefer field access in hot paths.
-    public var BYTES: [UInt64] { [l0, h0] }
+    public var BYTES: [UInt64] {
+        [l0, h0]
+    }
 
     /// Direct field initializer (no allocation).
     @inlinable @inline(__always)
@@ -44,7 +46,9 @@ public extension U128 {
     }
 
     @inlinable @inline(__always)
-    var isZero: Bool { l0 == 0 && h0 == 0 }
+    var isZero: Bool {
+        l0 == 0 && h0 == 0
+    }
 }
 
 // MARK: - Arithmetic (specialized; only `+` and `*` are exercised on hot paths)
@@ -70,7 +74,12 @@ public extension U128 {
     }
 
     @inlinable @inline(__always)
-    static func + (lhs: U128, rhs: U128) -> U128 { lhs.overflowAdd(rhs).0 }
+    static func + (lhs: U128, rhs: U128) -> U128 {
+        lhs.overflowAdd(rhs).0
+    }
+
     @inlinable @inline(__always)
-    static func * (lhs: U128, rhs: U128) -> U128 { lhs.mul(rhs) }
+    static func * (lhs: U128, rhs: U128) -> U128 {
+        lhs.mul(rhs)
+    }
 }

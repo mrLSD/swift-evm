@@ -21,7 +21,9 @@ public struct U256: BigUInt {
     public static let ZERO: Self = .init(l0: 0, l1: 0, h0: 0, h1: 0)
 
     /// Computed array view (allocates). Prefer field access in hot paths.
-    public var BYTES: [UInt64] { [l0, l1, h0, h1] }
+    public var BYTES: [UInt64] {
+        [l0, l1, h0, h1]
+    }
 
     /// Direct field initializer (no allocation).
     @inlinable @inline(__always)
@@ -42,6 +44,66 @@ public struct U256: BigUInt {
     }
 }
 
+// MARK: - Integer accessors / Endianness (specialized — bypass BYTES allocation)
+
+public extension U256 {
+    /// Get `UInt` value from `U256` (or `nil` if value does not fit).
+    /// On 64-bit systems always succeeds when the upper three limbs are zero.
+    @inlinable @inline(__always)
+    var getUInt: UInt? {
+        guard l1 == 0 && h0 == 0 && h1 == 0 else { return nil }
+        return UInt(exactly: l0)
+    }
+
+    /// Get `Int` value from `U256` (or `nil` if value does not fit).
+    @inlinable @inline(__always)
+    var getInt: Int? {
+        guard l1 == 0 && h0 == 0 && h1 == 0 else { return nil }
+        return Int(exactly: l0)
+    }
+
+    /// Big-endian byte representation (32 bytes, MSB-first).
+    /// Pulls bytes directly from limb fields without going through the array view of `BYTES`.
+    var toBigEndian: [UInt8] {
+        var out = [UInt8]()
+        out.reserveCapacity(32)
+        // Limbs from most to least significant: h1, h0, l1, l0.
+        for limb in [h1, h0, l1, l0] {
+            out.append(UInt8(truncatingIfNeeded: limb >> 56))
+            out.append(UInt8(truncatingIfNeeded: limb >> 48))
+            out.append(UInt8(truncatingIfNeeded: limb >> 40))
+            out.append(UInt8(truncatingIfNeeded: limb >> 32))
+            out.append(UInt8(truncatingIfNeeded: limb >> 24))
+            out.append(UInt8(truncatingIfNeeded: limb >> 16))
+            out.append(UInt8(truncatingIfNeeded: limb >> 8))
+            out.append(UInt8(truncatingIfNeeded: limb))
+        }
+        return out
+    }
+
+    /// Construct `U256` from a big-endian byte array (length ≤ 32). Packs bytes directly into
+    /// limb fields; no intermediate `[UInt64]` buffer.
+    static func fromBigEndian(from val: [UInt8]) -> U256 {
+        precondition(val.count <= Int(Self.numberBytes), "BigUInt must be initialized with not more than \(Self.numberBytes) bytes.")
+        var l0: UInt64 = 0, l1: UInt64 = 0, h0: UInt64 = 0, h1: UInt64 = 0
+        let n = val.count
+        // val[n-1] is the LSB byte (lowest position), val[0] is the MSB byte (highest position).
+        for i in 0 ..< n {
+            let byte = UInt64(val[n - 1 - i])
+            let block = i / 8
+            let shift = (i % 8) * 8
+            let v = byte << shift
+            switch block {
+            case 0: l0 |= v
+            case 1: l1 |= v
+            case 2: h0 |= v
+            default: h1 |= v
+            }
+        }
+        return U256(l0: l0, l1: l1, h0: h0, h1: h1)
+    }
+}
+
 // MARK: - Equality / Comparison
 
 public extension U256 {
@@ -51,7 +113,9 @@ public extension U256 {
     }
 
     @inlinable @inline(__always)
-    static func != (lhs: U256, rhs: U256) -> Bool { !(lhs == rhs) }
+    static func != (lhs: U256, rhs: U256) -> Bool {
+        !(lhs == rhs)
+    }
 
     @inlinable @inline(__always)
     static func < (lhs: U256, rhs: U256) -> Bool {
@@ -62,14 +126,24 @@ public extension U256 {
     }
 
     @inlinable @inline(__always)
-    static func > (lhs: U256, rhs: U256) -> Bool { rhs < lhs }
-    @inlinable @inline(__always)
-    static func <= (lhs: U256, rhs: U256) -> Bool { !(lhs > rhs) }
-    @inlinable @inline(__always)
-    static func >= (lhs: U256, rhs: U256) -> Bool { !(lhs < rhs) }
+    static func > (lhs: U256, rhs: U256) -> Bool {
+        rhs < lhs
+    }
 
     @inlinable @inline(__always)
-    var isZero: Bool { l0 == 0 && l1 == 0 && h0 == 0 && h1 == 0 }
+    static func <= (lhs: U256, rhs: U256) -> Bool {
+        !(lhs > rhs)
+    }
+
+    @inlinable @inline(__always)
+    static func >= (lhs: U256, rhs: U256) -> Bool {
+        !(lhs < rhs)
+    }
+
+    @inlinable @inline(__always)
+    var isZero: Bool {
+        l0 == 0 && l1 == 0 && h0 == 0 && h1 == 0
+    }
 }
 
 // MARK: - Arithmetic (specialized, no array allocation)
@@ -114,18 +188,18 @@ public extension U256 {
         carry = U256.mac(&r0, l0, value.l0, carry)
         carry = U256.mac(&r1, l0, value.l1, carry)
         carry = U256.mac(&r2, l0, value.h0, carry)
-        _      = U256.mac(&r3, l0, value.h1, carry)
+        _ = U256.mac(&r3, l0, value.h1, carry)
         // i = 1: products fall into limbs 1..3.
         carry = 0
         carry = U256.mac(&r1, l1, value.l0, carry)
         carry = U256.mac(&r2, l1, value.l1, carry)
-        _      = U256.mac(&r3, l1, value.h0, carry)
+        _ = U256.mac(&r3, l1, value.h0, carry)
         // i = 2: products fall into limbs 2..3.
         carry = 0
         carry = U256.mac(&r2, h0, value.l0, carry)
-        _      = U256.mac(&r3, h0, value.l1, carry)
+        _ = U256.mac(&r3, h0, value.l1, carry)
         // i = 3: only limb 3.
-        _      = U256.mac(&r3, h1, value.l0, 0)
+        _ = U256.mac(&r3, h1, value.l0, 0)
 
         return U256(l0: r0, l1: r1, h0: r2, h1: r3)
     }
@@ -170,18 +244,34 @@ public extension U256 {
     }
 
     @inlinable @inline(__always)
-    static func + (lhs: U256, rhs: U256) -> U256 { lhs.overflowAdd(rhs).0 }
-    @inlinable @inline(__always)
-    static func - (lhs: U256, rhs: U256) -> U256 { lhs.overflowSub(rhs).0 }
-    @inlinable @inline(__always)
-    static func * (lhs: U256, rhs: U256) -> U256 { lhs.mul(rhs) }
+    static func + (lhs: U256, rhs: U256) -> U256 {
+        lhs.overflowAdd(rhs).0
+    }
 
     @inlinable @inline(__always)
-    static func += (lhs: inout U256, rhs: U256) { lhs = lhs + rhs }
+    static func - (lhs: U256, rhs: U256) -> U256 {
+        lhs.overflowSub(rhs).0
+    }
+
     @inlinable @inline(__always)
-    static func -= (lhs: inout U256, rhs: U256) { lhs = lhs - rhs }
+    static func * (lhs: U256, rhs: U256) -> U256 {
+        lhs.mul(rhs)
+    }
+
     @inlinable @inline(__always)
-    static func *= (lhs: inout U256, rhs: U256) { lhs = lhs * rhs }
+    static func += (lhs: inout U256, rhs: U256) {
+        lhs = lhs + rhs
+    }
+
+    @inlinable @inline(__always)
+    static func -= (lhs: inout U256, rhs: U256) {
+        lhs = lhs - rhs
+    }
+
+    @inlinable @inline(__always)
+    static func *= (lhs: inout U256, rhs: U256) {
+        lhs = lhs * rhs
+    }
 }
 
 // MARK: - Bitwise / Shift
@@ -290,7 +380,12 @@ public extension U256 {
     }
 
     @inlinable @inline(__always)
-    static func << (lhs: U256, shift: Int) -> U256 { lhs.shiftLeft(shift) }
+    static func << (lhs: U256, shift: Int) -> U256 {
+        lhs.shiftLeft(shift)
+    }
+
     @inlinable @inline(__always)
-    static func >> (lhs: U256, shift: Int) -> U256 { lhs.shiftRight(shift) }
+    static func >> (lhs: U256, shift: Int) -> U256 {
+        lhs.shiftRight(shift)
+    }
 }

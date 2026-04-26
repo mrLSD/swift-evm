@@ -227,14 +227,9 @@ public extension BigUInt {
         let format = uppercase ? "%02X" : "%02x"
 
         // Strip leading zeros
-        let hex = bytes
+        return bytes
             .drop { $0 == 0 }
             .map { String(format: format, $0) }
             .joined()
-
-        return hex
     }
 }
-
-// Equatable / Comparable operators are provided per concrete type (U128, U256, U512, I256)
-// to operate directly on stored fields without allocating array views.
