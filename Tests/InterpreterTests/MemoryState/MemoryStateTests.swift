@@ -719,7 +719,6 @@ final class MemoryStateSpec: QuickSpec {
             context("TStorage Management") {
                 let key1 = H256(from: U256(from: 10).toBigEndian)
                 let val1 = H256(from: [UInt8](repeating: 0xf2, count: 32))
-                let expectedVal = H256(from: U256(from: 555).toBigEndian)
 
                 it("should handle tstorage for current state") {
                     let backend = MockBackend()
@@ -1058,7 +1057,7 @@ final class MemoryStateSpec: QuickSpec {
                     // Substate work fully discarded
                     expect(state.logs.count).to(equal(1))
                     expect(state.logs.first?.address).to(equal(addr1))
-                    e   xpect(state.accounts[addr2]).to(beNil())
+                    expect(state.accounts[addr2]).to(beNil())
                     expect(state.storages[addr2]).to(beNil())
                     expect(state.creates.contains(addr2)).to(beFalse())
                     // Parent state preserved
