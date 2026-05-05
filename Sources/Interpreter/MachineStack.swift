@@ -192,7 +192,7 @@ struct Stack {
 
         let safeCount = max(0, min(count, data.count))
         #if TRACING && TRACE_STACK_INOUT
-            self.traceStackOut.append(contentsOf: self.data.suffix(safeCount))
+            self.traceStackOut.append(contentsOf: self.data.suffix(safeCount).reversed())
         #endif
         self.data.removeLast(safeCount)
     }
