@@ -15,7 +15,7 @@ final class InstructionCodeCopySpec: QuickSpec {
                 m.evalLoop()
 
                 expect(m.machineStatus).to(equal(.Exit(.Error(.OutOfGas))))
-                expect(m.stack.length).to(equal(0))
+                expect(m.stack.length).to(equal(3))
                 expect(m.gas.remaining).to(equal(1))
                 expect(m.gas.memoryGas.numWords).to(equal(0))
                 expect(m.gas.memoryGas.gasCost).to(equal(0))
@@ -60,7 +60,7 @@ final class InstructionCodeCopySpec: QuickSpec {
                 m.evalLoop()
 
                 expect(m.machineStatus).to(equal(.Exit(.Error(.OutOfGas))))
-                expect(m.stack.length).to(equal(0))
+                expect(m.stack.length).to(equal(3))
                 expect(m.gas.remaining).to(equal(10))
                 expect(m.gas.memoryGas.numWords).to(equal(0))
                 expect(m.gas.memoryGas.gasCost).to(equal(0))
@@ -74,7 +74,7 @@ final class InstructionCodeCopySpec: QuickSpec {
                 m.evalLoop()
 
                 expect(m.machineStatus).to(equal(.Exit(.Error(.OutOfGas))))
-                expect(m.stack.length).to(equal(0))
+                expect(m.stack.length).to(equal(3))
                 expect(m.gas.remaining).to(equal(4))
                 expect(m.gas.memoryGas.numWords).to(equal(0))
                 expect(m.gas.memoryGas.gasCost).to(equal(0))
@@ -88,7 +88,7 @@ final class InstructionCodeCopySpec: QuickSpec {
                 m.evalLoop()
 
                 expect(m.machineStatus).to(equal(.Exit(.Error(.OutOfGas))))
-                expect(m.stack.length).to(equal(0))
+                expect(m.stack.length).to(equal(3))
                 expect(m.gas.remaining).to(equal(4))
                 expect(m.gas.memoryGas.numWords).to(equal(4))
                 expect(m.gas.memoryGas.gasCost).to(equal(12))
@@ -116,7 +116,7 @@ final class InstructionCodeCopySpec: QuickSpec {
                 m1.evalLoop()
 
                 expect(m1.machineStatus).to(equal(.Exit(.Error(.IntOverflow))))
-                expect(m1.stack.length).to(equal(0))
+                expect(m1.stack.length).to(equal(3))
                 expect(m1.gas.remaining).to(equal(94))
                 expect(m1.gas.memoryGas.numWords).to(equal(0))
                 expect(m1.gas.memoryGas.gasCost).to(equal(0))
@@ -127,11 +127,11 @@ final class InstructionCodeCopySpec: QuickSpec {
                 _ = m2.stack.push(value: U256(from: 32))
                 m2.evalLoop()
 
-                expect(m2.machineStatus).to(equal(.Exit(.Error(.IntOverflow))))
+                expect(m2.machineStatus).to(equal(.Exit(.Success(.Stop))))
                 expect(m2.stack.length).to(equal(0))
-                expect(m2.gas.remaining).to(equal(94))
-                expect(m2.gas.memoryGas.numWords).to(equal(0))
-                expect(m2.gas.memoryGas.gasCost).to(equal(0))
+                expect(m2.gas.remaining).to(equal(88))
+                expect(m2.gas.memoryGas.numWords).to(equal(2))
+                expect(m2.gas.memoryGas.gasCost).to(equal(6))
 
                 let m3 = TestMachine.machine(opcodes: [Opcode.CODECOPY], gasLimit: 100)
                 _ = m3.stack.push(value: U256(from: [1, 1, 0, 0]))
@@ -140,7 +140,7 @@ final class InstructionCodeCopySpec: QuickSpec {
                 m3.evalLoop()
 
                 expect(m3.machineStatus).to(equal(.Exit(.Error(.IntOverflow))))
-                expect(m3.stack.length).to(equal(0))
+                expect(m3.stack.length).to(equal(3))
                 expect(m3.gas.remaining).to(equal(100))
                 expect(m3.gas.memoryGas.numWords).to(equal(0))
                 expect(m3.gas.memoryGas.gasCost).to(equal(0))

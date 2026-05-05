@@ -28,18 +28,41 @@ final class InstructionKeccakSpec: QuickSpec {
 
                 expect(m1.machineStatus).to(equal(.Exit(.Error(.IntOverflow))))
                 expect(m1.gas.remaining).to(equal(1000)) // No gas spent before check
+            }
 
-                // Case 2: Memory Offset exceeds Int/UInt64 max
-                // Note: Size is checked first, then gas recorded, then offset checked.
-                // We need enough gas to pass the initial cost check to reach the offset check.
-                let m2 = TestMachine.machine(data: [], opcode: Opcode.SHA3, gasLimit: 1000)
-                _ = m2.stack.push(value: U256(from: 0)) // Size
-                _ = m2.stack.push(value: U256(from: [1, 1, 0, 0])) // Huge Offset
-                m2.evalLoop()
+            it("check stack Int success is as expected for zero size and offset") {
+                let m = TestMachine.machine(data: [], opcode: Opcode.SHA3, gasLimit: 1000)
+                _ = m.stack.push(value: U256(from: 0)) // Size
+                _ = m.stack.push(value: U256(from: [1, 1, 0, 0])) // Huge Offset
+                m.evalLoop()
 
-                expect(m2.machineStatus).to(equal(.Exit(.Error(.IntOverflow))))
+                expect(m.machineStatus).to(equal(.Exit(.Success(.Stop))))
                 // Gas should be deducted for the operation (Base 30 + 0 dynamic) because size check passed
-                expect(m2.gas.remaining).to(equal(970))
+                expect(m.gas.remaining).to(equal(970))
+                expect(m.gas.memoryGas.gasCost).to(equal(0))
+
+                let expected = U256.fromBigEndian(from: H256.KECCAK_EMPTY.BYTES)
+                let result = try! m.stack.pop().get()
+                expect(result).to(equal(expected))
+
+                expect(m.stack.length).to(equal(0))
+            }
+
+            it("check IntOverflow on memory offset with non-zero size") {
+                // Covers the `getIntOrFail(rawMemoryOffset)` branch in `keccak256`.
+                // The branch is reachable only when size > 0 — for size == 0 the KECCAK_EMPTY
+                // short-circuit returns before memoryOffset is validated.
+                // size = 32 → keccak256Cost = 30 + 6*1 = 36. memoryOffset > Int.max → IntOverflow.
+                // Memory expansion is NOT attempted (offset check fails before resize).
+                let m = TestMachine.machine(data: [], opcode: Opcode.SHA3, gasLimit: 1000)
+                _ = m.stack.push(value: U256(from: 32)) // Size (non-zero, bypasses KECCAK_EMPTY)
+                _ = m.stack.push(value: U256(from: [1, 1, 0, 0])) // Huge memory offset (> Int.max)
+                m.evalLoop()
+
+                expect(m.machineStatus).to(equal(.Exit(.Error(.IntOverflow))))
+                expect(m.gas.remaining).to(equal(964)) // 1000 - 36 (base 30 + 1 word * 6)
+                expect(m.gas.memoryGas.numWords).to(equal(0))
+                expect(m.gas.memoryGas.gasCost).to(equal(0))
             }
 
             it("fails with OutOfGas if limit is less than Base Cost (30)") {
@@ -118,7 +141,7 @@ final class InstructionKeccakSpec: QuickSpec {
 
                 expect(m.machineStatus).to(equal(.Exit(.Success(.Stop))))
 
-                let expected = try! U256.fromString(hex: "c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470").get()
+                let expected = U256.fromBigEndian(from: H256.KECCAK_EMPTY.BYTES)
                 let result = try! m.stack.pop().get()
                 expect(result).to(equal(expected))
 

@@ -601,6 +601,10 @@ public final class Machine {
     ///   - size: The new size to which the memory should be resized.
     /// - Returns: A Boolean value indicating whether the memory was successfully resized and the gas cost recorded.
     func resizeMemoryAndRecordGas(offset: Int, size: Int) -> Bool {
+        // Early return if size is zero, as resizing to zero does not incur any gas cost and does not require any memory operation.
+        if size == 0 {
+            return true
+        }
         // Calculate the gas cost for resizing memory.
         let resizeMemoryCost = self.gas.memoryGas.resize(end: offset, length: size)
         switch resizeMemoryCost {

@@ -79,7 +79,7 @@ final class InstructionCallDataCopySpec: QuickSpec {
                 m.evalLoop()
 
                 expect(m.machineStatus).to(equal(.Exit(.Error(.OutOfGas))))
-                expect(m.stack.length).to(equal(0))
+                expect(m.stack.length).to(equal(3))
                 expect(m.gas.remaining).to(equal(4))
                 expect(m.gas.memoryGas.numWords).to(equal(0))
                 expect(m.gas.memoryGas.gasCost).to(equal(0))
@@ -94,7 +94,7 @@ final class InstructionCallDataCopySpec: QuickSpec {
                 m.evalLoop()
 
                 expect(m.machineStatus).to(equal(.Exit(.Error(.OutOfGas))))
-                expect(m.stack.length).to(equal(0))
+                expect(m.stack.length).to(equal(3))
                 expect(m.gas.remaining).to(equal(4))
                 expect(m.gas.memoryGas.numWords).to(equal(4))
                 expect(m.gas.memoryGas.gasCost).to(equal(12))
@@ -134,10 +134,10 @@ final class InstructionCallDataCopySpec: QuickSpec {
                 _ = m2.stack.push(value: U256(from: 32))
                 m2.evalLoop()
 
-                expect(m2.machineStatus).to(equal(.Exit(.Error(.IntOverflow))))
-                expect(m2.gas.remaining).to(equal(94))
-                expect(m2.gas.memoryGas.numWords).to(equal(0))
-                expect(m2.gas.memoryGas.gasCost).to(equal(0))
+                expect(m2.machineStatus).to(equal(.Exit(.Success(.Stop))))
+                expect(m2.gas.remaining).to(equal(88))
+                expect(m2.gas.memoryGas.numWords).to(equal(2))
+                expect(m2.gas.memoryGas.gasCost).to(equal(6))
 
                 let m3 = TestMachine.machine(data: callData, opcode: Opcode.CALLDATACOPY, gasLimit: 100)
                 _ = m3.stack.push(value: U256(from: [1, 1, 0, 0]))
