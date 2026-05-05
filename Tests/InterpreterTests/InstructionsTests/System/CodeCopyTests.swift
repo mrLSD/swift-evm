@@ -146,6 +146,24 @@ final class InstructionCodeCopySpec: QuickSpec {
                 expect(m3.gas.memoryGas.gasCost).to(equal(0))
             }
 
+            it("check size==0 with oversized offsets does not raise IntOverflow") {
+                // Lock-in regression: with size == 0 the fast path must consume the stack
+                // and exit successfully WITHOUT validating memoryOffset/codeOffset. Per
+                // Yellow Paper §H.2: when l == 0 no memory access happens, so offsets are
+                // unobservable and must not produce IntOverflow even when > Int.max.
+                let m = TestMachine.machine(opcodes: [Opcode.CODECOPY], gasLimit: 100)
+                _ = m.stack.push(value: U256(from: 0)) // size = 0
+                _ = m.stack.push(value: U256(from: [1, 1, 0, 0])) // codeOffset > Int.max
+                _ = m.stack.push(value: U256(from: [1, 1, 0, 0])) // memoryOffset > Int.max
+                m.evalLoop()
+
+                expect(m.machineStatus).to(equal(.Exit(.Success(.Stop))))
+                expect(m.stack.length).to(equal(0))
+                expect(m.gas.remaining).to(equal(97)) // 100 - veryLowCopy(0)=3
+                expect(m.gas.memoryGas.numWords).to(equal(0))
+                expect(m.gas.memoryGas.gasCost).to(equal(0))
+            }
+
             it("success") {
                 let m = TestMachine.machine(opcodes: [Opcode.JUMPDEST, Opcode.JUMPDEST, Opcode.JUMPDEST, Opcode.JUMPDEST, Opcode.JUMPDEST, Opcode.JUMPDEST, Opcode.CODECOPY], gasLimit: 100)
                 _ = m.stack.push(value: U256(from: 3))

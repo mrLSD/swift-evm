@@ -61,6 +61,23 @@ final class InterpreterMachineTestsSpec: QuickSpec {
                 m.stackPush(value: U256(from: 1))
                 expect(m.machineStatus).to(equal(.Exit(.Error(.StackOverflow))))
             }
+
+            it("resizeMemoryAndRecordGas early-returns true for size == 0") {
+                // Per Yellow Paper §H.1: when length == 0, no memory access occurs and no
+                // expansion is required, regardless of the offset. The early return prevents
+                // spurious gas charges and avoids reaching `Memory.resize(_, 0)` which would
+                // otherwise short-circuit and incorrectly trigger an OutOfGas exit.
+                // Offset = 1024 would expand memory to 32 words and charge gas;
+                // with size = 0 it must remain a no-op.
+                let m = TestMachine.machine(opcodes: [], gasLimit: 100)
+                let res = m.resizeMemoryAndRecordGas(offset: 1024, size: 0)
+
+                expect(res).to(beTrue())
+                expect(m.machineStatus).to(equal(.NotStarted))
+                expect(m.gas.remaining).to(equal(100))
+                expect(m.gas.memoryGas.numWords).to(equal(0))
+                expect(m.gas.memoryGas.gasCost).to(equal(0))
+            }
         }
     }
 }

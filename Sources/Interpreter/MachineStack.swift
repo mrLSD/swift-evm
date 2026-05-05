@@ -191,6 +191,9 @@ struct Stack {
         assert(count >= 0 && count <= self.data.count, "Stack underflow")
 
         let safeCount = max(0, min(count, data.count))
+        #if TRACING && TRACE_STACK_INOUT
+            self.traceStackOut.append(contentsOf: self.data.suffix(safeCount))
+        #endif
         self.data.removeLast(safeCount)
     }
 
