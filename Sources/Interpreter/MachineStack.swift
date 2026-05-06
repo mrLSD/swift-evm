@@ -8,7 +8,9 @@ struct Stack {
     /// Stack limit
     let limit: Int
     /// Stack length
-    var length: Int { self.data.count }
+    var length: Int {
+        self.data.count
+    }
 
     #if TRACING && TRACE_STACK_INOUT
         /// Trace Stack Out data flow
@@ -180,6 +182,19 @@ struct Stack {
         }
 
         return .success(())
+    }
+
+    /// Safely consumes the specified number of elements from the top of the stack without returning them.
+    /// The removal count is clamped to the current stack size to prevent out-of-bounds runtime crashes.
+    @inline(__always)
+    mutating func consume(count: Int) {
+        assert(count >= 0 && count <= self.data.count, "Stack underflow")
+
+        let safeCount = max(0, min(count, data.count))
+        #if TRACING && TRACE_STACK_INOUT
+            self.traceStackOut.append(contentsOf: self.data.suffix(safeCount).reversed())
+        #endif
+        self.data.removeLast(safeCount)
     }
 
     #if TRACING

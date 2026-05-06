@@ -93,6 +93,13 @@ public extension BigUInt {
         return Int(exactly: BYTES[0])
     }
 
+    /// Saturating conversion to Int. Returns `Int.max` when the value exceeds `Int.max`.
+    /// Per Yellow Paper: this preserves the "value is mathematically larger than any
+    /// property when narrowing 256-bit offsets to the host word size.
+    var saturatingInt: Int {
+        return self.getInt ?? Int.max
+    }
+
     /// Calculate is `BigUInt` value zero
     var isZero: Bool {
         return self.BYTES.allSatisfy { $0 == 0 }
@@ -227,12 +234,10 @@ public extension BigUInt {
         let format = uppercase ? "%02X" : "%02x"
 
         // Strip leading zeros
-        let hex = bytes
+        return bytes
             .drop { $0 == 0 }
             .map { String(format: format, $0) }
             .joined()
-
-        return hex
     }
 }
 

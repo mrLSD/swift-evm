@@ -413,6 +413,104 @@ final class InterpreterMachineStackSpec: QuickSpec {
                     expect(stack.length).to(equal(2))
                 }
             }
+
+            context("consume operation") {
+                it("should be a no-op when count is zero on a non-empty stack") {
+                    var stack = Stack(limit: 3)
+                    _ = stack.push(value: U256(from: 10))
+                    _ = stack.push(value: U256(from: 20))
+                    expect(stack.length).to(equal(2))
+
+                    stack.consume(count: 0)
+                    expect(stack.length).to(equal(2))
+
+                    let top = stack.peek(indexFromTop: 0)
+                    expect(top).to(beSuccess { value in
+                        expect(value).to(equal(U256(from: 20)))
+                    })
+                }
+
+                it("should be a no-op when count is zero on an empty stack") {
+                    var stack = Stack(limit: 3)
+                    expect(stack.length).to(equal(0))
+
+                    stack.consume(count: 0)
+                    expect(stack.length).to(equal(0))
+                }
+
+                it("should remove a single element from the top") {
+                    var stack = Stack(limit: 3)
+                    _ = stack.push(value: U256(from: 10))
+                    _ = stack.push(value: U256(from: 20))
+                    _ = stack.push(value: U256(from: 30))
+                    expect(stack.length).to(equal(3))
+
+                    stack.consume(count: 1)
+                    expect(stack.length).to(equal(2))
+
+                    let top = stack.peek(indexFromTop: 0)
+                    expect(top).to(beSuccess { value in
+                        expect(value).to(equal(U256(from: 20)))
+                    })
+                    let bottom = stack.peek(indexFromTop: 1)
+                    expect(bottom).to(beSuccess { value in
+                        expect(value).to(equal(U256(from: 10)))
+                    })
+                }
+
+                it("should remove multiple elements from the top") {
+                    var stack = Stack(limit: 5)
+                    _ = stack.push(value: U256(from: 10))
+                    _ = stack.push(value: U256(from: 20))
+                    _ = stack.push(value: U256(from: 30))
+                    _ = stack.push(value: U256(from: 40))
+                    expect(stack.length).to(equal(4))
+
+                    stack.consume(count: 3)
+                    expect(stack.length).to(equal(1))
+
+                    let top = stack.peek(indexFromTop: 0)
+                    expect(top).to(beSuccess { value in
+                        expect(value).to(equal(U256(from: 10)))
+                    })
+                }
+
+                it("should clear the stack when count equals stack length") {
+                    var stack = Stack(limit: 3)
+                    _ = stack.push(value: U256(from: 10))
+                    _ = stack.push(value: U256(from: 20))
+                    expect(stack.length).to(equal(2))
+
+                    stack.consume(count: 2)
+                    expect(stack.length).to(equal(0))
+
+                    let result = stack.peek(indexFromTop: 0)
+                    expect(result).to(beFailure { error in
+                        expect(error).to(matchError(Machine.ExitError.StackUnderflow))
+                    })
+                }
+            }
+
+            context("consume assertion safety") {
+                it("should trigger assertion when count is negative") {
+                    var stack = Stack(limit: 3)
+                    _ = stack.push(value: U256(from: 10))
+                    expect { stack.consume(count: -1) }.to(throwAssertion())
+                }
+
+                it("should trigger assertion when count exceeds stack length") {
+                    var stack = Stack(limit: 3)
+                    _ = stack.push(value: U256(from: 10))
+                    expect(stack.length).to(equal(1))
+                    expect { stack.consume(count: 2) }.to(throwAssertion())
+                }
+
+                it("should trigger assertion when count is positive on an empty stack") {
+                    var stack = Stack(limit: 3)
+                    expect(stack.length).to(equal(0))
+                    expect { stack.consume(count: 1) }.to(throwAssertion())
+                }
+            }
         }
     }
 }

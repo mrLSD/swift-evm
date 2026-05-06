@@ -168,6 +168,16 @@ final class U128Spec: QuickSpec {
                     let val2 = U128(from: [0xffff, 0])
                     expect(0xffff).to(equal(val2.getInt))
                 }
+
+                it("saturatingInt") {
+                    let val = U128.fromLittleEndian(from: [
+                        0xf, 1, 2, 3, 0xc1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xac, 2,
+                    ])
+                    expect(val.saturatingInt).to(equal(Int.max))
+
+                    let val2 = U128(from: [0xffff, 0])
+                    expect(val2.saturatingInt).to(equal(0xffff))
+                }
             }
 
             describe("U128.divRem(divisor:)") {

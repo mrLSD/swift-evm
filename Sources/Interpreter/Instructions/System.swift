@@ -27,8 +27,8 @@ enum SystemInstructions {
         }
 
         // After stack verification this guard will always succeed. But we keep it for safety and clarity.
-        // Pop the required values from the stack: memory offset, code offset, and size.
-        guard let rawMemoryOffset = m.stackPop(), let rawCodeOffset = m.stackPop(), let rawSize = m.stackPop() else { return }
+        // Peek the required values from the stack: memory offset, code offset, and size.
+        guard let rawMemoryOffset = m.stackPeek(indexFromTop: 0), let rawCodeOffset = m.stackPeek(indexFromTop: 1), let rawSize = m.stackPeek(indexFromTop: 2) else { return }
 
         // This situation possible only for 32-bit context (for example wasm32)
         guard let size = m.getIntOrFail(rawSize) else {
@@ -45,6 +45,7 @@ enum SystemInstructions {
 
         // If the size is zero, no copying is required.
         if size == 0 {
+            m.stack.consume(count: 3)
             return
         }
 
@@ -52,13 +53,14 @@ enum SystemInstructions {
         guard let memoryOffset = m.getIntOrFail(rawMemoryOffset) else {
             return
         }
-        guard let codeOffset = m.getIntOrFail(rawCodeOffset) else {
-            return
-        }
+        let codeOffset = rawCodeOffset.saturatingInt
 
         guard m.resizeMemoryAndRecordGas(offset: memoryOffset, size: size) else {
             return
         }
+
+        // After stack verification this guard will always succeed. But we keep it for safety and clarity.
+        m.stack.consume(count: 3)
 
         // Perform the code copy. If the copy fails, update the machine status with the error.
         if case .failure(let err) = m.memory.copyData(memoryOffset: memoryOffset, dataOffset: codeOffset, size: size, data: m.code) {
@@ -103,11 +105,9 @@ enum SystemInstructions {
             return
         }
 
-        // After stack verification this guard will always succeed. But we keep it for safety and clarity.
-        guard let _ = m.stackPop(), let _ = m.stackPop(), let _ = m.stackPop() else { return }
-
         // If the size is zero, no copying is required.
         if size == 0 {
+            m.stack.consume(count: 3)
             return
         }
 
@@ -115,13 +115,14 @@ enum SystemInstructions {
         guard let memoryOffset = m.getIntOrFail(rawMemoryOffset) else {
             return
         }
-        guard let dataOffset = m.getIntOrFail(rawDataOffset) else {
-            return
-        }
+        let dataOffset = rawDataOffset.saturatingInt
 
         guard m.resizeMemoryAndRecordGas(offset: memoryOffset, size: size) else {
             return
         }
+
+        // After stack verification this guard will always succeed. But we keep it for safety and clarity.
+        m.stack.consume(count: 3)
 
         // Perform the call-data copy. If the copy fails, update the machine status with the error.
         if case .failure(let err) = m.memory.copyData(memoryOffset: memoryOffset, dataOffset: dataOffset, size: size, data: m.data) {
@@ -144,10 +145,11 @@ enum SystemInstructions {
 
         var load = [UInt8](repeating: 0, count: 32)
         let dataCount = m.data.count
-        if let intIndex = index.getInt, intIndex < dataCount {
-            let countToCopy = min(32, dataCount - intIndex)
+        let offset = index.saturatingInt
+        if offset < dataCount {
+            let countToCopy = min(32, dataCount - offset)
 
-            let sourceRange = intIndex ..< (intIndex + countToCopy)
+            let sourceRange = offset ..< (offset + countToCopy)
             let destinationRange = 0 ..< countToCopy
             load.replaceSubrange(destinationRange, with: m.data[sourceRange])
         }
@@ -220,8 +222,15 @@ enum SystemInstructions {
             return
         }
 
-        // After stack verification this guard will always succeed. But we keep it for safety and clarity.
-        guard let _ = m.stackPop(), let _ = m.stackPop() else { return }
+        // Short-circuit for empty input: keccak256("") is a well-known constant.
+        // Per Yellow Paper: with size == 0 no memory access happens, so memory offset
+        // validation and memory expansion are both skipped.
+        if size == 0 {
+            // After stack verification this guard will always succeed. But we keep it for safety and clarity.
+            m.stack.consume(count: 2)
+            m.stackPush(value: U256.fromBigEndian(from: H256.KECCAK_EMPTY.BYTES))
+            return
+        }
 
         // This situation possible only for 32-bit context (for example wasm32)
         guard let memoryOffset = m.getIntOrFail(rawMemoryOffset) else {
@@ -231,6 +240,9 @@ enum SystemInstructions {
         guard m.resizeMemoryAndRecordGas(offset: memoryOffset, size: size) else {
             return
         }
+
+        // After stack verification this guard will always succeed. But we keep it for safety and clarity.
+        m.stack.consume(count: 2)
 
         let data = m.memory.get(offset: memoryOffset, size: size)
 

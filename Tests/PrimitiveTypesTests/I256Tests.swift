@@ -183,6 +183,17 @@ final class I256Spec: QuickSpec {
                     let val2 = I256(from: [0xFFFF, 0, 0, 0])
                     expect(0xFFFF).to(equal(val2.getInt))
                 }
+
+                it("saturatingInt") {
+                    let val = I256.fromLittleEndian(from: [
+                        0xF, 1, 2, 3, 0xC1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                        0, 0xAC, 2,
+                    ])
+                    expect(val.saturatingInt).to(equal(Int.max))
+
+                    let val2 = I256(from: [0xFFFF, 0, 0, 0])
+                    expect(val2.saturatingInt).to(equal(0xFFFF))
+                }
             }
 
             context("when compare numbers") {
