@@ -5,6 +5,48 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.26] - 2026-05-11
+
+### Added
+- **`H256.KECCAK_EMPTY` Constant:** Added the canonical Keccak-256 hash of the empty string (`""`) as a public static constant on `H256`. Useful for code-hash queries against accounts with no code without recomputing the digest at every call site ([#69]).
+- **`BigUInt.saturatingInt`:** Added a saturating conversion to `Int` that returns `Int.max` when the value exceeds the host word size, instead of returning `nil`. Used by data-copy opcodes where any offset past `Int.max` is semantically equivalent to "past end of buffer" ([#69]).
+- **`Stack.consume(count:)`:** Added a safe helper that removes the top N elements from the stack without returning them, with assertion-based underflow protection. Replaces idiomatic `_ = stackPop()` chains in instructions that have already validated their operands via `stackPeek` ([#69]).
+
+### Changed
+- **`CODECOPY` and `CALLDATACOPY` Stack Discipline:** Refactored both opcodes from the *pop-then-validate* pattern to the *peek-then-consume* pattern: operands are first read with `stackPeek(indexFromTop:)` and validated; the stack is mutated only via `stack.consume(count: 3)` after gas charging and memory resize succeed. This preserves the stack on failure paths, matching the pattern used by the rest of the instruction set ([#69]).
+- **Code/Data Offset Handling:** `CODECOPY` and `CALLDATACOPY` now use `saturatingInt` for the source offset rather than `getIntOrFail`. Previously, an out-of-range offset caused a runtime fault; now it is correctly treated as "read past end of buffer", which `Memory.copyData` zero-fills as required by the Yellow Paper ([#69]).
+
+### Fixed
+- **Trace Stack-Out Ordering:** Fixed `Stack.consume(count:)` to record traced popped values in logical (least-significant-first) order rather than physical (top-down) order, so the `TRACE_STACK_INOUT` output matches the order produced by other instructions ([#69]).
+
+### Tests
+- **MachineStackTests:** Added a new test file (98 LOC) covering `consume(count:)` underflow safety, no-op behaviour with `count: 0`, and trace-output ordering ([#69]).
+- **System Instructions:** Extended `KeccakTests`, `CallDataCopyTests`, and `CodeCopyTests` for the new peek/consume flow and saturating-offset behaviour ([#69]).
+- **Primitive Types:** Added `saturatingInt` test cases to `H256Tests`, `I256Tests`, `U128Tests`, `U256Tests`, and `U512Tests` ([#69]).
+
+## [0.5.25] - 2026-04-27
+
+### Added
+- **EIP-7702 Authorization:** Introduced public `Authorization` struct holding an `authority`, target `address`, `nonce`, and `isValid` flag, plus helpers for delegation-designator parsing — `Authorization.isDelegated(code:)`, `Authorization.getDelegatedAddress(_:)`, and `Authorization.delegationCode()` (encodes the canonical `0xef0100 ++ address` 23-byte sequence) ([#64]).
+- **Account Models:** Replaced the previous single `Account.swift` with a richer `Accounts.swift` containing `BasicAccount` (saturating `addBalance`/`subBalance`, `incNonce`, default value) and `StateAccount` (basic + optional code + reset flag) ([#64]).
+- **Transfer Type:** Added a public `Transfer` struct as the foundation for value-transfer semantics in future `CALL`-family opcodes ([#64]).
+- **Hierarchical MemoryState:** Major extension of `MemoryState` with full nested-call substate support: `enter()` / `exitCommit()` / `exitRevert()` / `exitDiscard()`, swap-and-merge logic for `accounts`/`storages`/`tstorages`, recursive parent-chain queries (`knownAccount`, `knownStorage`, `isCold`, `isStorageCold`, `isDeleted`, `isCreated`), authority-target cache with parent traversal, plus `incNonce`, `setStorage`, `resetStorage`, `setCode`, and `isEmpty` helpers ([#64]).
+- **Transient Storage State:** Added per-substate `tstorages` storage map for EIP-1153 transient storage (`TLOAD`/`TSTORE`) groundwork ([#64], [#66]).
+- **Gas Helpers:** Extended `Gas` with stipend-merging logic used during substate exit-commit ([#64]).
+
+### Changed
+- **MemoryState Architecture:** `MemoryState` is now a hierarchical chain of substates linked via a `parent` reference, with O(1) state swap on enter/exit (Swift COW semantics on dictionaries/sets) and explicit cycle-breaking (`exited.parent = nil`) on exit. Lookups walk the parent chain until a known answer is found ([#64]).
+- **Backend Integration:** Refined backend integration helpers (`getAccountAndTouch`, `basic(address:)`, etc.) to centralize cache-or-fetch logic between local substate and the host `Backend` ([#64]).
+
+### Fixed
+- **Substate Swap Logic:** Corrected an early issue in `MemoryState` swap ordering that surfaced during deeper nesting validation ([#64]).
+
+### Tests
+- **Foundational Coverage:** Added `AccountsTests`, `AuthorizationTests`, `LogsTests`, `TransferTests`, and the initial `MemoryStateTests`/`AccessedTests`/`MetadataTests` suites (~1000 LOC across the substate model) ([#64]).
+- **Transient Storage Tests:** Added comprehensive `TStorage` tests covering set/get within a substate, propagation on commit, and isolation on revert ([#66]).
+- **Authorization List Tests:** Added tests for the authority-target cache including parent-chain lookup, delegation-code parsing, and the address resolution flow used by EIP-7702 ([#66]).
+- **Full-Coverage Pass:** Brought `MemoryState.swift` to 100% line coverage by exercising the previously-unhit branches: `isStorageCold` (current-state and recursive parent lookup), `recursiveIsCold` nil-accessed branch (Frontier hard fork before access lists existed), `exitCommit` merge of accounts/storages/tstorages with `reset` flag and conflict-resolution closures, `exitRevert` (state restoration plus gas-stipend merging), and `exitDiscard` (state restoration without gas merging) ([#67]).
+
 ## [0.5.24] - 2026-02-17
 
 ### Added
@@ -251,8 +293,208 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Memory Integrity:** Added tests for `MLOAD` and `MSTORE` to verify big-endian byte ordering and proper memory growth ([#42]).
 - **Flow Control:** Added tests for `RETURN` and `REVERT` to ensure correct output data capture and execution status reporting ([#42]).
 
+## [0.5.7] - 2025-04-28
+
+### Added
+- **CALLDATASIZE Opcode:** Implemented the `CALLDATASIZE` (0x36) opcode, returning the size in bytes of the input data sent with the current call ([#40]).
+- **CALLDATALOAD Opcode:** Implemented the `CALLDATALOAD` (0x35) opcode, loading a 32-byte word from the input data starting at a given offset (zero-padded if the read extends past the end) ([#41]).
+- **CALLDATACOPY Opcode:** Implemented the `CALLDATACOPY` (0x37) opcode, copying a range of input data into memory with proper memory expansion and gas accounting ([#41]).
+
+### Tests
+- **CALLDATASIZE Coverage:** Added unit tests for `CALLDATASIZE` covering empty calldata, normal sizes, and gas consumption (Base Gas: 2). Extended `CODESIZE` tests for parity ([#40]).
+- **CALLDATALOAD/CALLDATACOPY Coverage:** Added unit tests covering offset boundaries, zero-padding past end-of-data, memory expansion costs, and stack discipline ([#41]).
+
+## [0.5.6] - 2025-03-23
+
+### Added
+- **MSIZE Opcode:** Implemented the `MSIZE` (0x59) opcode, returning the active memory size in bytes (rounded up to the nearest 32-byte word) ([#39]).
+
+### Tests
+- **Coverage:** Added unit tests for `MSIZE` verifying memory expansion behavior, gas consumption (Base Gas: 2), and stack interactions ([#39]).
+
+## [0.5.5] - 2025-03-16
+
+### Added
+- **MSTORE8 Opcode:** Implemented the `MSTORE8` (0x53) opcode for storing a single byte to memory at a given offset, taking only the least-significant byte of the 32-byte stack value ([#38]).
+
+### Tests
+- **Coverage:** Added unit tests for `MSTORE8` covering byte truncation behavior, memory expansion, gas accounting, and edge cases at memory boundaries ([#38]).
+
+## [0.5.4] - 2025-03-15
+
+### Added
+- **MSTORE Opcode:** Implemented the `MSTORE` (0x52) opcode for saving a 32-byte word to memory at a given offset, including dynamic memory expansion and gas accounting ([#37]).
+
+### Changed
+- **Build Targets:** Updated minimum supported Apple OS versions in `Package.swift` to enable native `UInt128` support required for arithmetic primitives ([#37]).
+
+### Tests
+- **Coverage:** Added unit tests for `MSTORE` verifying big-endian byte ordering, memory growth on writes past current size, and gas cost correctness ([#37]).
+
+## [0.5.3] - 2025-03-11
+
+### Added
+- **Hard Fork Configuration:** Extended the `HardFork` enum with additional fork-aware predicates and gas configuration entries, enabling fork-conditional behavior across the interpreter ([#36]).
+- **EXP Gas Schedule:** Added EIP-160 (Spurious Dragon) aware gas pricing for the `EXP` opcode (per-byte cost increased from 10 to 50 gas after Spurious Dragon) ([#36]).
+- **Documentation:** Updated `README.md` with hard-fork configuration details and additional usage notes ([#36]).
+
+### Changed
+- **Package Metadata:** Updated `Package.swift` configuration in support of broader hard-fork coverage ([#36]).
+
+### Tests
+- **Hard Fork Coverage:** Extended `HardForkTests` and `ExpTests` to verify pre-/post-Spurious Dragon EXP cost schedule and fork-conditional gating ([#36]).
+
+## [0.5.2] - 2025-03-10
+
+### Added
+- **HardFork Enum:** Introduced a public `HardFork` enum covering all major Ethereum forks, allowing the `Machine` to gate fork-dependent behavior at runtime ([#34]).
+- **MLOAD Opcode:** Implemented the `MLOAD` (0x51) opcode, loading a 32-byte word from memory onto the stack with automatic memory expansion ([#35]).
+
+### Tests
+- **HardFork Coverage:** Added a comprehensive `HardForkTests` suite verifying fork ordering and predicate accuracy ([#34]).
+- **MLOAD Coverage:** Added unit tests for `MLOAD` covering big-endian byte order, memory expansion, gas accounting, and reads past current memory size ([#35]).
+
+## [0.5.1] - 2025-03-02
+
+### Added
+- **CODECOPY Opcode:** Implemented the `CODECOPY` (0x39) opcode for copying a portion of the executing contract's code into memory, with proper memory expansion semantics ([#33]).
+- **Memory Gas Costs:** Added formalized memory-expansion gas calculation logic in `Gas.swift` (linear `3·N` plus quadratic `N²/512` cost components) used by all memory-touching opcodes ([#33]).
+- **`Memory.copyData`:** Added an internal helper for safe memory-from-buffer copy with offset clamping and zero-fill for out-of-range reads, used by `CODECOPY` and later by `CALLDATACOPY` ([#33]).
+
+### Tests
+- **CODECOPY Coverage:** Added unit tests for `CODECOPY` covering source-offset boundaries, target memory expansion, zero-fill of out-of-range bytes, and gas accounting accuracy ([#33]).
+- **Gas Tests:** Added dedicated gas-cost tests for the new memory-expansion formula ([#33]).
+
+## [0.5.0] - 2025-02-23
+
+This is the first **0.5.x** baseline release, gathering a substantial Memory subsystem rewrite together with broad lint/CI hygiene work.
+
+### Added
+- **CI: SwiftLint Integration:** Added `.swiftlint.yml` configuration and wired SwiftLint into the GitHub Actions workflow to enforce code-style consistency on every push ([#32]).
+
+### Changed
+- **Memory Subsystem Refactor:** Major refactor of `Memory.swift` (~348-line delta): improved bounds validation, expansion accounting, and integration with the gas layer. Bitwise opcode implementations refactored in lock-step (~398-line delta in `Bitwise.swift`) for consistent stack/memory semantics ([#31]).
+- **Stack Utilities & Gas Recording:** Refactored stack helpers and gas-record bookkeeping across the entire instruction set (Arithmetic, Bitwise, Control, Stack, System) — broad cleanup with ~340-line delta in `Arithmetic.swift` alone, standardizing the order of validate-then-pop-then-charge ([#32]).
+
+### Tests
+- **Memory & Stack Tests:** Reworked `MemoryTests` and `MachineTests` to align with the new memory bounds model; extended arithmetic tests for additional edge cases following the stack-utility refactor ([#31], [#32]).
+
+## [0.4.0] - 2025-01-28
+
+### Added
+- **Control Flow Opcodes:** Implemented the core control-flow instruction set:
+  - `STOP` (0x00) — halts execution successfully ([#30]).
+  - `JUMP` (0x56) — unconditional jump to a destination popped from the stack ([#30]).
+  - `JUMPI` (0x57) — conditional jump (jumps if the top-of-stack condition is non-zero) ([#30]).
+  - `JUMPDEST` (0x5B) — marks valid jump destinations within bytecode ([#30]).
+- **Jump Destination Validation:** Added `JumpTable` for indexing valid `JUMPDEST` positions in code, with verification that rejects jumps into the immediate-data region of `PUSH` instructions or onto non-`JUMPDEST` bytes (`BadJumpDestination` error) ([#30]).
+- **Stack DUP Opcodes:** Implemented `DUP1` through `DUP16` (0x80–0x8F), duplicating the Nth stack item to the top with the canonical 3-gas (`VERYLOW`) cost ([#29]).
+- **Stack SWAP Opcodes:** Implemented `SWAP1` through `SWAP16` (0x90–0x9F), exchanging the top of the stack with the (N+1)-th item ([#28]).
+
+### Changed
+- **Instruction Organization:** Moved `PC` opcode tests from `InstructionsTests/System/` to `InstructionsTests/Control/` to group flow-control tests together with the new `JUMP`/`JUMPI`/`STOP` tests ([#30]).
+- **Gas Test Refactor:** Refactored gas-cost tests across Arithmetic and Bitwise instruction suites for consistency, in preparation for the broader gas-record cleanup that landed in v0.5.0 ([#29]).
+
+### Tests
+- **Stack Coverage:** Added `DupTests` covering all 16 `DUP` variants with stack-boundary checks ([#29]); added `SwapTests` covering all 16 `SWAP` variants ([#28]).
+- **Control Coverage:** Added `JumpTests`, `JumpITests`, `StopTests`, and `JumpTableTests` for jump-validity checks, infinite-loop protection (gas-bounded), and PC manipulation ([#30]).
+
+## [0.3.0] - 2025-01-19
+
+### Added
+- **Extended Arithmetic Opcodes:** Added the signed and modulus-based instruction family ([#20]):
+  - `SDIV` (0x05) — signed integer division.
+  - `SMOD` (0x07) — signed integer modulus.
+  - `ADDMOD` (0x08) — `(a + b) mod n` using `U512` intermediate.
+  - `MULMOD` (0x09) — `(a * b) mod n` using `U512` intermediate.
+  - `EXP` (0x0A) — exponentiation with byte-length-aware gas cost.
+  - `SIGNEXTEND` (0x0B) — sign-extend a value at a specified byte index.
+- **Comparison Opcodes:** Implemented `LT` (0x10), `GT` (0x11), `SLT` (0x12), `SGT` (0x13), `EQ` (0x14), `ISZERO` (0x15) ([#21]).
+- **Bitwise Logical Opcodes:** Implemented `AND` (0x16), `OR` (0x17), `XOR` (0x18), `NOT` (0x19), `BYTE` (0x1A) ([#21]).
+- **Shift Opcodes:** Implemented `SHL` (0x1B), `SHR` (0x1C), `SAR` (0x1D), with correct semantics for shift amounts ≥ 256 ([#21]).
+- **CODESIZE Opcode:** Implemented `CODESIZE` (0x38) returning the size of the executing contract code ([#23]).
+- **PC Opcode:** Implemented `PC` (0x58) returning the current program counter prior to its post-instruction increment ([#24]).
+- **POP Opcode:** Implemented `POP` (0x50) ([#25]).
+- **PUSH Opcodes:** Implemented `PUSH0` (0x5F, EIP-3855) and `PUSH1`–`PUSH32` (0x60–0x7F) for pushing immediate values from bytecode to the stack, with proper PC advancement past the immediate-data region ([#27]).
+- **Tracing Subsystem:** Added optional execution-tracing module (`Sources/Interpreter/Tracing/Trace.swift`, ~252 LOC) with conditional-compilation flags (`TRACING`, `TRACE_STACK_INOUT`). Provides per-instruction stack/memory/gas snapshots for debugging ([#26]).
+
+### Changed
+- **Stack Module Rename:** Renamed `Sources/Interpreter/Stack.swift` → `Sources/Interpreter/MachineStack.swift` (and the corresponding test file) to clarify its role as the EVM machine-stack abstraction ([#25]).
+
+### Tests
+- **Arithmetic Suite:** Added comprehensive tests for `SDIV`, `SREM`, `SIGNEXTEND`, `EXP`, `MUL`, and updated `SUB`/`DIV` (~907-line delta) ([#20]).
+- **Bitwise Suite:** Added `AndTests`, `OrTests`, `XorTests`, `NotTests`, `ByteTests`, `ShlTests`, `ShrTests`, `SarTests`, `LtTests`, `GtTests`, `SltTests`, `SgtTests`, `EqTests`, `IsZeroTests`, `MachineTests` (~1247-line delta) ([#21]).
+- **Bitwise Coverage Pass:** Added missing bitwise tests (extended `SLT`, `SGT`, `SHL`, `SHR`, `XOR` cases) and extended `I256Tests` (~1146-line delta) ([#22]).
+- **System Coverage:** Added `CodeSizeTests` ([#23]), `PcTests` ([#24]), `PopTests` ([#25]).
+- **Stack Coverage:** Added `Push0Tests` and `PushTests` covering PUSH0 + all PUSH1..PUSH32 variants ([#27]).
+
+## [0.2.0] - 2024-11-04
+
+### Added
+- **U128 Integer Type:** Introduced `U128` as a 128-bit unsigned integer with full arithmetic and a comprehensive test suite (~441 LOC). Used internally as a primitive for multiply-accumulate carries and 128-by-64 division ([#15]).
+- **U512 Integer Type:** Introduced `U512` as a 512-bit unsigned integer (used as the intermediate type for `ADDMOD`/`MULMOD`) with arithmetic and ~317 LOC of tests ([#18]).
+- **I256 Signed Integer:** Introduced `I256` as a 256-bit signed integer with two's-complement representation, arithmetic, comparison, and arithmetic shift operations ([#18], [#19]).
+- **Knuth Long Division:** Implemented Knuth Algorithm D (`divModKnuth`) for 256-bit division, with normalization and the `q_hat` correction loop, plus a fast-path `divModSmall` for divisors fitting in `UInt64` ([#15]).
+- **`DivModUtils` Helper:** Added `DivModUtils.divModWord` (128-by-64 word division) used internally by Knuth's quotient-digit estimation ([#19]).
+- **Bitwise Module:** Added a dedicated bitwise-operations file for `BigUInt` types — shift left/right, AND, OR, XOR, NOT — used by the upcoming Bitwise opcodes ([#18]).
+- **DIV/MOD Opcodes:** Implemented `DIV` (0x04) and `MOD` (0x06) instructions with proper division-by-zero semantics (push zero, do not error) ([#17]).
+- **CI: Code Coverage:** Added `.codecov.yml` configuration so coverage reports are published on each push ([#19]).
+
+### Changed
+- **Bitwise File Rename:** Corrected the typo `Bifwise.swift` → `Bitwise.swift` introduced in PR #18 ([#19]).
+- **Arithmetic Helpers Refactor:** Refactored shared helpers in `PrimitiveTypes/Arithmetic.swift` for cleaner integration of Knuth division and `fullShr` utilities ([#17], [#19]).
+
+### Tests
+- **Division Fuzz:** Added a 100 000-iteration fuzz test (`FuzzDivTests`) validating `divRem` correctness against the platform-native `UInt128` ([#17], [#19]).
+- **Division Edge Cases:** `DivRemTests` covering divide-by-zero (precondition), divisor > dividend, divisor = 1, multi-word divisors, and `qhat`-adjustment paths ([#15], [#17], [#18]).
+- **U512 Coverage:** ~317 LOC of `U512Tests` covering construction, arithmetic, and bit manipulation ([#18]).
+- **I256 Coverage:** ~534 LOC of `I256Tests` covering construction, signed arithmetic, comparison, sign-extend, and conversion to/from `U256` ([#18], [#19]).
+- **Shift Tests:** Comprehensive shift-left/right test coverage with sign-handling cases for `I256` ([#18]).
+
+## [0.1.0] - 2024-10-22
+
+This is the **initial public release** of `swift-evm` — a Swift-native Ethereum Virtual Machine implementation. It establishes the entire foundation: primitive arithmetic types, the execution machine with status/eval loop, memory and stack subsystems, gas accounting, the opcode dispatch table, and the first wave of arithmetic and shift instructions.
+
+### Added
+
+#### Primitive Types (`PrimitiveTypes` module)
+- **`BigUInt` Protocol:** Generic protocol covering arbitrary-width unsigned integers with `numberBytes`, `numberBase`, `BYTES` accessor, `MAX`/`ZERO` constants, hex parsing/encoding, big-endian/little-endian conversions, equality and comparison operators ([#2], [#3], [#10]).
+- **`FixedArray` Protocol:** Companion protocol for fixed-size byte arrays (used by hash types) with hex parsing, equality, and zero/max helpers ([#3]).
+- **`U256`:** 256-bit unsigned integer (4 × `UInt64` limbs) with full arithmetic, comparison, and bitwise operations ([#2], [#3], [#4], [#10]).
+- **`H160`:** 20-byte fixed array representing Ethereum addresses ([#4]).
+- **`H256`:** 32-byte fixed array representing hashes, with conversion helpers from/to `H160` ([#5]).
+- **Arithmetic Primitives:** Reusable implementations of `overflowAdd`, `overflowSub`, and the multiply-accumulate (`mac`) primitive used across integer types ([#11], [#12]).
+- **Shift Operations:** Full implementation of bit-level left/right shifts on `BigUInt` types with correct word/bit boundary handling, plus `U128` shift helpers ([#16]).
+
+#### Interpreter (`Interpreter` module)
+- **Opcode Table:** Complete `Opcodes` enum mapping all standard EVM opcodes (0x00–0xFF) with mnemonic names and per-opcode metadata ([#1], [#13], [#14]).
+- **`Machine`:** Core EVM execution machine holding program counter, code/data buffers, memory, stack, gas, and an opcode-dispatch table built from function pointers ([#1], [#6], [#7], [#14]).
+- **Machine Status & Eval Loop:** `MachineStatus` enum (`Continue`, `Stop`, `Exit*`), `step()` / `evalLoop()` execution control, and structured exit reasons ([#6], [#7]).
+- **Memory Subsystem:** Initial `Memory` implementation with byte-addressable buffer, automatic expansion semantics, and integration with the gas layer ([#1], [#2], [#7], [#14]).
+- **Stack Subsystem:** `Stack` type with `push`/`pop`/`peek`, the canonical 1024-element depth limit, and structured underflow/overflow errors ([#8]).
+- **Gas Accounting:** `Gas` and `GasConstant` modules with `recordCost`, gas tracking, and the canonical EVM gas constants used by the instruction set ([#9], [#12], [#14]).
+- **Arithmetic Instructions:**
+  - `ADD` (0x01) ([#11]).
+  - `MUL` (0x02) ([#13]).
+  - `SUB` (0x03) ([#12]).
+- **Instruction Modules:** Established `Sources/Interpreter/Instructions/` (Arithmetic, Bitwise) with the canonical pattern of *gas-charge → pop operands → execute → push result* ([#13], [#14]).
+
+### Tests
+- **PrimitiveTypes Coverage:** `U256Tests` (~140 LOC), `H160Tests` (~55 LOC), `H256Tests` (~101 LOC), and `CustomBigUIntTests` — BDD-style tests verifying the `BigUInt` protocol contract via a custom 128-bit conformance ([#3], [#4], [#5]).
+- **Arithmetic Coverage:** Comprehensive opcode tests for `ADD`, `SUB`, `MUL`, with stack and gas verification — `AddTests` (~190 LOC), `SubTests` (~159 LOC), `MulTests` (~204 LOC), `MacTests` (~282 LOC) ([#11], [#12], [#13], [#14]).
+- **Stack & Memory Coverage:** `StackTests` (~413 LOC) and initial `MemoryTests` covering push/pop, expansion, and gas accounting ([#8], [#14]).
+- **Opcode Coverage:** `OpcodeTests` (~485 LOC) verifying the opcode table, gas costs, and dispatch correctness ([#10], [#13]).
+- **Gas Coverage:** `GasTests` (~294 LOC) for `recordCost` accuracy and edge cases ([#12]).
+
+### CI/Build
+- **Swift Toolchain & CI:** Initial `Package.swift` configuration; CI pipeline (`.github/workflows/swift.yaml`) runs the unit-test suite on every push ([#1], [#10]).
+- **Quick / Nimble:** Adopted [Quick](https://github.com/Quick/Quick) and [Nimble](https://github.com/Quick/Nimble) for BDD-style testing across the entire test suite ([#3]).
+- **README:** Initial project README with architecture overview ([#10]).
+
 
 <!-- Versions -->
+[0.5.26]: https://github.com/mrLSD/swift-evm/compare/v0.5.25...v0.5.26
+[0.5.25]: https://github.com/mrLSD/swift-evm/compare/v0.5.24...v0.5.25
 [0.5.24]: https://github.com/mrLSD/swift-evm/compare/v0.5.23...v0.5.24
 [0.5.23]: https://github.com/mrLSD/swift-evm/compare/v0.5.22...v0.5.23
 [0.5.22]: https://github.com/mrLSD/swift-evm/compare/v0.5.21...v0.5.22
@@ -270,8 +512,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [0.5.10]: https://github.com/mrLSD/swift-evm/compare/v0.5.9...v0.5.10
 [0.5.9]: https://github.com/mrLSD/swift-evm/compare/v0.5.8...v0.5.9
 [0.5.8]: https://github.com/mrLSD/swift-evm/compare/v0.5.7...v0.5.8
+[0.5.7]: https://github.com/mrLSD/swift-evm/compare/v0.5.6...v0.5.7
+[0.5.6]: https://github.com/mrLSD/swift-evm/compare/v0.5.5...v0.5.6
+[0.5.5]: https://github.com/mrLSD/swift-evm/compare/v0.5.4...v0.5.5
+[0.5.4]: https://github.com/mrLSD/swift-evm/compare/v0.5.3...v0.5.4
+[0.5.3]: https://github.com/mrLSD/swift-evm/compare/v0.5.2...v0.5.3
+[0.5.2]: https://github.com/mrLSD/swift-evm/compare/v0.5.1...v0.5.2
+[0.5.1]: https://github.com/mrLSD/swift-evm/compare/v0.5.0...v0.5.1
+[0.5.0]: https://github.com/mrLSD/swift-evm/compare/v0.4.0...v0.5.0
+[0.4.0]: https://github.com/mrLSD/swift-evm/compare/v0.3.0...v0.4.0
+[0.3.0]: https://github.com/mrLSD/swift-evm/compare/v0.2.0...v0.3.0
+[0.2.0]: https://github.com/mrLSD/swift-evm/compare/v0.1.0...v0.2.0
+[0.1.0]: https://github.com/mrLSD/swift-evm/releases/tag/v0.1.0
 
 <!-- PRs -->
+[#69]: https://github.com/mrLSD/swift-evm/pull/69
+[#67]: https://github.com/mrLSD/swift-evm/pull/67
+[#66]: https://github.com/mrLSD/swift-evm/pull/66
+[#64]: https://github.com/mrLSD/swift-evm/pull/64
 [#63]: https://github.com/mrLSD/swift-evm/pull/63
 [#62]: https://github.com/mrLSD/swift-evm/pull/62
 [#61]: https://github.com/mrLSD/swift-evm/pull/61
@@ -292,3 +550,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [#44]: https://github.com/mrLSD/swift-evm/pull/44
 [#43]: https://github.com/mrLSD/swift-evm/pull/43
 [#42]: https://github.com/mrLSD/swift-evm/pull/42
+[#41]: https://github.com/mrLSD/swift-evm/pull/41
+[#40]: https://github.com/mrLSD/swift-evm/pull/40
+[#39]: https://github.com/mrLSD/swift-evm/pull/39
+[#38]: https://github.com/mrLSD/swift-evm/pull/38
+[#37]: https://github.com/mrLSD/swift-evm/pull/37
+[#36]: https://github.com/mrLSD/swift-evm/pull/36
+[#35]: https://github.com/mrLSD/swift-evm/pull/35
+[#34]: https://github.com/mrLSD/swift-evm/pull/34
+[#33]: https://github.com/mrLSD/swift-evm/pull/33
+[#32]: https://github.com/mrLSD/swift-evm/pull/32
+[#31]: https://github.com/mrLSD/swift-evm/pull/31
+[#30]: https://github.com/mrLSD/swift-evm/pull/30
+[#29]: https://github.com/mrLSD/swift-evm/pull/29
+[#28]: https://github.com/mrLSD/swift-evm/pull/28
+[#27]: https://github.com/mrLSD/swift-evm/pull/27
+[#26]: https://github.com/mrLSD/swift-evm/pull/26
+[#25]: https://github.com/mrLSD/swift-evm/pull/25
+[#24]: https://github.com/mrLSD/swift-evm/pull/24
+[#23]: https://github.com/mrLSD/swift-evm/pull/23
+[#22]: https://github.com/mrLSD/swift-evm/pull/22
+[#21]: https://github.com/mrLSD/swift-evm/pull/21
+[#20]: https://github.com/mrLSD/swift-evm/pull/20
+[#19]: https://github.com/mrLSD/swift-evm/pull/19
+[#18]: https://github.com/mrLSD/swift-evm/pull/18
+[#17]: https://github.com/mrLSD/swift-evm/pull/17
+[#16]: https://github.com/mrLSD/swift-evm/pull/16
+[#15]: https://github.com/mrLSD/swift-evm/pull/15
+[#14]: https://github.com/mrLSD/swift-evm/pull/14
+[#13]: https://github.com/mrLSD/swift-evm/pull/13
+[#12]: https://github.com/mrLSD/swift-evm/pull/12
+[#11]: https://github.com/mrLSD/swift-evm/pull/11
+[#10]: https://github.com/mrLSD/swift-evm/pull/10
+[#9]: https://github.com/mrLSD/swift-evm/pull/9
+[#8]: https://github.com/mrLSD/swift-evm/pull/8
+[#7]: https://github.com/mrLSD/swift-evm/pull/7
+[#6]: https://github.com/mrLSD/swift-evm/pull/6
+[#5]: https://github.com/mrLSD/swift-evm/pull/5
+[#4]: https://github.com/mrLSD/swift-evm/pull/4
+[#3]: https://github.com/mrLSD/swift-evm/pull/3
+[#2]: https://github.com/mrLSD/swift-evm/pull/2
+[#1]: https://github.com/mrLSD/swift-evm/pull/1
