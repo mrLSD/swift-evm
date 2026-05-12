@@ -88,14 +88,7 @@ public extension FixedArray {
     /// Encode to hex string.
     /// - Parameter uppercase: Use uppercase hex characters.
     func hexString(uppercase: Bool) -> String {
-        // FixedArray (H160/H256) logic:
-        // Never strip leading zeros. Always return full length string.
-
-        let bytes = self.BYTES
-        let format = uppercase ? "%02X" : "%02x"
-
-        return bytes
-            .map { String(format: format, $0) }
-            .joined()
+        // FixedArray (H160/H256) logic: never strip leading zeros; always return full-length string.
+        return hexEncode(self.BYTES, uppercase: uppercase)
     }
 }

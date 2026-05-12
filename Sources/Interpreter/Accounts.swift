@@ -4,7 +4,7 @@ import PrimitiveTypes
 public struct BasicAccount: Equatable, Sendable {
     /// Account balance.
     public var balance: U256
-    /// Account nonce. EVM uses a 64-bit nonce in practice (max ~18·10¹⁸ transactions per account).
+    /// Account nonce.
     public var nonce: UInt64
 
     /// Initializes a new `BasicAccount` with the provided balance and nonce.

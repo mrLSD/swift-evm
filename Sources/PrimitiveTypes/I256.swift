@@ -15,12 +15,20 @@ public struct I256: BigUInt {
     /// Zero value of `I256`.
     public static let ZERO: Self = .init(l0: 0, l1: 0, h0: 0, h1: 0, signExtend: false)
 
-    /// Sign bit mask for `I256` type (clears the sign bit).
+    /// `U256` with the msb (I256 sign bit) cleared — low 255 bits all set.
     public static let SIGN_BIT_MASK: U256 = .init(
         l0: 0xffff_ffff_ffff_ffff,
         l1: 0xffff_ffff_ffff_ffff,
         h0: 0xffff_ffff_ffff_ffff,
         h1: 0x7fff_ffff_ffff_ffff
+    )
+
+    /// Same bit pattern as `SIGN_BIT_MASK`, typed as `I256` with `signExtend = false`.
+    @usableFromInline
+    static let SIGN_BIT_MASK_I256: I256 = .init(
+        l0: SIGN_BIT_MASK.l0, l1: SIGN_BIT_MASK.l1,
+        h0: SIGN_BIT_MASK.h0, h1: SIGN_BIT_MASK.h1,
+        signExtend: false
     )
 
     /// Sign extension flag: `true` if the number is negative.
@@ -107,11 +115,11 @@ public struct I256: BigUInt {
     }
 
     /// Minimum value of I256.
-    public static let minValue: Self = {
-        let mask = U256.MAX & Self.SIGN_BIT_MASK
-        let v = mask + U256(from: 1)
-        return .init(l0: v.l0, l1: v.l1, h0: v.h0, h1: v.h1, signExtend: true)
-    }()
+    public static let minValue: Self = .init(
+        l0: 0, l1: 0, h0: 0,
+        h1: 0x8000_0000_0000_0000, // single sign bit
+        signExtend: true
+    )
 
     /// `I256` division operation.
     func div(rhs: Self) -> Self {
@@ -121,7 +129,7 @@ public struct I256: BigUInt {
             return Self.minValue
         }
 
-        var d = divRem(divisor: rhs).quotient & I256(from: Self.SIGN_BIT_MASK.BYTES)
+        var d = divRem(divisor: rhs).quotient & Self.SIGN_BIT_MASK_I256
         if d.isZero {
             return Self.ZERO
         }
@@ -140,7 +148,7 @@ public struct I256: BigUInt {
 
     /// `I256` remainder operation.
     func rem(rhs: Self) -> Self {
-        var r = divRem(divisor: rhs).remainder & I256(from: Self.SIGN_BIT_MASK.BYTES)
+        var r = divRem(divisor: rhs).remainder & Self.SIGN_BIT_MASK_I256
         if r.isZero {
             return Self.ZERO
         }
@@ -166,8 +174,8 @@ public extension I256 {
     }
 
     /// Unsigned-style limb compare (helper for signed comparison and BigUInt fallback).
-    @inlinable @inline(__always)
-    static func _cmpLessUnsigned(_ a: Self, _ b: Self) -> Bool {
+    @inline(__always)
+    private static func cmpLessUnsigned(_ a: Self, _ b: Self) -> Bool {
         if a.h1 != b.h1 { return a.h1 < b.h1 }
         if a.h0 != b.h0 { return a.h0 < b.h0 }
         if a.l1 != b.l1 { return a.l1 < b.l1 }
@@ -178,9 +186,9 @@ public extension I256 {
         switch (lhs.signExtend, rhs.signExtend) {
         case (true, true):
             // Both negative: larger absolute magnitude is smaller value.
-            return _cmpLessUnsigned(rhs, lhs)
+            return cmpLessUnsigned(rhs, lhs)
         case (false, false):
-            return _cmpLessUnsigned(lhs, rhs)
+            return cmpLessUnsigned(lhs, rhs)
         case (true, false):
             return true
         case (false, true):
@@ -206,11 +214,25 @@ public extension I256 {
     }
 }
 
-// MARK: - Shift operator
+// MARK: - Bitwise operations
 
 public extension I256 {
     static func >> (lhs: Self, shift: Int) -> Self {
         lhs.shiftRight(shift)
+    }
+
+    /// Limb-wise AND on stored fields — no `BYTES` array allocation.
+    /// `signExtend` is reset to `false` on the result (matches the previous
+    /// generic `Self(from: [UInt64])` array-init behavior used by `I256.div`/`rem`).
+    @inlinable @inline(__always)
+    static func & (lhs: Self, rhs: Self) -> Self {
+        Self(
+            l0: lhs.l0 & rhs.l0,
+            l1: lhs.l1 & rhs.l1,
+            h0: lhs.h0 & rhs.h0,
+            h1: lhs.h1 & rhs.h1,
+            signExtend: false
+        )
     }
 }
 

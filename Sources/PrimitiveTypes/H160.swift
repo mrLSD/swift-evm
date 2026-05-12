@@ -2,9 +2,7 @@
 ///
 /// Storage is fixed-size value layout (`l0: UInt64`, `l1: UInt64`, `l2: UInt32`) — exactly 20 bytes
 /// inline, no heap allocation per instance. Hashing is auto-synthesized over these three fields,
-/// avoiding the per-byte `Array` traversal of the previous `[UInt8]` storage. The public
-/// `BYTES: [UInt8]` accessor is preserved as a computed view for `FixedArray` protocol
-/// compatibility.
+/// avoiding the per-byte `Array` traversal.
 public struct H160: FixedArray, Hashable {
     /// Bytes 0..7 (most-significant first when serialized big-endian).
     @usableFromInline let l0: UInt64

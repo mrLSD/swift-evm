@@ -1,5 +1,3 @@
-import Foundation
-
 /// `BigUInt` Protocol - represent Bit Unsigner Integers
 public protocol BigUInt: CustomStringConvertible, Equatable, Sendable, Hashable {
     /// `BigUInt` bytes
@@ -229,15 +227,7 @@ public extension BigUInt {
             return "0"
         }
 
-        // Use BigEndian for human-readable string
-        let bytes = self.toBigEndian
-        let format = uppercase ? "%02X" : "%02x"
-
-        // Strip leading zeros
-        return bytes
-            .drop { $0 == 0 }
-            .map { String(format: format, $0) }
-            .joined()
-
+        // Use BigEndian for human-readable string. `BigUInt` semantics: strip leading zero bytes.
+        return hexEncode(self.toBigEndian.drop { $0 == 0 }, uppercase: uppercase)
     }
 }

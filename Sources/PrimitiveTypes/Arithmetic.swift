@@ -190,12 +190,12 @@ public extension BigUInt {
         // If we shift both self and v, it won't affect the quotient
         // and the remainder will only need to be shifted back.
         let shift = v.BYTES[n - 1].leadingZeroBitCount
-        v = v << shift
+        v = v.shiftLeftForBytes(shift)
 
         // u will store the remainder (shifted)
         var u = [UInt64](repeating: 0, count: self.BYTES.count + 1)
         let u_lo = self.BYTES[0] << shift
-        let u_hi = self >> (64 - shift)
+        let u_hi = self.shiftRightForBytes(64 - shift)
         u[0] = u_lo
         u.replaceSubrange(1 ..< u.count, with: u_hi.BYTES)
 
