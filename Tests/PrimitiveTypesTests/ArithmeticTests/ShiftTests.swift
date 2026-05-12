@@ -165,6 +165,55 @@ final class ArithmeticShiftSpec: QuickSpec {
             }
         }
 
+        describe("U256 shiftLeft / shiftRight boundary") {
+            it("shiftLeft by exactly 256 returns ZERO") {
+                let value = U256.MAX
+                expect(value.shiftLeft(256)).to(equal(U256.ZERO))
+            }
+            it("shiftLeft by 300 returns ZERO") {
+                let value = U256.MAX
+                expect(value.shiftLeft(300)).to(equal(U256.ZERO))
+            }
+            it("shiftLeft by 64 (word boundary, bitShift==0)") {
+                let value = U256(from: [1, 0, 0, 0])
+                expect(value.shiftLeft(64)).to(equal(U256(from: [0, 1, 0, 0])))
+            }
+            it("shiftLeft by 128 (word boundary)") {
+                let value = U256(from: [1, 0, 0, 0])
+                expect(value.shiftLeft(128)).to(equal(U256(from: [0, 0, 1, 0])))
+            }
+            it("shiftLeft by 192 (word boundary)") {
+                let value = U256(from: [1, 0, 0, 0])
+                expect(value.shiftLeft(192)).to(equal(U256(from: [0, 0, 0, 1])))
+            }
+            it("shiftRight by exactly 256 returns ZERO") {
+                let value = U256.MAX
+                expect(value.shiftRight(256)).to(equal(U256.ZERO))
+            }
+            it("shiftRight by 300 returns ZERO") {
+                let value = U256.MAX
+                expect(value.shiftRight(300)).to(equal(U256.ZERO))
+            }
+            it("shiftRight by 64 (word boundary, bitShift==0)") {
+                let value = U256(from: [0, 1, 0, 0])
+                expect(value.shiftRight(64)).to(equal(U256(from: [1, 0, 0, 0])))
+            }
+        }
+
+        describe("U256 comparisons across limbs") {
+            it("differs only at h0 limb") {
+                let lo = U256(from: [0, 0, 1, 5])
+                let hi = U256(from: [0, 0, 2, 5])
+                expect(lo < hi).to(beTrue())
+                expect(hi < lo).to(beFalse())
+            }
+            it("differs only at l1 limb") {
+                let lo = U256(from: [0, 1, 7, 5])
+                let hi = U256(from: [0, 2, 7, 5])
+                expect(lo < hi).to(beTrue())
+            }
+        }
+
         describe("I256 shiftArithmeticRight") {
             it("no shift") {
                 let value = I256(from: [1, 2, 3, 4])

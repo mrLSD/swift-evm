@@ -104,12 +104,30 @@ final class H256Spec: QuickSpec {
                 }
             }
 
-            context("when init from H160 value") {
-                let valH160 = H160(from: [UInt8](repeating: 0xAC, count: 20))
+            context("when init from H160 value (distinct bytes)") {
+                // Distinct, position-varying bytes — would catch any byte-shuffle bug in the
+                // H160→H256 pad logic that a uniform 0xAC pattern cannot detect.
+                let h160Bytes: [UInt8] = [
+                    0x01, 0x02, 0x03, 0x04,
+                    0x05, 0x06, 0x07, 0x08,
+                    0x09, 0x0a, 0x0b, 0x0c,
+                    0x0d, 0x0e, 0x0f, 0x10,
+                    0x11, 0x12, 0x13, 0x14,
+                ]
+                let valH160 = H160(from: h160Bytes)
                 let val = H256(from: valH160)
 
-                it("correct data") {
-                    expect(val.BYTES).to(equal([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC]))
+                it("correct data: 12 leading zero bytes followed by H160 bytes in order") {
+                    expect(val.BYTES).to(equal([
+                        0x00, 0x00, 0x00, 0x00,
+                        0x00, 0x00, 0x00, 0x00,
+                        0x00, 0x00, 0x00, 0x00,
+                        0x01, 0x02, 0x03, 0x04,
+                        0x05, 0x06, 0x07, 0x08,
+                        0x09, 0x0a, 0x0b, 0x0c,
+                        0x0d, 0x0e, 0x0f, 0x10,
+                        0x11, 0x12, 0x13, 0x14,
+                    ]))
                 }
 
                 it("correct leading zero") {
@@ -119,28 +137,129 @@ final class H256Spec: QuickSpec {
             }
 
             context("when converted to H160 value") {
-                it("correct data") {
-                    let valH160 = H160(from: [UInt8](repeating: 0xAC, count: 20))
-                    let val = H256(from: valH160)
+                it("toH160() takes the last 20 bytes, dropping the upper 12") {
+                    // Upper 12 bytes are non-zero and DIFFERENT from the lower 20 — confirms
+                    // toH160() truly ignores the upper region and selects bytes 12..31.
+                    let h256 = H256(from: [
+                        0xaa, 0xaa, 0xaa, 0xaa,
+                        0xbb, 0xbb, 0xbb, 0xbb,
+                        0xcc, 0xcc, 0xcc, 0xcc,
+                        0x01, 0x02, 0x03, 0x04,
+                        0x05, 0x06, 0x07, 0x08,
+                        0x09, 0x0a, 0x0b, 0x0c,
+                        0x0d, 0x0e, 0x0f, 0x10,
+                        0x11, 0x12, 0x13, 0x14,
+                    ])
+                    let expected: [UInt8] = [
+                        0x01, 0x02, 0x03, 0x04,
+                        0x05, 0x06, 0x07, 0x08,
+                        0x09, 0x0a, 0x0b, 0x0c,
+                        0x0d, 0x0e, 0x0f, 0x10,
+                        0x11, 0x12, 0x13, 0x14,
+                    ]
+                    expect(h256.toH160().BYTES).to(equal(expected))
+                }
 
-                    expect(val.BYTES).to(equal([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC, 0xAC]))
-                    expect(val.toH160()).to(equal(valH160))
+                it("H160 -> H256 -> H160 round-trip preserves the address") {
+                    let original = H160(from: [
+                        0x01, 0x02, 0x03, 0x04,
+                        0x05, 0x06, 0x07, 0x08,
+                        0x09, 0x0a, 0x0b, 0x0c,
+                        0x0d, 0x0e, 0x0f, 0x10,
+                        0x11, 0x12, 0x13, 0x14,
+                    ])
+                    let restored = H256(from: original).toH160()
+                    expect(restored).to(equal(original))
+                }
+            }
+
+            context("BYTES round-trip with distinct-byte input") {
+                // Distinct bytes 0x01..0x20 across all 32 positions ensure any byte-shuffle
+                // bug in the H256 pack/unpack pipeline is detectable.
+                let bytes: [UInt8] = (1...32).map { UInt8($0) }
+
+                it("H256(from:bytes).BYTES preserves order") {
+                    let h = H256(from: bytes)
+                    expect(h.BYTES).to(equal(bytes))
+                }
+
+                it("is not zero for non-zero distinct bytes") {
+                    let h = H256(from: bytes)
+                    expect(h.isZero).to(beFalse())
+                }
+            }
+
+            context("Equality on stored fields") {
+                let base: [UInt8] = (1...32).map { UInt8($0) }
+
+                it("equal for identical bytes") {
+                    // Pre-computed limbs for `base = [0x01, 0x02, ..., 0x20]`.
+                    // Each limb is 8 big-endian bytes of `base`:
+                    //   l0 = bytes 0..7   = 0x01..0x08
+                    //   l1 = bytes 8..15  = 0x09..0x10
+                    //   l2 = bytes 16..23 = 0x11..0x18
+                    //   l3 = bytes 24..31 = 0x19..0x20
+                    let expectedL0: UInt64 = 0x0102030405060708
+                    let expectedL1: UInt64 = 0x090a0b0c0d0e0f10
+                    let expectedL2: UInt64 = 0x1112131415161718
+                    let expectedL3: UInt64 = 0x191a1b1c1d1e1f20
+
+                    // 1. BYTES-init vs BYTES-init — same source path, baseline.
+                    expect(H256(from: base)).to(equal(H256(from: base)))
+
+                    // 2. BYTES-init vs UInt64-limbs-init — cross-init equivalence:
+                    //    confirms that `init(from: [UInt8])` packs bytes into limbs
+                    //    in the exact same order as `init(l0:l1:l2:l3:)` expects.
+                    let viaLimbs = H256(l0: expectedL0, l1: expectedL1, l2: expectedL2, l3: expectedL3)
+                    expect(H256(from: base)).to(equal(viaLimbs))
+
+                    // 3. UInt64-limbs-init vs UInt64-limbs-init — same source path
+                    //    on the direct field initializer.
+                    let viaLimbs2 = H256(l0: expectedL0, l1: expectedL1, l2: expectedL2, l3: expectedL3)
+                    expect(viaLimbs).to(equal(viaLimbs2))
+                }
+
+                it("differs at byte 0 (high half of l0)") {
+                    var other = base
+                    other[0] ^= 0xff
+                    expect(H256(from: base)).toNot(equal(H256(from: other)))
+                }
+
+                it("differs at byte 15 (low half of l1)") {
+                    var other = base
+                    other[15] ^= 0xff
+                    expect(H256(from: base)).toNot(equal(H256(from: other)))
+                }
+
+                it("differs at byte 23 (low half of l2)") {
+                    var other = base
+                    other[23] ^= 0xff
+                    expect(H256(from: base)).toNot(equal(H256(from: other)))
+                }
+
+                it("differs at byte 31 (low half of l3)") {
+                    var other = base
+                    other[31] ^= 0xff
+                    expect(H256(from: base)).toNot(equal(H256(from: other)))
                 }
             }
 
             context("when hashing H256") {
+                // Use distinct bytes — would catch byte-shuffle bugs that a uniform 0xAB pattern won't.
+                let bytesA: [UInt8] = (1...32).map { UInt8($0) }
+                let bytesB: [UInt8] = (1...32).map { UInt8(0x80 &+ $0) }
+
                 it("produces the same hash for equal values") {
-                    let bytes = [UInt8](repeating: 0xAB, count: 32)
-                    let h1 = H256(from: bytes)
-                    let h2 = H256(from: bytes)
+                    let h1 = H256(from: bytesA)
+                    let h2 = H256(from: bytesA)
 
                     expect(h1.hashValue).to(equal(h2.hashValue))
                 }
 
                 it("can be used in a Set") {
-                    let h1 = H256(from: [UInt8](repeating: 0x01, count: 32))
-                    let h2 = H256(from: [UInt8](repeating: 0x02, count: 32))
-                    let h3 = H256(from: [UInt8](repeating: 0x01, count: 32)) // same as h1
+                    let h1 = H256(from: bytesA)
+                    let h2 = H256(from: bytesB)
+                    let h3 = H256(from: bytesA) // same as h1
 
                     var set: Set<H256> = []
                     set.insert(h1)

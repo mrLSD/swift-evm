@@ -29,23 +29,12 @@ public protocol FixedArray: CustomStringConvertible, Equatable, Sendable {
     func hexString(uppercase: Bool) -> String
 }
 
-/// Implementation of common `FixedArray` functionality
+/// Implementation of common `FixedArray` functionality.
+///
+/// `isZero` and `==` are specialized per concrete type (`H160`, `H256`) to operate on stored
+/// fields directly - see those files. They are deliberately not provided here as protocol-extension
+/// defaults to avoid the `BYTES` array allocation on every call.
 public extension FixedArray {
-    /// Calculate Max value
-    static var getMax: Self {
-        Self(from: [UInt8](repeating: UInt8.max, count: Int(self.numberBytes)))
-    }
-
-    /// Calculate Zero valued
-    static var getZero: Self {
-        Self(from: [UInt8](repeating: 0, count: Int(numberBytes)))
-    }
-
-    /// Calculate is value zero
-    var isZero: Bool {
-        return BYTES.allSatisfy { $0 == 0 }
-    }
-
     /// Create `FixedArray` from hex `String`. Returns Result type
     static func fromString(hex value: String) -> Result<Self, HexStringError> {
         let hex = value.hasPrefix("0x") || value.hasPrefix("0X")
@@ -105,18 +94,8 @@ public extension FixedArray {
         let bytes = self.BYTES
         let format = uppercase ? "%02X" : "%02x"
 
-        let hex = bytes
+        return bytes
             .map { String(format: format, $0) }
             .joined()
-
-        return hex
-    }
-}
-
-/// Implementation of `Equatable`
-public extension FixedArray {
-    /// Operator `==`: Check if two `FixedArray` values are equal
-    static func == (lhs: Self, rhs: Self) -> Bool {
-        lhs.BYTES == rhs.BYTES
     }
 }
