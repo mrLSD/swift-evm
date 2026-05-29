@@ -1,6 +1,3 @@
-# This workflow will build a Swift project
-# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-swift
-
 name: Swift
 
 on:
@@ -9,48 +6,101 @@ on:
   pull_request:
     branches: [ "master" ]
 
+env:
+  ETHTESTS_VERSION: v17.0
+  ETHEREUM_SPEC_TESTS_URL: https://github.com/ethereum/execution-spec-tests/releases/download/v5.4.0/fixtures_stable.tar.gz
+
 jobs:
   build:
     runs-on: macos-latest
     steps:
-    - uses: actions/checkout@v4
-#    - uses: swift-actions/setup-swift@v2
-    - uses: SwiftyLab/setup-swift@latest
-      with:
-        swift-version: '6.0'
-    
-    - name: Build
-      run: swift build
+      - uses: actions/checkout@v4
+      - uses: SwiftyLab/setup-swift@latest
+        with:
+          swift-version: '6.0'
 
-    - name: Install SwiftLint
-      run: brew install swiftlint
+      - name: Build
+        run: swift build
 
-    - name: Run SwiftLint
-      run: swiftlint
+      - name: Install SwiftLint
+        run: brew install swiftlint
 
-    - name: Run tests
-      run: swift test --verbose --enable-code-coverage
+      - name: Run SwiftLint
+        run: swiftlint
 
-    - name: Generate Coverage Report
-      run: |
-        mkdir -p coverage
-        BIN_PATH=$(swift build --show-bin-path)
-        TEST_BUNDLE=$(find "$BIN_PATH" -name "*.xctest" | head -n 1)
-        BINARY_NAME=$(basename "$TEST_BUNDLE" .xctest)
-        BINARY_PATH="$TEST_BUNDLE/Contents/MacOS/$BINARY_NAME"
-        echo "Binary path found: $BINARY_PATH"
-        xcrun llvm-cov export -format="lcov" "$BINARY_PATH" \
-          -instr-profile="$BIN_PATH/codecov/default.profdata" \
-          -ignore-filename-regex="\.build|Tests" \
-          > coverage/lcov.info
-        ls -la coverage/lcov.info
+      - name: Run tests
+        run: swift test --verbose --enable-code-coverage
 
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v4
-      env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}      
-      with:
-        files: coverage/lcov.info
-        flags: swift
-        name: codecov-umbrella
-        fail_ci_if_error: true
+      - name: Generate Coverage Report
+        run: |
+          mkdir -p coverage
+          BIN_PATH=$(swift build --show-bin-path)
+          TEST_BUNDLE=$(find "$BIN_PATH" -name "*.xctest" | head -n 1)
+          BINARY_NAME=$(basename "$TEST_BUNDLE" .xctest)
+          BINARY_PATH="$TEST_BUNDLE/Contents/MacOS/$BINARY_NAME"
+          echo "Binary path found: $BINARY_PATH"
+          xcrun llvm-cov export -format="lcov" "$BINARY_PATH" \
+            -instr-profile="$BIN_PATH/codecov/default.profdata" \
+            -ignore-filename-regex="\.build|Tests" \
+            > coverage/lcov.info
+          ls -la coverage/lcov.info
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+        with:
+          files: coverage/lcov.info
+          flags: swift
+          name: codecov-umbrella
+          fail_ci_if_error: true
+
+  ethereum-spec-tests:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: SwiftyLab/setup-swift@latest
+        with:
+          swift-version: '6.0'
+
+      - name: Checkout ethereum/tests
+        uses: actions/checkout@v4
+        with:
+          repository: ethereum/tests
+          path: ethtests
+          ref: ${{ env.ETHTESTS_VERSION }}
+          submodules: recursive
+          fetch-depth: 1
+
+      - name: Download Ethereum spec tests fixtures
+        run: |
+          curl -L "${{ env.ETHEREUM_SPEC_TESTS_URL }}" -o ethereum-spec-tests.tar.gz
+          mkdir ethereum-spec-tests
+          tar -xzf ethereum-spec-tests.tar.gz -C ethereum-spec-tests
+
+      - name: Build EthereumSpecTests (release)
+        run: swift build -c release --product EthereumSpecTests
+
+      - name: Run Ethereum state tests
+        run: |
+          .build/release/EthereumSpecTests state --enable-slow-tests -f \
+            ethtests/GeneralStateTests/ \
+            ethtests/LegacyTests/Cancun/GeneralStateTests/ \
+            ethereum-spec-tests/fixtures/state_tests/
+
+      - name: Run Ethereum vm tests
+        run: |
+          .build/release/EthereumSpecTests vm --enable-slow-tests -f \
+            ethtests/LegacyTests/Constantinople/VMTests/vmArithmeticTest \
+            ethtests/LegacyTests/Constantinople/VMTests/vmBitwiseLogicOperation \
+            ethtests/LegacyTests/Constantinople/VMTests/vmBlockInfoTest \
+            ethtests/LegacyTests/Constantinople/VMTests/vmEnvironmentalInfo \
+            ethtests/LegacyTests/Constantinople/VMTests/vmIOandFlowOperations \
+            ethtests/LegacyTests/Constantinople/VMTests/vmLogTest \
+            ethtests/LegacyTests/Constantinople/VMTests/vmPerformance \
+            ethtests/LegacyTests/Constantinople/VMTests/vmPushDupSwapTest \
+            ethtests/LegacyTests/Constantinople/VMTests/vmRandomTest \
+            ethtests/LegacyTests/Constantinople/VMTests/vmSha3Test \
+            ethtests/LegacyTests/Constantinople/VMTests/vmSystemOperations \
+            ethtests/LegacyTests/Constantinople/VMTests/vmTests
