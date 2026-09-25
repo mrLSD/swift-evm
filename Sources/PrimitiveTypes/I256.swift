@@ -39,14 +39,14 @@ public struct I256: BigUInt {
         [l0, l1, h0, h1]
     }
 
-    /// Direct field initializer.
+    /// Initializes from limbs and normalizes zero to nonnegative.
     @inline(__always)
     public init(l0: UInt64, l1: UInt64, h0: UInt64, h1: UInt64, signExtend: Bool) {
         self.l0 = l0
         self.l1 = l1
         self.h0 = h0
         self.h1 = h1
-        self.signExtend = signExtend
+        self.signExtend = signExtend && (l0 != 0 || l1 != 0 || h0 != 0 || h1 != 0)
     }
 
     /// Initialize from `[UInt64]` with `signExtend == false`.
@@ -59,14 +59,14 @@ public struct I256: BigUInt {
         self.signExtend = false
     }
 
-    /// Initialize from `[UInt64]` with explicit `signExtend` flag.
+    /// Initializes from limbs and normalizes zero to nonnegative.
     public init(from value: [UInt64], signExtend: Bool) {
         precondition(value.count == Self.numberBase, "I256 must be initialized with \(Self.numberBase) UInt64 values.")
         self.l0 = value[0]
         self.l1 = value[1]
         self.h0 = value[2]
         self.h1 = value[3]
-        self.signExtend = signExtend
+        self.signExtend = signExtend && value.contains(where: { $0 != 0 })
     }
 
     /// Create an `I256` from a `U256` value.
@@ -91,26 +91,26 @@ public struct I256: BigUInt {
         }
     }
 
-    /// Bitwise operations. Only shifting right, as for negative number it will be Shift Arithmetic Right (SAR).
+    /// Performs an arithmetic right shift.
     public func shiftRight(_ shift: Int) -> Self {
-        if isZero || shift >= 256 || shift < 0 {
-            if signExtend {
-                // value is `< 0`, pushing `-1`
-                return Self(l0: 1, l1: 0, h0: 0, h1: 0, signExtend: true)
-            } else {
-                // value is 0 or `>= 1`, pushing 0
-                return Self.ZERO
-            }
+        if shift <= 0 {
+            return self
+        }
+        if isZero {
+            return Self.ZERO
+        }
+        if shift >= 256 {
+            return signExtend
+                ? Self(l0: 1, l1: 0, h0: 0, h1: 0, signExtend: true)
+                : Self.ZERO
+        }
+        if signExtend {
+            let me = U256(l0: l0, l1: l1, h0: h0, h1: h1)
+            let val = ((me - U256(from: 1)) >> shift) + U256(from: 1)
+            return Self(l0: val.l0, l1: val.l1, h0: val.h0, h1: val.h1, signExtend: true)
         } else {
-            // `Value < 0`
-            if signExtend {
-                let me = U256(l0: l0, l1: l1, h0: h0, h1: h1)
-                let val = ((me - U256(from: 1)) >> shift) + U256(from: 1)
-                return Self(l0: val.l0, l1: val.l1, h0: val.h0, h1: val.h1, signExtend: true)
-            } else {
-                let val = toU256 >> shift
-                return Self(l0: val.l0, l1: val.l1, h0: val.h0, h1: val.h1, signExtend: false)
-            }
+            let val = toU256 >> shift
+            return Self(l0: val.l0, l1: val.l1, h0: val.h0, h1: val.h1, signExtend: false)
         }
     }
 
@@ -176,9 +176,15 @@ public extension I256 {
     /// Unsigned-style limb compare (helper for signed comparison and BigUInt fallback).
     @inline(__always)
     private static func cmpLessUnsigned(_ a: Self, _ b: Self) -> Bool {
-        if a.h1 != b.h1 { return a.h1 < b.h1 }
-        if a.h0 != b.h0 { return a.h0 < b.h0 }
-        if a.l1 != b.l1 { return a.l1 < b.l1 }
+        if a.h1 != b.h1 {
+            return a.h1 < b.h1
+        }
+        if a.h0 != b.h0 {
+            return a.h0 < b.h0
+        }
+        if a.l1 != b.l1 {
+            return a.l1 < b.l1
+        }
         return a.l0 < b.l0
     }
 

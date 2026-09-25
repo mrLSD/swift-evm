@@ -130,6 +130,31 @@ final class InstructionSarSpec: QuickSpec {
                 expect(m.gas.remaining).to(equal(10 - GasConstant.VERYLOW))
             }
 
+            it("matches signed and shift boundaries") {
+                func expectSar(_ name: String, _ value: U256, _ shift: U256, _ expected: U256) {
+                    let m = Self.machine
+                    _ = m.stack.push(value: value)
+                    _ = m.stack.push(value: shift)
+                    m.evalLoop()
+
+                    expect(m.machineStatus).to(equal(.Exit(.Success(.Stop))), description: name)
+                    expect(m.stack.peek(indexFromTop: 0)).to(beSuccess(expected), description: name)
+                    expect(m.stack.length).to(equal(1), description: name)
+                    expect(m.gas.remaining).to(equal(10 - GasConstant.VERYLOW), description: name)
+                }
+
+                expectSar("positive shift zero", U256(from: 7), .ZERO, U256(from: 7))
+                expectSar("negative rounding", U256.MAX - U256(from: 2), U256(from: 1), U256.MAX - U256(from: 1))
+                expectSar(
+                    "minimum shift one",
+                    I256.minValue.toU256,
+                    U256(from: 1),
+                    U256(l0: 0, l1: 0, h0: 0, h1: 0xC000_0000_0000_0000)
+                )
+                expectSar("positive maximal shift", I256.SIGN_BIT_MASK, .MAX, .ZERO)
+                expectSar("negative maximal shift", I256.minValue.toU256, .MAX, .MAX)
+            }
+
             it("`a >>> b`, when `b` not in the stack") {
                 let m = Self.machine
 

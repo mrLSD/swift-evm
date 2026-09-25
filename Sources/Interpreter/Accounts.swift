@@ -18,7 +18,7 @@ public struct BasicAccount: Equatable, Sendable {
     /// - Precondition: caller must ensure `nonce < UInt64.max` (see `MemoryState.incNonce`,
     ///   which checks for `UInt64.max` and returns `.MaxNonce` before invoking this method).
     /// - Trap: if `nonce == UInt64.max` at the point of call, the `+= 1` overflow traps
-    ///   lwoudly (Swift's checked arithmetic).
+    ///   loudly (Swift's checked arithmetic).
     public mutating func incNonce() {
         self.nonce += 1
     }

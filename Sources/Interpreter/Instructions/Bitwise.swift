@@ -17,8 +17,9 @@ enum BitwiseInstructions {
             return
         }
 
-        // After stack verification this guard will always succeed. But we keep it for safety and clarity.
-        guard let op1 = m.stackPop(), let op2 = m.stackPop() else { return }
+        // Stack size was verified above; these unwraps cannot fail.
+        let op1 = m.stackPop()!
+        let op2 = m.stackPop()!
 
         let newValue: UInt64 = (op1 < op2) ? 1 : 0
         m.stackPush(value: U256(from: newValue))
@@ -36,8 +37,9 @@ enum BitwiseInstructions {
             return
         }
 
-        // After stack verification this guard will always succeed. But we keep it for safety and clarity.
-        guard let op1 = m.stackPop(), let op2 = m.stackPop() else { return }
+        // Stack size was verified above; these unwraps cannot fail.
+        let op1 = m.stackPop()!
+        let op2 = m.stackPop()!
 
         let newValue: UInt64 = (op1 > op2) ? 1 : 0
         m.stackPush(value: U256(from: newValue))
@@ -56,8 +58,9 @@ enum BitwiseInstructions {
             return
         }
 
-        // After stack verification this guard will always succeed. But we keep it for safety and clarity.
-        guard let op1 = m.stackPop(), let op2 = m.stackPop() else { return }
+        // Stack size was verified above; these unwraps cannot fail.
+        let op1 = m.stackPop()!
+        let op2 = m.stackPop()!
 
         let iOp1 = I256.fromU256(op1)
         let iOp2 = I256.fromU256(op2)
@@ -79,8 +82,9 @@ enum BitwiseInstructions {
             return
         }
 
-        // After stack verification this guard will always succeed. But we keep it for safety and clarity.
-        guard let op1 = m.stackPop(), let op2 = m.stackPop() else { return }
+        // Stack size was verified above; these unwraps cannot fail.
+        let op1 = m.stackPop()!
+        let op2 = m.stackPop()!
 
         let iOp1 = I256.fromU256(op1)
         let iOp2 = I256.fromU256(op2)
@@ -101,8 +105,9 @@ enum BitwiseInstructions {
             return
         }
 
-        // After stack verification this guard will always succeed. But we keep it for safety and clarity.
-        guard let op1 = m.stackPop(), let op2 = m.stackPop() else { return }
+        // Stack size was verified above; these unwraps cannot fail.
+        let op1 = m.stackPop()!
+        let op2 = m.stackPop()!
 
         let newValue: UInt64 = (op1 == op2) ? 1 : 0
         m.stackPush(value: U256(from: newValue))
@@ -120,8 +125,8 @@ enum BitwiseInstructions {
             return
         }
 
-        // After stack verification this guard will always succeed. But we keep it for safety and clarity.
-        guard let op1 = m.stackPop() else { return }
+        // Stack size was verified above; this unwrap cannot fail.
+        let op1 = m.stackPop()!
 
         let newValue: UInt64 = (op1.isZero) ? 1 : 0
         m.stackPush(value: U256(from: newValue))
@@ -139,8 +144,9 @@ enum BitwiseInstructions {
             return
         }
 
-        // After stack verification this guard will always succeed. But we keep it for safety and clarity.
-        guard let op1 = m.stackPop(), let op2 = m.stackPop() else { return }
+        // Stack size was verified above; these unwraps cannot fail.
+        let op1 = m.stackPop()!
+        let op2 = m.stackPop()!
 
         let newValue = op1 & op2
         m.stackPush(value: newValue)
@@ -158,8 +164,9 @@ enum BitwiseInstructions {
             return
         }
 
-        // After stack verification this guard will always succeed. But we keep it for safety and clarity.
-        guard let op1 = m.stackPop(), let op2 = m.stackPop() else { return }
+        // Stack size was verified above; these unwraps cannot fail.
+        let op1 = m.stackPop()!
+        let op2 = m.stackPop()!
 
         let newValue = op1 | op2
         m.stackPush(value: newValue)
@@ -177,8 +184,9 @@ enum BitwiseInstructions {
             return
         }
 
-        // After stack verification this guard will always succeed. But we keep it for safety and clarity.
-        guard let op1 = m.stackPop(), let op2 = m.stackPop() else { return }
+        // Stack size was verified above; these unwraps cannot fail.
+        let op1 = m.stackPop()!
+        let op2 = m.stackPop()!
 
         let newValue = op1 ^ op2
         m.stackPush(value: newValue)
@@ -196,8 +204,8 @@ enum BitwiseInstructions {
             return
         }
 
-        // After stack verification this guard will always succeed. But we keep it for safety and clarity.
-        guard let op1 = m.stackPop() else { return }
+        // Stack size was verified above; this unwrap cannot fail.
+        let op1 = m.stackPop()!
 
         let newValue = ~op1
         m.stackPush(value: newValue)
@@ -215,8 +223,9 @@ enum BitwiseInstructions {
             return
         }
 
-        // After stack verification this guard will always succeed. But we keep it for safety and clarity.
-        guard let op1 = m.stackPop(), let op2 = m.stackPop() else { return }
+        // Stack size was verified above; these unwraps cannot fail.
+        let op1 = m.stackPop()!
+        let op2 = m.stackPop()!
 
         var newValue = U256.ZERO
         if op1 < U256(from: 32) {
@@ -243,8 +252,9 @@ enum BitwiseInstructions {
             return
         }
 
-        // After stack verification this guard will always succeed. But we keep it for safety and clarity.
-        guard let op1 = m.stackPop(), let op2 = m.stackPop() else { return }
+        // Stack size was verified above; these unwraps cannot fail.
+        let op1 = m.stackPop()!
+        let op2 = m.stackPop()!
 
         var newValue = U256.ZERO
         if !op2.isZero, op1 < U256(from: 256) {
@@ -267,8 +277,9 @@ enum BitwiseInstructions {
             return
         }
 
-        // After stack verification this guard will always succeed. But we keep it for safety and clarity.
-        guard let op1 = m.stackPop(), let op2 = m.stackPop() else { return }
+        // Stack size was verified above; these unwraps cannot fail.
+        let op1 = m.stackPop()!
+        let op2 = m.stackPop()!
 
         var newValue = U256.ZERO
         if !op2.isZero, op1 < U256(from: 256) {
@@ -279,9 +290,7 @@ enum BitwiseInstructions {
         m.stackPush(value: newValue)
     }
 
-    /// Pushes `x >> shift` (arithmetic, sign-extending) onto the stack; pushes `0` if `x == 0` or `shift >= 255`, or `2^256 - 1` if `x < 0` and `shift >= 255`.
-    ///
-    /// Interprets `x` as a two's-complement signed 256-bit integer.
+    /// Pushes the arithmetic right shift of a signed 256-bit value.
     /// Requires 2 stack items; fails with `StackUnderflow` or `OutOfGas` (`GasConstant.VERYLOW`).
     static func sar(machine m: Machine) {
         if !m.verifyStack(pop: 2) {
@@ -292,41 +301,16 @@ enum BitwiseInstructions {
             return
         }
 
-        // After stack verification this guard will always succeed. But we keep it for safety and clarity.
-        guard let op1 = m.stackPop(), let op2 = m.stackPop() else { return }
+        // Stack size was verified above; these unwraps cannot fail.
+        let op1 = m.stackPop()!
+        let op2 = m.stackPop()!
 
-        let iOp2 = I256.fromU256(op2)
-
-        var newValue = U256.ZERO
-
-        // NOTE: In that case 255 is actually better than 256:
-        // For arithmetic right shift on 256-bit values, when the shift amount
-        // reaches 255, the result becomes deterministic based solely on the sign bit:
-        //
-        // - Shifting 255 positions moves bit 255 (the sign bit) to position 0
-        // - For positive numbers (sign bit = 0): result is 0
-        // - For negative numbers (sign bit = 1): result is -1 (all bits set due to sign extension)
-        //
-        // Using >= 255 instead of >= 256 is an optimization that recognizes this
-        // deterministic case one shift earlier, avoiding unnecessary computation while producing
-        // identical results. Your tests demonstrate that this optimization is correct and maintains EVM spec compliance.
-        if op2.isZero || op1 >= U256(from: 255) {
-            // if value is < 0, pushing -1
-            // else `Zero` (by default)
-            if iOp2.signExtend, !op2.isZero {
-                newValue = I256(from: [1, 0, 0, 0], signExtend: true).toU256
-            }
+        let value = I256.fromU256(op2)
+        let newValue = if value.isZero || op1 >= U256(from: 256) {
+            value.signExtend ? U256.MAX : U256.ZERO
         } else {
             // Force get Int, because we know it is less than 256
-            let shift = op1.getInt!
-            // Check is positive number
-            if !iOp2.signExtend {
-                // Shift Right
-                newValue = op2 >> shift
-            } else {
-                // Shift Arithmetic Right
-                newValue = (iOp2 >> shift).toU256
-            }
+            (value >> op1.getInt!).toU256
         }
         m.stackPush(value: newValue)
     }

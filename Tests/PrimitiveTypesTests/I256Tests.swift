@@ -138,6 +138,15 @@ final class I256Spec: QuickSpec {
                 it("correct transformed from Big Endian") {
                     expect(I256.fromBigEndian(from: val.toBigEndian)).to(equal(val))
                 }
+                it("normalizes zero with sign extension") {
+                    let fieldZero = I256(l0: 0, l1: 0, h0: 0, h1: 0, signExtend: true)
+                    let arrayZero = I256(from: [0, 0, 0, 0], signExtend: true)
+
+                    expect(fieldZero).to(equal(I256.ZERO))
+                    expect(arrayZero).to(equal(I256.ZERO))
+                    expect(fieldZero.signExtend).to(beFalse())
+                    expect(arrayZero.signExtend).to(beFalse())
+                }
             }
 
             context("when concrete I256 value") {
@@ -563,6 +572,27 @@ final class I256Spec: QuickSpec {
             }
 
             context("shift arithmetic right (SAR)") {
+                func referenceShift(_ value: U256, by shift: Int) -> U256 {
+                    if shift <= 0 {
+                        return value
+                    }
+
+                    let signBit = U256(l0: 0, l1: 0, h0: 0, h1: 0x8000_0000_0000_0000)
+                    let isNegative = !(value & signBit).isZero
+                    if shift >= 256 {
+                        return isNegative ? U256.MAX : U256.ZERO
+                    }
+
+                    var result = value
+                    for _ in 0 ..< shift {
+                        result = result >> 1
+                        if isNegative {
+                            result = result | signBit
+                        }
+                    }
+                    return result
+                }
+
                 it("shiftRight with positive I256 value, no sign extension") {
                     let i256Value = I256(from: [0, 0, 0, 1], signExtend: false)
                     let result = i256Value >> 1
@@ -609,6 +639,30 @@ final class I256Spec: QuickSpec {
                     let expected = U256.ZERO
 
                     expect(result.toU256).to(equal(expected))
+                }
+
+                it("matches signed values and shift boundaries") {
+                    let values: [(String, U256)] = [
+                        ("zero", .ZERO),
+                        ("one", U256(from: 1)),
+                        ("signed max", I256.SIGN_BIT_MASK),
+                        ("mixed positive", U256(l0: .max, l1: 2, h0: 3, h1: 4)),
+                        ("signed min", I256.minValue.toU256),
+                        ("minus one", .MAX),
+                        ("minus three", U256.MAX - U256(from: 2)),
+                        ("mixed negative", U256(l0: 1, l1: 2, h0: 3, h1: 0x8000_0000_0000_0004)),
+                    ]
+                    let shifts = [-1, 0, 1, 2, 63, 64, 65, 127, 128, 129, 191, 192, 193, 254, 255, 256, 257]
+
+                    for (name, value) in values {
+                        for shift in shifts {
+                            let result = (I256.fromU256(value) >> shift).toU256
+                            expect(result).to(
+                                equal(referenceShift(value, by: shift)),
+                                description: "\(name) >> \(shift)"
+                            )
+                        }
+                    }
                 }
             }
 
