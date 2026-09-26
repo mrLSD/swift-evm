@@ -119,10 +119,9 @@ public extension BigUInt {
         return (res2, overflow1 || overflow2)
     }
 
-    /// Returns the quotient and remainder of dividing a 128-bit number (hi << 64 + lo) by a 64-bit y.
-    /// Assumes that `hi < y`.
+    /// Divides `(hi << 64) | lo` by `y`. Requires `hi < y`, so the quotient fits in UInt64.
     static func divModWord(hi: UInt64, lo: UInt64, y: UInt64) -> (quotient: UInt64, remainder: UInt64) {
-        DivModUtils.divModWord(hi: hi, lo: lo, y: y)
+        y.dividingFullWidth((high: hi, low: lo))
     }
 
     /// Multiply UInt64 with carry
@@ -230,7 +229,9 @@ public extension BigUInt {
                     let (new_r_hat, overflow) = r_hat.addingReportingOverflow(v_n_1)
                     r_hat = new_r_hat
                     // if r_hat overflowed, we're done
-                    if overflow { break }
+                    if overflow {
+                        break
+                    }
                 }
                 q_hat = temp_q_hat
             } else {

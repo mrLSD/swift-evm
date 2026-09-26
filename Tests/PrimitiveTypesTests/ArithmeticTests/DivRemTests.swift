@@ -157,44 +157,110 @@ final class ArithmeticDivRemSpec: QuickSpec {
                 }
             }
 
-            context("divmodWord for non UInt128") {
+            context("divModWord") {
                 it("100 / 2") {
-                    let (div, rem) = DivModUtils.divModWord64(hi: 0, lo: 100, y: 2)
+                    let (div, rem) = U256.divModWord(hi: 0, lo: 100, y: 2)
 
                     expect(div).to(equal(50))
                     expect(rem).to(equal(0))
                 }
 
                 it("100 / 6") {
-                    let (div, rem) = DivModUtils.divModWord64(hi: 0, lo: 100, y: 6)
+                    let (div, rem) = U256.divModWord(hi: 0, lo: 100, y: 6)
 
                     expect(div).to(equal(16))
                     expect(rem).to(equal(4))
                 }
 
-                it("hi 100 / 6") {
-                    let (div, rem) = DivModUtils.divModWord64(hi: 100, lo: 0, y: 6)
+                it("preserves the high bit of the remainder") {
+                    let high: UInt64 = 0x8000000000000000
+                    let (div, rem) = U256.divModWord(hi: high, lo: 0, y: .max)
 
-                    expect(div).to(equal(UInt64.max))
-                    expect(rem).to(equal(6))
+                    expect(div).to(equal(high))
+                    expect(rem).to(equal(high))
                 }
 
-                it("fuzz single random pair 1") {
-                    let a = UInt64.random(in: 1..<UInt64.max)
-                    let b = UInt64.random(in: 1..<UInt64.max)
-                    let (div, rem) = DivModUtils.divModWord64(hi: 0, lo: a, y: b)
+                it("handles zero, unit divisors and the largest representable quotient") {
+                    let cases: [(UInt64, UInt64, UInt64, UInt64, UInt64)] = [
+                        (0, 0, 1, 0, 0),
+                        (0, .max, 1, .max, 0),
+                        (0, .max, .max, 1, 0),
+                        (1, 0, 2, 0x8000000000000000, 0),
+                        (.max - 1, .max, .max, .max, .max - 1),
+                    ]
+                    for (hi, lo, divisor, quotient, remainder) in cases {
+                        let (q, r) = U256.divModWord(hi: hi, lo: lo, y: divisor)
 
-                    expect(div).to(equal(a/b))
-                    expect(rem).to(equal(a % b))
+                        expect(q).to(equal(quotient))
+                        expect(r).to(equal(remainder))
+                        expect(r < divisor).to(beTrue())
+                    }
                 }
 
-                it("fuzz single random pair 2") {
-                    let a = UInt64.random(in: 1..<UInt64.max)
-                    let b = UInt64.random(in: 1..<UInt64.max)
-                    let (div, rem) = DivModUtils.divModWord64(hi: 0, lo: a, y: b)
+                it("rejects a zero divisor") {
+                    expect(captureStandardError {
+                        expect {
+                            _ = U256.divModWord(hi: 0, lo: 1, y: 0)
+                        }.to(throwAssertion())
+                    }).to(contain("Division by zero"))
+                }
 
-                    expect(div).to(equal(a/b))
-                    expect(rem).to(equal(a % b))
+                it("rejects a quotient that does not fit in UInt64") {
+                    for hi: UInt64 in [6, 100] {
+                        expect(captureStandardError {
+                            expect {
+                                _ = U256.divModWord(hi: hi, lo: 0, y: 6)
+                            }.to(throwAssertion())
+                        }).to(contain("Quotient is not representable"))
+                    }
+                }
+            }
+
+            context("Knuth quotient correction") {
+                it("propagates corrected quotient digits through a full U512 dividend") {
+                    // a = (b^3 - b^2 - b) * b^5, divisor = b^2 - 1, b = 2^64.
+                    let a = U512(from: [0, 0, 0, 0, 0, 0, .max, .max - 1])
+                    let divisor = U512(from: [.max, .max, 0, 0, 0, 0, 0, 0])
+                    let (q, r) = a.divRem(divisor: divisor)
+
+                    expect(q).to(equal(U512(from: [.max, .max - 1, .max, .max - 1, .max, .max - 1, 0, 0])))
+                    expect(r).to(equal(U512(from: [.max, .max - 1, 0, 0, 0, 0, 0, 0])))
+                    expect(r < divisor).to(beTrue())
+                }
+
+                it("stops correction when r_hat overflows") {
+                    // With base b = 2^64, q_hat = b-1 and r_hat = b-2 before correction.
+                    let a = U256(from: [0, .max, .max - 1, 0])
+                    let divisor = U256(from: [.max, .max, 0, 0])
+                    let (q, r) = a.divRem(divisor: divisor)
+
+                    expect(q).to(equal(U256(from: UInt64.max - 1)))
+                    expect(r).to(equal(U256(from: [.max - 1, .max, 0, 0])))
+                    expect(r < divisor).to(beTrue())
+                    expect(U512(from: q) * U512(from: divisor) + U512(from: r)).to(equal(U512(from: a)))
+                }
+
+                it("corrects the estimate twice before r_hat overflows") {
+                    let a = U256(from: [0, 0, 0x8000000000000000, 0])
+                    let divisor = U256(from: [.max, 0x8000000000000001, 0, 0])
+                    let (q, r) = a.divRem(divisor: divisor)
+
+                    expect(q).to(equal(U256(from: UInt64.max - 3)))
+                    expect(r).to(equal(U256(from: [.max - 3, 8, 0, 0])))
+                    expect(r < divisor).to(beTrue())
+                    expect(U512(from: q) * U512(from: divisor) + U512(from: r)).to(equal(U512(from: a)))
+                }
+
+                it("adds the divisor back after an overestimated quotient digit") {
+                    // The leading two normalized limbs match; the low limb requires D6.
+                    let a = U256(from: [0, 1, 1, 0])
+                    let divisor = U256(from: [1, 1, 1, 0])
+                    let (q, r) = a.divRem(divisor: divisor)
+
+                    expect(q).to(equal(U256.ZERO))
+                    expect(r).to(equal(a))
+                    expect(r < divisor).to(beTrue())
+                    expect(U512(from: q) * U512(from: divisor) + U512(from: r)).to(equal(U512(from: a)))
                 }
             }
 
