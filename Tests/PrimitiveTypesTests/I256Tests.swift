@@ -602,6 +602,52 @@ final class I256Spec: QuickSpec {
                 }
             }
 
+            context("bitwise AND") {
+                it("preserves signed patterns and canonical zero") {
+                    let minusOne = I256(from: [1, 0, 0, 0], signExtend: true)
+                    let minusSix = I256(from: [6, 0, 0, 0], signExtend: true)
+                    let cases: [(I256, I256, I256)] = [
+                        (minusOne, minusOne, minusOne),
+                        (minusSix, I256(from: [3, 0, 0, 0], signExtend: true), I256(from: [8, 0, 0, 0], signExtend: true)),
+                        (minusSix, I256(from: 3), I256(from: 2)),
+                        (I256(from: 3), minusSix, I256(from: 2)),
+                        (I256(from: 6), I256(from: 3), I256(from: 2)),
+                        (I256.minValue, minusOne, I256.minValue),
+                        (I256.minValue, I256.minValue, I256.minValue),
+                        (I256.minValue, I256(from: [.max, .max, .max, 0x7FFF_FFFF_FFFF_FFFF]), .ZERO),
+                        (.ZERO, minusOne, .ZERO),
+                    ]
+
+                    for (a, b, expected) in cases {
+                        let result = a & b
+                        let description = "lhs \(a.BYTES), rhs \(b.BYTES), signs \(a.signExtend), \(b.signExtend)"
+                        expect(result.BYTES).to(equal(expected.BYTES), description: description)
+                        expect(result.signExtend).to(equal(expected.signExtend), description: description)
+                    }
+                }
+
+                it("matches native limb AND across every bit boundary and seeded patterns") {
+                    let seed: UInt64 = 0xA256
+                    var generator = SeededGenerator(state: seed)
+
+                    for bit in 0 ..< 256 {
+                        var singleBit: [UInt64] = [0, 0, 0, 0]
+                        singleBit[bit / 64] = UInt64(1) << (bit % 64)
+                        let random = (0 ..< 4).map { _ in generator.next() }
+
+                        for lhs in [singleBit, singleBit.map { ~$0 }, random] {
+                            let rhs = (0 ..< 4).map { _ in generator.next() }
+                            let expected = zip(lhs, rhs).map { $0 & $1 }
+                            let result = I256.fromU256(U256(from: lhs)) & I256.fromU256(U256(from: rhs))
+                            let description = "seed \(seed), bit \(bit), lhs \(lhs), rhs \(rhs)"
+
+                            expect(result.toU256.BYTES).to(equal(expected), description: description)
+                            expect(result.signExtend).to(equal(expected[3] >> 63 != 0), description: description)
+                        }
+                    }
+                }
+            }
+
             context("shift arithmetic right (SAR)") {
                 func referenceShift(_ value: U256, by shift: Int) -> U256 {
                     if shift <= 0 {
@@ -698,6 +744,11 @@ final class I256Spec: QuickSpec {
             }
 
             context("div operation") {
+                it("preserves the negative magnitude when dividing by one") {
+                    let dividend = I256(from: [6, 0, 0, 0], signExtend: true)
+                    expect(dividend / I256(from: 1)).to(equal(dividend))
+                }
+
                 it("preserves the magnitude identity and signs at signed and limb boundaries") {
                     var magnitudes: [[UInt64]] = [
                         [0, 0, 0, 0], [1, 0, 0, 0], [2, 0, 0, 0],
@@ -792,6 +843,11 @@ final class I256Spec: QuickSpec {
             }
 
             context("rem operation") {
+                it("preserves a negative dividend smaller than the divisor") {
+                    let dividend = I256(from: [6, 0, 0, 0], signExtend: true)
+                    expect(dividend % I256(from: 10)).to(equal(dividend))
+                }
+
                 it("returns canonical zero for seeded exact divisions with every sign combination") {
                     let seed: UInt64 = 0x1257
                     var generator = SeededGenerator(state: seed)

@@ -10,6 +10,19 @@ final class InstructionSModSpec: QuickSpec {
 
     override class func spec() {
         describe("Instruction SMod") {
+            it("preserves a negative dividend smaller than the divisor") {
+                let m = Self.machine
+                let minusSix = U256(from: [.max - 5, .max, .max, .max])
+                _ = m.stack.push(value: U256(from: 10))
+                _ = m.stack.push(value: minusSix)
+                m.evalLoop()
+
+                expect(m.machineStatus).to(equal(.Exit(.Success(.Stop))))
+                expect(m.stack.peek(indexFromTop: 0)).to(beSuccess(minusSix))
+                expect(m.stack.length).to(equal(1))
+                expect(m.gas.remaining).to(equal(10 - GasConstant.LOW))
+            }
+
             it("preserves remainder signs when word division carries the high remainder bit") {
                 for negativeDividend in [false, true] {
                     for negativeDivisor in [false, true] {

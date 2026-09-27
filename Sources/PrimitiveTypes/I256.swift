@@ -23,13 +23,12 @@ public struct I256: BigUInt {
         h1: 0x7fff_ffff_ffff_ffff
     )
 
-    /// Same bit pattern as `SIGN_BIT_MASK`, typed as `I256` with `signExtend = false`.
-    @usableFromInline
-    static let SIGN_BIT_MASK_I256: I256 = .init(
-        l0: SIGN_BIT_MASK.l0, l1: SIGN_BIT_MASK.l1,
-        h0: SIGN_BIT_MASK.h0, h1: SIGN_BIT_MASK.h1,
-        signExtend: false
-    )
+    /// Masks the stored magnitude independently of two's-complement bitwise operations.
+    /// Clears `signExtend`, which `divRem` may preserve by returning `self` on early exits.
+    @inline(__always)
+    private var maskedMagnitude: Self {
+        Self(l0: l0, l1: l1, h0: h0, h1: h1 & Self.SIGN_BIT_MASK.h1, signExtend: false)
+    }
 
     /// Sign extension flag: `true` if the number is negative.
     public private(set) var signExtend: Bool
@@ -129,7 +128,7 @@ public struct I256: BigUInt {
             return Self.minValue
         }
 
-        var d = divRem(divisor: rhs).quotient & Self.SIGN_BIT_MASK_I256
+        var d = divRem(divisor: rhs).quotient.maskedMagnitude
         if d.isZero {
             return Self.ZERO
         }
@@ -148,7 +147,7 @@ public struct I256: BigUInt {
 
     /// `I256` remainder operation.
     func rem(rhs: Self) -> Self {
-        var r = divRem(divisor: rhs).remainder & Self.SIGN_BIT_MASK_I256
+        var r = divRem(divisor: rhs).remainder.maskedMagnitude
         if r.isZero {
             return Self.ZERO
         }
@@ -227,18 +226,10 @@ public extension I256 {
         lhs.shiftRight(shift)
     }
 
-    /// Limb-wise AND on stored fields — no `BYTES` array allocation.
-    /// `signExtend` is reset to `false` on the result (matches the previous
-    /// generic `Self(from: [UInt64])` array-init behavior used by `I256.div`/`rem`).
+    /// Bitwise AND of the two's-complement representations.
     @inlinable @inline(__always)
     static func & (lhs: Self, rhs: Self) -> Self {
-        Self(
-            l0: lhs.l0 & rhs.l0,
-            l1: lhs.l1 & rhs.l1,
-            h0: lhs.h0 & rhs.h0,
-            h1: lhs.h1 & rhs.h1,
-            signExtend: false
-        )
+        Self.fromU256(lhs.toU256 & rhs.toU256)
     }
 }
 
