@@ -3,6 +3,37 @@ import Nimble
 import Quick
 
 final class I256Spec: QuickSpec {
+    private static func checkDivisionSigns(dividend: [UInt64], divisor: [UInt64], description: String) {
+        let minimum: [UInt64] = [0, 0, 0, 0x8000_0000_0000_0000]
+        for negativeDividend in [false, true] where dividend != minimum || negativeDividend {
+            for negativeDivisor in [false, true] where divisor != minimum || negativeDivisor {
+                let a = I256(from: dividend, signExtend: negativeDividend)
+                let d = I256(from: divisor, signExtend: negativeDivisor)
+                let q = a / d
+                let r = a % d
+                let description = "\(description), dividend \(dividend), divisor \(divisor), signs \(negativeDividend), \(negativeDivisor)"
+                let quotientIsZero = q.BYTES.allSatisfy { $0 == 0 }
+                let remainderIsZero = r.BYTES.allSatisfy { $0 == 0 }
+                // EVM keeps MIN / -1 negative; the magnitude identity still holds.
+                let minimumQuotient = dividend == minimum && divisor == [1, 0, 0, 0]
+
+                expectDivisionIdentity(dividend: dividend, divisor: divisor, quotient: q.BYTES, remainder: r.BYTES, description: description)
+                expect(q.signExtend).to(equal(!quotientIsZero && (minimumQuotient || negativeDividend != negativeDivisor)), description: description)
+                expect(r.signExtend).to(equal(!remainderIsZero && negativeDividend), description: description)
+            }
+        }
+    }
+
+    private static func randomMagnitude(words: Int, generator: inout SeededGenerator) -> [UInt64] {
+        var magnitude = [UInt64](repeating: 0, count: 4)
+        for i in 0 ..< words {
+            magnitude[i] = generator.next()
+        }
+        magnitude[3] &= 0x7FFF_FFFF_FFFF_FFFF
+        magnitude[words - 1] = max(1, magnitude[words - 1])
+        return magnitude
+    }
+
     override class func spec() {
         describe("I256 type") {
             context("when init data wrong panics with message") {
@@ -667,6 +698,41 @@ final class I256Spec: QuickSpec {
             }
 
             context("div operation") {
+                it("preserves the magnitude identity and signs at signed and limb boundaries") {
+                    var magnitudes: [[UInt64]] = [
+                        [0, 0, 0, 0], [1, 0, 0, 0], [2, 0, 0, 0],
+                        [.max, .max, .max, 0x7FFF_FFFF_FFFF_FFFF], [0, 0, 0, 0x8000_0000_0000_0000],
+                    ]
+                    for limb in 1 ..< 4 {
+                        var power: [UInt64] = [0, 0, 0, 0]
+                        power[limb] = 1
+                        let below = [UInt64](repeating: .max, count: limb) + [UInt64](repeating: 0, count: 4 - limb)
+                        var above = power
+                        above[0] = 1
+                        magnitudes += [below, power, above]
+                    }
+
+                    for dividend in magnitudes {
+                        for divisor in magnitudes.dropFirst() {
+                            Self.checkDivisionSigns(dividend: dividend, divisor: divisor, description: "signed boundary")
+                        }
+                    }
+                }
+
+                it("preserves the magnitude identity and signs for seeded operands of every length") {
+                    let seed: UInt64 = 0x1256
+                    var generator = SeededGenerator(state: seed)
+                    for dividendWords in 1 ... 4 {
+                        for divisorWords in 1 ... 4 {
+                            for index in 0 ..< 16 {
+                                let dividend = Self.randomMagnitude(words: dividendWords, generator: &generator)
+                                let divisor = Self.randomMagnitude(words: divisorWords, generator: &generator)
+                                Self.checkDivisionSigns(dividend: dividend, divisor: divisor, description: "seed \(seed), iteration \(index)")
+                            }
+                        }
+                    }
+                }
+
                 it("by zero") {
                     expect(captureStandardError {
                         expect {
@@ -726,6 +792,20 @@ final class I256Spec: QuickSpec {
             }
 
             context("rem operation") {
+                it("returns canonical zero for seeded exact divisions with every sign combination") {
+                    let seed: UInt64 = 0x1257
+                    var generator = SeededGenerator(state: seed)
+                    for words in 1 ... 4 {
+                        for index in 0 ..< 16 {
+                            let magnitude = Self.randomMagnitude(words: words, generator: &generator)
+                            let description = "seed \(seed), iteration \(index)"
+                            Self.checkDivisionSigns(dividend: magnitude, divisor: [1, 0, 0, 0], description: description)
+                            Self.checkDivisionSigns(dividend: magnitude, divisor: magnitude, description: description)
+                            Self.checkDivisionSigns(dividend: [0, 0, 0, 0], divisor: magnitude, description: description)
+                        }
+                    }
+                }
+
                 it("by zero") {
                     expect(captureStandardError {
                         expect {

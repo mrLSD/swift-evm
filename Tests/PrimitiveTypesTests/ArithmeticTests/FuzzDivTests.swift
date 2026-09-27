@@ -4,49 +4,6 @@ import Quick
 @testable import PrimitiveTypes
 
 final class FuzzDivRemSpec: QuickSpec {
-    private struct SeededGenerator: RandomNumberGenerator {
-        var state: UInt64
-
-        mutating func next() -> UInt64 {
-            state = state &* 6_364_136_223_846_793_005 &+ 1_442_695_040_888_963_407
-            return state
-        }
-    }
-
-    private static func bytes(_ words: [UInt64]) -> [UInt8] {
-        words.flatMap { word in
-            (0 ..< 8).map { UInt8(truncatingIfNeeded: word >> ($0 * 8)) }
-        }
-    }
-
-    private static func expectDivisionIdentity(dividend: [UInt64], divisor: [UInt64], quotient: [UInt64], remainder: [UInt64], description: String) {
-        let a = bytes(dividend)
-        let d = bytes(divisor)
-        let q = bytes(quotient)
-        let r = bytes(remainder)
-
-        // Reconstruct q*d+r in base 256 with twice the input width, without library arithmetic.
-        var product = [UInt32](repeating: 0, count: a.count * 2 + 1)
-        for i in q.indices {
-            for j in d.indices {
-                product[i + j] += UInt32(q[i]) * UInt32(d[j])
-            }
-        }
-
-        for i in r.indices {
-            product[i] += UInt32(r[i])
-        }
-
-        for i in 0 ..< product.count - 1 {
-            product[i + 1] += product[i] >> 8
-            product[i] &= 0xFF
-        }
-        let expected = a.map(UInt32.init) + [UInt32](repeating: 0, count: product.count - a.count)
-
-        expect(product).to(equal(expected), description: description)
-        expect(r.reversed().lexicographicallyPrecedes(d.reversed())).to(beTrue(), description: description)
-    }
-
     private static func checkDivision<T: BigUInt>(_ type: T.Type, dividend: [UInt64], divisor: [UInt64], description: String) {
         let (q, r) = T(from: dividend).divRem(divisor: T(from: divisor))
         expectDivisionIdentity(dividend: dividend, divisor: divisor, quotient: q.BYTES, remainder: r.BYTES, description: description)
@@ -86,11 +43,36 @@ final class FuzzDivRemSpec: QuickSpec {
             let below = [UInt64](repeating: .max, count: limb) + [UInt64](repeating: 0, count: count - limb)
             var above = divisor
             above[0] += 1
-            for dividend in [zero, below, divisor, above, [UInt64](repeating: .max, count: count)] {
-                checkDivision(type, dividend: dividend, divisor: divisor, description: "dividend \(dividend), divisor \(divisor)")
+            let dividends = [zero, below, divisor, above, [UInt64](repeating: .max, count: count)]
+            for divisor in [below, divisor, above] where divisor != zero {
+                for dividend in dividends {
+                    checkDivision(type, dividend: dividend, divisor: divisor, description: "dividend \(dividend), divisor \(divisor)")
+                }
             }
         }
         checkDivision(type, dividend: [UInt64](repeating: .max, count: count), divisor: [UInt64](repeating: .max, count: count), description: "MAX / MAX")
+    }
+
+    private static func checkQuotientSaturation<T: BigUInt>(_ type: T.Type) {
+        let count = Int(T.numberBase)
+        for words in 2 ..< count {
+            for shift in 0 ..< 64 {
+                var divisor = [UInt64](repeating: 0, count: count)
+                divisor[0] = 1
+                divisor[words - 1] = UInt64(1) << (63 - shift)
+                // a = d*b-1 gives q = b-1, r = d-1, where b = 2^64.
+                var dividend = [UInt64.max] + divisor.dropLast()
+                dividend[1] -= 1
+                var remainder = divisor
+                remainder[0] -= 1
+                let (q, r) = T(from: dividend).divRem(divisor: T(from: divisor))
+                let description = "divisor words \(words), shift \(shift), dividend \(dividend), divisor \(divisor)"
+
+                expect(q).to(equal(T(from: UInt64.max)), description: description)
+                expect(r).to(equal(T(from: remainder)), description: description)
+                expectDivisionIdentity(dividend: dividend, divisor: divisor, quotient: q.BYTES, remainder: r.BYTES, description: description)
+            }
+        }
     }
 
     override class func spec() {
@@ -111,20 +93,29 @@ final class FuzzDivRemSpec: QuickSpec {
                 Self.checkLimbBoundaries(U512.self)
             }
 
+            it("verifies U256 saturated quotient estimates for every normalization") {
+                Self.checkQuotientSaturation(U256.self)
+            }
+
+            it("verifies U512 saturated quotient estimates for every normalization") {
+                Self.checkQuotientSaturation(U512.self)
+            }
+
             it("verifies word division around every divisor bit boundary") {
+                var divisors: Set<UInt64> = [.max]
                 for bit in 0 ..< 64 {
                     let power = UInt64(1) << bit
-                    let divisors = [power - 1, power, power + 1, UInt64.max].filter { $0 != 0 }
-                    for divisor in divisors {
-                        for hi in [0, divisor / 2, divisor - 1] {
-                            for lo: UInt64 in [0, 1, .max] {
-                                let (q, r) = U256.divModWord(hi: hi, lo: lo, y: divisor)
-                                Self.expectDivisionIdentity(
-                                    dividend: [lo, hi], divisor: [divisor, 0],
-                                    quotient: [q, 0], remainder: [r, 0],
-                                    description: "hi \(hi), lo \(lo), divisor \(divisor)"
-                                )
-                            }
+                    divisors.formUnion([power - 1, power, power + 1])
+                }
+                for divisor in divisors.sorted() where divisor != 0 {
+                    for hi in Set([0, divisor / 2, divisor - 1]).sorted() {
+                        for lo: UInt64 in [0, 1, .max] {
+                            let (q, r) = U256.divModWord(hi: hi, lo: lo, y: divisor)
+                            expectDivisionIdentity(
+                                dividend: [lo, hi], divisor: [divisor, 0],
+                                quotient: [q, 0], remainder: [r, 0],
+                                description: "hi \(hi), lo \(lo), divisor \(divisor)"
+                            )
                         }
                     }
                 }

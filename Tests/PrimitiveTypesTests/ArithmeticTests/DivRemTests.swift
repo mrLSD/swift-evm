@@ -244,7 +244,7 @@ final class ArithmeticDivRemSpec: QuickSpec {
 
                         expect(q).to(equal(U512(from: [0, 1, 0, 0, 0, 0, 0, 0])), description: "divisor words \(words)")
                         expect(r).to(equal(U512(from: remainder)), description: "divisor words \(words)")
-                        expect(r < U512(from: divisor)).to(beTrue())
+                        expect(r < U512(from: divisor)).to(beTrue(), description: "divisor words \(words)")
                     }
                 }
 
