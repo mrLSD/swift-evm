@@ -10,6 +10,19 @@ final class InstructionModSpec: QuickSpec {
 
     override class func spec() {
         describe("Instruction Mod") {
+            it("returns the remainder after Knuth remainder-estimate overflow") {
+                let m = Self.machine
+
+                _ = m.stack.push(value: U256(from: [.max, .max, 0, 0]))
+                _ = m.stack.push(value: U256(from: [0, .max, .max-1, 0]))
+                m.evalLoop()
+
+                expect(m.machineStatus).to(equal(.Exit(.Success(.Stop))))
+                expect(m.stack.peek(indexFromTop: 0)).to(beSuccess(U256(from: [.max-1, .max, 0, 0])))
+                expect(m.stack.length).to(equal(1))
+                expect(m.gas.remaining).to(equal(10-GasConstant.LOW))
+            }
+
             it("preserves a remainder whose high bit is set") {
                 let m = Self.machine
 

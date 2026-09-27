@@ -13,8 +13,123 @@ final class FuzzDivRemSpec: QuickSpec {
         }
     }
 
+    private static func bytes(_ words: [UInt64]) -> [UInt8] {
+        words.flatMap { word in
+            (0 ..< 8).map { UInt8(truncatingIfNeeded: word >> ($0 * 8)) }
+        }
+    }
+
+    private static func expectDivisionIdentity(dividend: [UInt64], divisor: [UInt64], quotient: [UInt64], remainder: [UInt64], description: String) {
+        let a = bytes(dividend)
+        let d = bytes(divisor)
+        let q = bytes(quotient)
+        let r = bytes(remainder)
+
+        // Reconstruct q*d+r in base 256 with twice the input width, without library arithmetic.
+        var product = [UInt32](repeating: 0, count: a.count * 2 + 1)
+        for i in q.indices {
+            for j in d.indices {
+                product[i + j] += UInt32(q[i]) * UInt32(d[j])
+            }
+        }
+
+        for i in r.indices {
+            product[i] += UInt32(r[i])
+        }
+
+        for i in 0 ..< product.count - 1 {
+            product[i + 1] += product[i] >> 8
+            product[i] &= 0xFF
+        }
+        let expected = a.map(UInt32.init) + [UInt32](repeating: 0, count: product.count - a.count)
+
+        expect(product).to(equal(expected), description: description)
+        expect(r.reversed().lexicographicallyPrecedes(d.reversed())).to(beTrue(), description: description)
+    }
+
+    private static func checkDivision<T: BigUInt>(_ type: T.Type, dividend: [UInt64], divisor: [UInt64], description: String) {
+        let (q, r) = T(from: dividend).divRem(divisor: T(from: divisor))
+        expectDivisionIdentity(dividend: dividend, divisor: divisor, quotient: q.BYTES, remainder: r.BYTES, description: description)
+    }
+
+    private static func checkNormalizations<T: BigUInt>(_ type: T.Type, seed: UInt64) {
+        var generator = SeededGenerator(state: seed)
+        let count = Int(T.numberBase)
+        for divisorWords in 1 ... count {
+            for shift in 0 ..< 64 {
+                var divisor = [UInt64](repeating: 0, count: count)
+                for i in 0 ..< divisorWords {
+                    divisor[i] = generator.next()
+                }
+
+                divisor[divisorWords - 1] = (generator.next() >> shift) | (UInt64(1) << (63 - shift))
+                for dividendWords in divisorWords ... count {
+                    var dividend = [UInt64](repeating: 0, count: count)
+                    for i in 0 ..< dividendWords {
+                        dividend[i] = generator.next()
+                    }
+
+                    dividend[dividendWords - 1] |= 0x8000000000000000
+                    let description = "seed \(seed), shift \(shift), dividend \(dividend), divisor \(divisor)"
+                    checkDivision(type, dividend: dividend, divisor: divisor, description: description)
+                }
+            }
+        }
+    }
+
+    private static func checkLimbBoundaries<T: BigUInt>(_ type: T.Type) {
+        let count = Int(T.numberBase)
+        let zero = [UInt64](repeating: 0, count: count)
+        for limb in 0 ..< count {
+            var divisor = zero
+            divisor[limb] = 1
+            let below = [UInt64](repeating: .max, count: limb) + [UInt64](repeating: 0, count: count - limb)
+            var above = divisor
+            above[0] += 1
+            for dividend in [zero, below, divisor, above, [UInt64](repeating: .max, count: count)] {
+                checkDivision(type, dividend: dividend, divisor: divisor, description: "dividend \(dividend), divisor \(divisor)")
+            }
+        }
+        checkDivision(type, dividend: [UInt64](repeating: .max, count: count), divisor: [UInt64](repeating: .max, count: count), description: "MAX / MAX")
+    }
+
     override class func spec() {
         describe("Fuzz divRem") {
+            it("verifies U256 division for every normalization and operand length") {
+                Self.checkNormalizations(U256.self, seed: 0xD256)
+            }
+
+            it("verifies U512 division for every normalization and operand length") {
+                Self.checkNormalizations(U512.self, seed: 0xD512)
+            }
+
+            it("verifies U256 division at every limb boundary") {
+                Self.checkLimbBoundaries(U256.self)
+            }
+
+            it("verifies U512 division at every limb boundary") {
+                Self.checkLimbBoundaries(U512.self)
+            }
+
+            it("verifies word division around every divisor bit boundary") {
+                for bit in 0 ..< 64 {
+                    let power = UInt64(1) << bit
+                    let divisors = [power - 1, power, power + 1, UInt64.max].filter { $0 != 0 }
+                    for divisor in divisors {
+                        for hi in [0, divisor / 2, divisor - 1] {
+                            for lo: UInt64 in [0, 1, .max] {
+                                let (q, r) = U256.divModWord(hi: hi, lo: lo, y: divisor)
+                                Self.expectDivisionIdentity(
+                                    dividend: [lo, hi], divisor: [divisor, 0],
+                                    quotient: [q, 0], remainder: [r, 0],
+                                    description: "hi \(hi), lo \(lo), divisor \(divisor)"
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
             if #available(macOS 15.0, iOS 18.0, tvOS 18.0, watchOS 11.0, visionOS 2.0, *) {
                 func splitUInt128(_ value: UInt128) -> (high: UInt64, low: UInt64) {
                     let high = UInt64(value >> 64)

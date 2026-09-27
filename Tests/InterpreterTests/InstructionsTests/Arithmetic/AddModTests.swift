@@ -14,6 +14,20 @@ final class InstructionAddModSpec: QuickSpec {
 
     override class func spec() {
         describe("Instruction AddMod") {
+            it("reduces a 257-bit sum with a high-bit remainder") {
+                let m = Self.machine
+
+                _ = m.stack.push(value: U256(from: UInt64.max))
+                _ = m.stack.push(value: U256(from: [0, 0x8000000000000000, 0, 0]))
+                _ = m.stack.push(value: U256.MAX)
+                m.evalLoop()
+
+                expect(m.machineStatus).to(equal(.Exit(.Success(.Stop))))
+                expect(m.stack.peek(indexFromTop: 0)).to(beSuccess(U256(from: 0x8000000000000000)))
+                expect(m.stack.length).to(equal(1))
+                expect(m.gas.remaining).to(equal(10 - GasConstant.MID))
+            }
+
             it("`(2 + 6) % 3`") {
                 let m = Self.machine
 

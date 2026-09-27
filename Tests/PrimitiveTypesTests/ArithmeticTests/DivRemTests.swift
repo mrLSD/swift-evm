@@ -217,6 +217,37 @@ final class ArithmeticDivRemSpec: QuickSpec {
             }
 
             context("Knuth quotient correction") {
+                it("adds back the divisor after a nonzero higher quotient digit") {
+                    let a = U256(from: [0, 2, 2, 1])
+                    let divisor = U256(from: [1, 1, 1, 0])
+                    let (q, r) = a.divRem(divisor: divisor)
+
+                    expect(q).to(equal(U256(from: [0, 1, 0, 0])))
+                    expect(r).to(equal(U256(from: [0, 1, 1, 0])))
+                    expect(r < divisor).to(beTrue())
+                    expect(U512(from: q) * U512(from: divisor) + U512(from: r)).to(equal(U512(from: a)))
+                }
+
+                it("adds back U512 divisors of different lengths") {
+                    for words in 3 ... 7 {
+                        var divisor = [UInt64](repeating: 0, count: 8)
+                        divisor[0] = 1
+                        divisor[1] = 1
+                        divisor[words - 1] = 1
+                        var remainder = divisor
+                        remainder[0] = 0
+                        var dividend = remainder
+                        for i in 0 ..< words {
+                            dividend[i + 1] += divisor[i]
+                        }
+                        let (q, r) = U512(from: dividend).divRem(divisor: U512(from: divisor))
+
+                        expect(q).to(equal(U512(from: [0, 1, 0, 0, 0, 0, 0, 0])), description: "divisor words \(words)")
+                        expect(r).to(equal(U512(from: remainder)), description: "divisor words \(words)")
+                        expect(r < U512(from: divisor)).to(beTrue())
+                    }
+                }
+
                 it("propagates corrected quotient digits through a full U512 dividend") {
                     // a = (b^3 - b^2 - b) * b^5, divisor = b^2 - 1, b = 2^64.
                     let a = U512(from: [0, 0, 0, 0, 0, 0, .max, .max - 1])
