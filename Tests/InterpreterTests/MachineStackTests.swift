@@ -185,6 +185,15 @@ final class InterpreterMachineStackSpec: QuickSpec {
             }
 
             context("peek UInt operation") {
+                it("rejects values wider than UInt without consuming the stack") {
+                    var stack = Stack(limit: 1)
+                    expect(stack.push(value: U256(from: [0, 1, 0, 0]))).to(beSuccess())
+                    expect(stack.peekUInt(indexFromTop: 0)).to(beFailure { error in
+                        expect(error).to(matchError(Machine.ExitError.OutOfOffset))
+                    })
+                    expect(stack.length).to(equal(1))
+                }
+
                 it("should return values from the stack successfully") {
                     var stack = Stack(limit: 2)
                     let result1 = stack.push(value: U256(from: 10))

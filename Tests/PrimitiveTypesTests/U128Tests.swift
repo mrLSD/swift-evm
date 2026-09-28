@@ -181,6 +181,22 @@ final class U128Spec: QuickSpec {
             }
 
             context("addition carry propagation") {
+                it("wraps the addition operator across the full width") {
+                    expect(U128.MAX + U128(from: 1)).to(equal(U128.ZERO))
+                }
+
+                it("reports high-limb overflow without a low-limb carry") {
+                    let (sum, overflow) = U128(from: [0, .max]).overflowAdd(U128(from: [0, 1]))
+                    expect(sum).to(equal(U128.ZERO))
+                    expect(overflow).to(beTrue())
+                }
+
+                it("adds without a carry in either limb") {
+                    let (sum, overflow) = U128(from: [2, 3]).overflowAdd(U128(from: [4, 5]))
+                    expect(sum).to(equal(U128(from: [6, 8])))
+                    expect(overflow).to(beFalse())
+                }
+
                 it("propagates carry from l0 to h0") {
                     let a = U128(from: [UInt64.max, 0])
                     let b = U128(from: [1, 0])

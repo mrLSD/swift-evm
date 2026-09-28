@@ -1,7 +1,7 @@
 /// `BigUInt` arithmetic operations.
 ///
-/// Add/Sub/Mul are specialized per concrete type (U128, U256, U512) to operate on stored fields
-/// without allocating array views. Knuth long division (used for `/` and `%`) remains generic.
+/// Concrete types implement the arithmetic needed by the EVM on stored fields.
+/// Generic division materializes each operand once and runs Knuth on limb arrays.
 public extension BigUInt {
     /// Multiply-accumulate primitive: `lhs += a*b + carry`, returns the high carry.
     /// Used by per-type multiplication implementations and by Knuth division helpers.
@@ -14,51 +14,43 @@ public extension BigUInt {
         return productHigh &+ (carry1 ? 1 : 0) &+ (carry2 ? 1 : 0)
     }
 
-    /// Returns the least number of bits needed to represent the number
-    private func leastNumber() -> Int {
-        guard let index = BYTES.lastIndex(where: { $0 > 0 }) else {
-            return 0
-        }
-        return (0x40 * (index + 1)) - BYTES[index].leadingZeroBitCount
-    }
-
-    /// Returns the least number of words needed to represent the nonzero number
-    private func leastNumberOfWords(bits: Int) -> Int {
-        1 + (bits - 1) / 64
-    }
-
-    /// Computes the quotient and remainder of dividing this value by `rhs`.
-    ///
-    /// - Parameter rhs: The divisor.
-    /// - Returns: A tuple containing:
-    ///   - quotient: The integer quotient of `self / rhs`.
-    ///   - remainder: The remainder of `self % rhs`.
+    /// Divides unsigned magnitudes, materializing each operand once.
     /// - Precondition: `rhs` must not be zero.
-    /// - Note: If `rhs == 1`, returns `(self, .ZERO)`.
-    /// - Note: If `rhs` is larger than `self`, returns `(.ZERO, self)`.
-    /// - Note: Uses a small-word division path when `rhs` fits in `UInt64`, otherwise falls back to Knuth’s long division.
     func divMod(_ rhs: Self) -> (quotient: Self, remainder: Self) {
         precondition(!rhs.isZero, "Division by zero")
-        if rhs == Self(from: 1) {
-            return (self, Self.ZERO)
+        let (quotient, remainder) = Self.divMod(BYTES, rhs.BYTES)
+        return (Self(from: quotient), Self(from: remainder))
+    }
+
+    /// Divides equal-width, little-endian arrays; the divisor is nonzero.
+    private static func divMod(_ u: [UInt64], _ v: [UInt64]) -> (quotient: [UInt64], remainder: [UInt64]) {
+        let uBits = Self.leastNumber(u)
+        let vBits = Self.leastNumber(v)
+        if vBits == 1 {
+            return (u, [UInt64](repeating: 0, count: u.count))
         }
-
-        let lhsLeastNumber = self.leastNumber()
-        let rhsLeastNumber = rhs.leastNumber()
-
         // Early return in case we are dividing by a larger number than us
-        if lhsLeastNumber < rhsLeastNumber {
-            return (Self.ZERO, self)
+        if uBits < vBits {
+            return ([UInt64](repeating: 0, count: u.count), u)
+        }
+        if vBits <= 64 {
+            return Self.divModSmall(u, v[0])
         }
 
-        if rhsLeastNumber <= 64 {
-            return self.divModSmall(other: rhs.BYTES[0])
-        }
+        // divisor limbs
+        let n = 1 + (vBits - 1) / 64
+        // extra dividend limbs
+        let m = 1 + (uBits - 1) / 64 - n
 
-        let lhsWord = self.leastNumberOfWords(bits: lhsLeastNumber)
-        let rhsWord = self.leastNumberOfWords(bits: rhsLeastNumber)
-        var rhs = rhs
-        return self.divModKnuth(v: &rhs, n: rhsWord, m: lhsWord - rhsWord)
+        return Self.divModKnuth(u, v, n: n, m: m)
+    }
+
+    /// Returns the least number of bits needed to represent the number (`0` for zero).
+    private static func leastNumber(_ a: [UInt64]) -> Int {
+        guard let index = a.lastIndex(where: { $0 > 0 }) else {
+            return 0
+        }
+        return 64 * (index + 1) - a[index].leadingZeroBitCount
     }
 
     /// Adds two slices of UInt64 and updates the first slice.
@@ -124,84 +116,70 @@ public extension BigUInt {
         y.dividingFullWidth((high: hi, low: lo))
     }
 
-    /// Multiply UInt64 with carry
-    private static func mulUInt64(_ a: UInt64, _ b: UInt64, _ carry: UInt64) -> (UInt64, UInt64) {
-        let res = (U128(from: a) * U128(from: b)) + U128(from: carry)
-        return (res.BYTES[0], res.BYTES[1])
-    }
-
-    /// Overflowing multiplication by Uint64.
-    /// Returns the result and carry.
-    private func overflowMulUInt64(by value: UInt64) -> (Self, UInt64) {
+    /// `a * b`, widened by one limb for the final carry.
+    private static func mul(_ a: [UInt64], by b: UInt64) -> [UInt64] {
+        var res = [UInt64](repeating: 0, count: a.count + 1)
         var carry: UInt64 = 0
-        var result = [UInt64](repeating: 0, count: self.BYTES.count)
-        for i in 0 ..< self.BYTES.count {
-            let (res, c) = Self.mulUInt64(self.BYTES[i], value, carry)
-            result[i] = res
-            carry = c
+        for i in 0 ..< a.count {
+            carry = Self.mac(&res[i], a[i], b, carry)
         }
-        return (Self(from: result), carry)
-    }
-
-    /// Full multiplication by UInt64.
-    private func fullMulUInt64(by: UInt64) -> [UInt64] {
-        var res = [UInt64](repeating: 0, count: self.BYTES.count + 1)
-        let (prod, carry) = self.overflowMulUInt64(by: by)
-        res.replaceSubrange(0 ..< self.BYTES.count, with: prod.BYTES)
-        res[self.BYTES.count] = carry
+        res[a.count] = carry
         return res
     }
 
-    /// Full shift right of an array of UInt64 by `shift` bits.
-    private static func fullShr(_ u: borrowing [UInt64], _ shift: Int) -> Self {
-        let n_words = u.count - 1
-        var resWords = [UInt64](repeating: 0, count: n_words)
-
-        for i in 0 ..< n_words {
-            resWords[i] = u[i] >> shift
-        }
+    /// `a << shift` for `0 <= shift < 64`; bits shifted out of the top limb are dropped.
+    private static func shiftLeft(_ a: [UInt64], _ shift: Int) -> [UInt64] {
+        var res = a.map { $0 << shift }
         if shift > 0 {
-            for i in 1 ... n_words {
-                resWords[i - 1] |= u[i] << (64 - shift)
+            for i in 1 ..< a.count {
+                res[i] |= a[i - 1] >> (64 - shift)
             }
         }
-
-        return Self(from: resWords)
+        return res
     }
 
-    /// Division and modulus by small UInt64 number.
-    private func divModSmall(other: UInt64) -> (quotient: Self, remainder: Self) {
+    /// `a >> shift` for `0 <= shift < 64`, narrowed by one limb (the top limb is always zero here).
+    private static func shiftRight(_ a: [UInt64], _ shift: Int) -> [UInt64] {
+        var res = (0 ..< a.count - 1).map { a[$0] >> shift }
+        if shift > 0 {
+            for i in 0 ..< res.count {
+                res[i] |= a[i + 1] << (64 - shift)
+            }
+        }
+        return res
+    }
+
+    /// Division and modulus by a single limb.
+    private static func divModSmall(_ u: [UInt64], _ d: UInt64) -> (quotient: [UInt64], remainder: [UInt64]) {
         var rem: UInt64 = 0
-        var quotient = [UInt64](repeating: 0, count: self.BYTES.count)
-        for i in stride(from: quotient.count - 1, through: 0, by: -1) {
-            let (q, r) = Self.divModWord(hi: rem, lo: self.BYTES[i], y: other)
+        var quotient = [UInt64](repeating: 0, count: u.count)
+        for i in stride(from: u.count - 1, through: 0, by: -1) {
+            let (q, r) = Self.divModWord(hi: rem, lo: u[i], y: d)
             quotient[i] = q
             rem = r
         }
-
-        return (Self(from: quotient), Self(from: rem))
+        var remainder = [UInt64](repeating: 0, count: u.count)
+        remainder[0] = rem
+        return (quotient, remainder)
     }
 
     /// See Knuth, TAOCP, Volume 2, section 4.3.1, Algorithm D.
-    func divModKnuth(v: inout Self, n: Int, m: Int) -> (quotient: Self, remainder: Self) {
+    /// `n` is the number of divisor limbs, `m` the number of extra dividend limbs.
+    private static func divModKnuth(_ u0: [UInt64], _ v0: [UInt64], n: Int, m: Int) -> (quotient: [UInt64], remainder: [UInt64]) {
         // D1.
         // Make sure 64th bit in v's highest word is set.
-        // If we shift both self and v, it won't affect the quotient
+        // If we shift both u and v, it won't affect the quotient
         // and the remainder will only need to be shifted back.
-        let shift = v.BYTES[n - 1].leadingZeroBitCount
-        v = v.shiftLeftForBytes(shift)
+        let shift = v0[n - 1].leadingZeroBitCount
+        let v = Self.shiftLeft(v0, shift)
 
-        // u will store the remainder (shifted)
-        var u = [UInt64](repeating: 0, count: self.BYTES.count + 1)
-        let u_lo = self.BYTES[0] << shift
-        let u_hi = self.shiftRightForBytes(64 - shift)
-        u[0] = u_lo
-        u.replaceSubrange(1 ..< u.count, with: u_hi.BYTES)
+        // u will store the remainder (shifted); one extra limb holds the bits shifted out.
+        var u = Self.shiftLeft(u0 + [0], shift)
 
         // quotient
-        var q = [UInt64](repeating: 0, count: self.BYTES.count)
-        let v_n_1 = v.BYTES[n - 1]
-        let v_n_2 = v.BYTES[n - 2]
+        var q = [UInt64](repeating: 0, count: u0.count)
+        let v_n_1 = v[n - 1]
+        let v_n_2 = v[n - 2]
 
         // D2. D7.
         // iterate from m downto 0
@@ -219,8 +197,7 @@ public extension BigUInt {
                 // this loop takes at most 2 iterations
                 while true {
                     // Check if q_hat * v_n_2 > b * r_hat + u[j+n-2]
-                    let product = U128(from: temp_q_hat) * U128(from: v_n_2)
-                    let (lo, hi) = (product.BYTES[0], product.BYTES[1])
+                    let (hi, lo) = temp_q_hat.multipliedFullWidth(by: v_n_2)
                     if (hi, lo) <= (r_hat, u[j + n - 2]) {
                         break
                     }
@@ -246,7 +223,7 @@ public extension BigUInt {
             // D4.
             // let's assume optimistically q_hat == q_j
             // subtract (q_hat * v) from u[j..]
-            let q_hat_v = v.fullMulUInt64(by: q_hat)
+            let q_hat_v = Self.mul(v, by: q_hat)
             // u[j..] -= q_hat_v;
             let c = Self.subSlice(a: &u, from: j, b: q_hat_v, to: n + 1)
 
@@ -255,40 +232,17 @@ public extension BigUInt {
             // Highly unlikely ~ (1 / 2^63)
             //
             // Add v to u[j..<j + n]
-            Self.carryAddSlice(carry: c, q_hat: &q_hat, a: &u, from: j, b: v.BYTES, to: n)
+            Self.carryAddSlice(carry: c, q_hat: &q_hat, a: &u, from: j, b: v, to: n)
 
             // D5.
             q[j] = q_hat
         }
 
         // D8.
-        let remainder = Self.fullShr(u, shift)
-
-        return (Self(from: q), remainder)
+        return (q, Self.shiftRight(u, shift))
     }
 
-    /// Performs an optimized long division of a fixed-bit unsigned integer by another fixed-bit unsigned integer with same length.
-    ///
-    /// This function divides a fixed-bit numerator by a fixed-bit divisor, both represented as arrays of four `UInt64` values
-    /// (little-endian order), and returns the quotient and remainder as arrays of `UInt64`.
-    ///
-    /// - Parameters:
-    ///   - self: An array of four `UInt64` values representing the fixed-bit numerator (dividend),
-    ///   - divisor: An array of four `UInt64` values representing the fixed-bit divisor, with same length to `self`.
-    ///
-    /// - Returns: A tuple containing:
-    ///   - `quotient`: An array of four `UInt64` values representing the fixed-bit quotient of the `division`.
-    ///   - `remainder`: An array of four `UInt64` values representing the fixed-bit `remainder` after the division.
-    ///
-    /// - Precondition:
-    ///   - The `divisor` must not be zero.
-    ///   - Both `self` and `divisor` arrays must have exactly same length of elements.
-    ///
-    /// - Note:
-    ///   - The function operates on little-endian representations of the numbers. Ensure that the least significant word is at index `0`
-    ///     and the most significant word is at index `Count-1`.
-    ///
-    /// - Complexity: O(1), since it operates on fixed-size arrays.
+    /// Returns the unsigned quotient and remainder. The divisor must be nonzero.
     @inline(__always)
     func divRem(divisor: Self) -> (quotient: Self, remainder: Self) {
         self.divMod(divisor)

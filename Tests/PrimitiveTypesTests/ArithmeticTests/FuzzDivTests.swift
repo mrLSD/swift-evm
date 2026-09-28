@@ -7,6 +7,23 @@ final class FuzzDivRemSpec: QuickSpec {
     private static func checkDivision<T: BigUInt>(_ type: T.Type, dividend: [UInt64], divisor: [UInt64], description: String) {
         let (q, r) = T(from: dividend).divRem(divisor: T(from: divisor))
         expectDivisionIdentity(dividend: dividend, divisor: divisor, quotient: q.BYTES, remainder: r.BYTES, description: description)
+        if type == U256.self {
+            let concrete = U256(from: dividend).divRem(divisor: U256(from: divisor))
+            expect(concrete.quotient.BYTES).to(equal(q.BYTES), description: description)
+            expect(concrete.remainder.BYTES).to(equal(r.BYTES), description: description)
+        }
+    }
+
+    private static func checkFullWidthDivision<T: BigUInt>(_ type: T.Type, seed: UInt64) {
+        var generator = SeededGenerator(state: seed)
+        for index in 0 ..< 1_024 {
+            var dividend = (0 ..< T.numberBase).map { _ in generator.next() }
+            var divisor = (0 ..< T.numberBase).map { _ in generator.next() }
+            dividend[dividend.count - 1] |= 0x8000000000000000
+            divisor[divisor.count - 1] |= 0x8000000000000000
+            let description = "seed \(seed), iteration \(index), dividend \(dividend), divisor \(divisor)"
+            checkDivision(type, dividend: dividend, divisor: divisor, description: description)
+        }
     }
 
     private static func checkNormalizations<T: BigUInt>(_ type: T.Type, seed: UInt64) {
@@ -77,6 +94,14 @@ final class FuzzDivRemSpec: QuickSpec {
 
     override class func spec() {
         describe("Fuzz divRem") {
+            it("verifies seeded full-width U256 division through generic and concrete paths") {
+                Self.checkFullWidthDivision(U256.self, seed: 0xF256)
+            }
+
+            it("verifies seeded full-width U512 division") {
+                Self.checkFullWidthDivision(U512.self, seed: 0xF512)
+            }
+
             it("verifies U256 division for every normalization and operand length") {
                 Self.checkNormalizations(U256.self, seed: 0xD256)
             }

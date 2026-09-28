@@ -8,14 +8,14 @@
 @usableFromInline
 internal let hexTableLower: [UInt8] = [
     0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, // '0'..'7'
-    0x38, 0x39, 0x61, 0x62, 0x63, 0x64, 0x65, 0x66, // '8', '9', 'a'..'f'
+    0x38, 0x39, 0x61, 0x62, 0x63, 0x64, 0x65, 0x66 // '8', '9', 'a'..'f'
 ]
 
 /// ASCII bytes for uppercase hex digits `0..F`.
 @usableFromInline
 internal let hexTableUpper: [UInt8] = [
     0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, // '0'..'7'
-    0x38, 0x39, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, // '8', '9', 'A'..'F'
+    0x38, 0x39, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46 // '8', '9', 'A'..'F'
 ]
 
 /// Encode a `UInt8` as two hex ASCII bytes (high nibble first).
@@ -36,7 +36,7 @@ public func hexEncode<S: Sequence>(_ bytes: S, uppercase: Bool) -> String where 
         out.append(table[Int(byte >> 4)])
         out.append(table[Int(byte & 0x0F)])
     }
-    return String(decoding: out, as: UTF8.self)
+    return String(decoding: out, as: UTF8.self) // swiftlint:disable:this optional_data_string_conversion
 }
 
 /// Encode a `UInt64` to a hex `String` without leading zeros (matches `printf("%x")`).
@@ -53,5 +53,5 @@ public func hexEncodeNoPad(_ value: UInt64, uppercase: Bool) -> String {
         v >>= 4
     }
     out.reverse()
-    return String(decoding: out, as: UTF8.self)
+    return String(decoding: out, as: UTF8.self) // swiftlint:disable:this optional_data_string_conversion
 }

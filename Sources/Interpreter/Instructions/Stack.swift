@@ -70,8 +70,9 @@ enum StackInstructions {
             return
         }
 
-        // After stack verification this guard will always succeed. But we keep it for safety and clarity.
-        guard let val1 = m.stackPeek(indexFromTop: 0), let val2 = m.stackPeek(indexFromTop: n) else { return }
+        // Stack size was verified above; these unwraps cannot fail.
+        let val1 = m.stackPeek(indexFromTop: 0)!
+        let val2 = m.stackPeek(indexFromTop: n)!
 
         if !m.gasRecordCost(cost: GasConstant.VERYLOW) {
             return
@@ -95,8 +96,8 @@ enum StackInstructions {
             return
         }
 
-        // After stack verification this guard will always succeed. But we keep it for safety and clarity.
-        guard let dupVal = m.stackPeek(indexFromTop: n - 1) else { return }
+        // Stack size was verified above; this unwrap cannot fail.
+        let dupVal = m.stackPeek(indexFromTop: n - 1)!
 
         m.stackPush(value: dupVal)
     }

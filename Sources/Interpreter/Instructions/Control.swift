@@ -46,9 +46,9 @@ enum ControlInstructions {
             return
         }
 
-        // After stack verification this guard will always succeed. But we keep it for safety and clarity.
+        // Stack size was verified above; these unwraps cannot fail.
         // Get jump destination
-        guard let target = m.stackPop() else { return }
+        let target = m.stackPop()!
 
         // Convert jump destination
         guard let dest = m.getIntOrFail(target) else {
@@ -75,9 +75,10 @@ enum ControlInstructions {
             return
         }
 
-        // After stack verification this guard will always succeed. But we keep it for safety and clarity.
+        // Stack size was verified above; these unwraps cannot fail.
         // Get jump destination
-        guard let target = m.stackPop(), let value = m.stackPop() else { return }
+        let target = m.stackPop()!
+        let value = m.stackPop()!
 
         // Jump destination can't be zero
         if value.isZero {
@@ -106,8 +107,9 @@ enum ControlInstructions {
             return
         }
 
-        // After stack verification this guard will always succeed. But we keep it for safety and clarity.// Pop values
-        guard let rawOffset = m.stackPop(), let rawLength = m.stackPop() else { return }
+        // Stack size was verified above; these unwraps cannot fail.
+        let rawOffset = m.stackPop()!
+        let rawLength = m.stackPop()!
 
         // Convert values
         guard let offset = m.getIntOrFail(rawOffset) else {
@@ -143,8 +145,9 @@ enum ControlInstructions {
             return
         }
 
-        // After stack verification this guard will always succeed. But we keep it for safety and clarity.
-        guard let rawOffset = m.stackPop(), let rawLength = m.stackPop() else { return }
+        // Stack size was verified above; these unwraps cannot fail.
+        let rawOffset = m.stackPop()!
+        let rawLength = m.stackPop()!
 
         // Convert values
         guard let offset = m.getIntOrFail(rawOffset) else {

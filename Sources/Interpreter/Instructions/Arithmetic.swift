@@ -24,8 +24,9 @@ enum ArithmeticInstructions {
             return
         }
 
-        // After stack verification this guard will always succeed. But we keep it for safety and clarity.
-        guard let op1 = m.stackPop(), let op2 = m.stackPop() else { return }
+        // Stack size was verified above; these unwraps cannot fail.
+        let op1 = m.stackPop()!
+        let op2 = m.stackPop()!
 
         let (newValue, _) = op1.overflowAdd(op2)
         m.stackPush(value: newValue)
@@ -43,8 +44,9 @@ enum ArithmeticInstructions {
             return
         }
 
-        // After stack verification this guard will always succeed. But we keep it for safety and clarity.
-        guard let op1 = m.stackPop(), let op2 = m.stackPop() else { return }
+        // Stack size was verified above; these unwraps cannot fail.
+        let op1 = m.stackPop()!
+        let op2 = m.stackPop()!
 
         let (newValue, _) = op1.overflowSub(op2)
         m.stackPush(value: newValue)
@@ -62,8 +64,9 @@ enum ArithmeticInstructions {
             return
         }
 
-        // After stack verification this guard will always succeed. But we keep it for safety and clarity.
-        guard let op1 = m.stackPop(), let op2 = m.stackPop() else { return }
+        // Stack size was verified above; these unwraps cannot fail.
+        let op1 = m.stackPop()!
+        let op2 = m.stackPop()!
 
         let newValue = op1.mul(op2)
         m.stackPush(value: newValue)
@@ -81,8 +84,9 @@ enum ArithmeticInstructions {
             return
         }
 
-        // After stack verification this guard will always succeed. But we keep it for safety and clarity.
-        guard let op1 = m.stackPop(), let op2 = m.stackPop() else { return }
+        // Stack size was verified above; these unwraps cannot fail.
+        let op1 = m.stackPop()!
+        let op2 = m.stackPop()!
 
         let newValue = op2.isZero ? U256.ZERO : op1 / op2
         m.stackPush(value: newValue)
@@ -100,8 +104,9 @@ enum ArithmeticInstructions {
             return
         }
 
-        // After stack verification this guard will always succeed. But we keep it for safety and clarity.
-        guard let op1 = m.stackPop(), let op2 = m.stackPop() else { return }
+        // Stack size was verified above; these unwraps cannot fail.
+        let op1 = m.stackPop()!
+        let op2 = m.stackPop()!
 
         let newValue = op2.isZero ? U256.ZERO : op1 % op2
         m.stackPush(value: newValue)
@@ -119,8 +124,9 @@ enum ArithmeticInstructions {
             return
         }
 
-        // After stack verification this guard will always succeed. But we keep it for safety and clarity.
-        guard let op1 = m.stackPop(), let op2 = m.stackPop() else { return }
+        // Stack size was verified above; these unwraps cannot fail.
+        let op1 = m.stackPop()!
+        let op2 = m.stackPop()!
 
         let iOp1 = I256.fromU256(op1)
         let iOp2 = I256.fromU256(op2)
@@ -140,8 +146,9 @@ enum ArithmeticInstructions {
             return
         }
 
-        // After stack verification this guard will always succeed. But we keep it for safety and clarity.
-        guard let op1 = m.stackPop(), let op2 = m.stackPop() else { return }
+        // Stack size was verified above; these unwraps cannot fail.
+        let op1 = m.stackPop()!
+        let op2 = m.stackPop()!
 
         let iOp1 = I256.fromU256(op1)
         let iOp2 = I256.fromU256(op2)
@@ -161,8 +168,10 @@ enum ArithmeticInstructions {
             return
         }
 
-        // After stack verification this guard will always succeed. But we keep it for safety and clarity.
-        guard let op1 = m.stackPop(), let op2 = m.stackPop(), let op3 = m.stackPop() else { return }
+        // Stack size was verified above; these unwraps cannot fail.
+        let op1 = m.stackPop()!
+        let op2 = m.stackPop()!
+        let op3 = m.stackPop()!
 
         let op1u512 = U512(from: op1)
         let op2u512 = U512(from: op2)
@@ -191,8 +200,10 @@ enum ArithmeticInstructions {
             return
         }
 
-        // After stack verification this guard will always succeed. But we keep it for safety and clarity.
-        guard let op1 = m.stackPop(), let op2 = m.stackPop(), let op3 = m.stackPop() else { return }
+        // Stack size was verified above; these unwraps cannot fail.
+        let op1 = m.stackPop()!
+        let op2 = m.stackPop()!
+        let op3 = m.stackPop()!
 
         let op1u512 = U512(from: op1)
         let op2u512 = U512(from: op2)
@@ -217,15 +228,16 @@ enum ArithmeticInstructions {
             return
         }
 
-        // After stack verification this guard will always succeed. But we keep it for safety and clarity.
-        guard var op2 = m.stackPeek(indexFromTop: 1) else { return }
+        // Stack size was verified above; these unwraps cannot fail.
+        var op2 = m.stackPeek(indexFromTop: 1)!
 
         if !m.gasRecordCost(cost: GasCost.expCost(hardFork: m.hardFork, power: op2)) {
             return
         }
 
-        // After stack verification this guard will always succeed. But we keep it for safety and clarity.
-        guard var op1 = m.stackPop(), let _ = m.stackPop() else { return }
+        // Stack size was verified above; these unwraps cannot fail.
+        var op1 = m.stackPop()!
+        _ = m.stackPop()
 
         let one = U256(from: 1)
         var r = one
@@ -266,8 +278,9 @@ enum ArithmeticInstructions {
             return
         }
 
-        // After stack verification this guard will always succeed. But we keep it for safety and clarity.
-        guard let op1 = m.stackPop(), let op2 = m.stackPop() else { return }
+        // Stack size was verified above; these unwraps cannot fail.
+        let op1 = m.stackPop()!
+        let op2 = m.stackPop()!
 
         var newValue = op2
         if op1 < U256(from: 32) {

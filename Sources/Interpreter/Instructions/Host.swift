@@ -8,8 +8,8 @@ enum HostInstructions {
             return
         }
 
-        // After stack verification this guard will always succeed. But we keep it for safety and clarity.
-        guard let address = m.stackPopH256()?.toH160() else { return }
+        // Stack size was verified above; this unwrap cannot fail.
+        let address = m.stackPopH256()!.toH160()
 
         // Calculate gas depending on hard fork
         var gasCost: UInt64 = 0

@@ -415,6 +415,6 @@ public enum Opcode: UInt8, CustomStringConvertible {
     /// Represent attributes as `String`: `OPCODE(0xNN)`
     public var description: String {
         let (hi, lo) = hexByteAscii(rawValue, uppercase: false)
-        return "\(name)(0x\(String(decoding: [hi, lo], as: UTF8.self)))"
+        return "\(name)(0x\(String(decoding: [hi, lo], as: UTF8.self)))" // swiftlint:disable:this optional_data_string_conversion
     }
 }

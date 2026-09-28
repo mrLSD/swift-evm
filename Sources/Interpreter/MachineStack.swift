@@ -107,7 +107,7 @@ struct Stack {
     }
 
     /// Peeks a value at a given index from the top of the stack and converts it to `UInt`.
-    /// If the value is larger than `UInt.max`, `ExitError.OutOfOffset` is returned (possible only for 32-bit context like `wasm32`).
+    /// Returns `ExitError.OutOfOffset` if the value exceeds the platform's `UInt.max`.
     ///
     /// - Parameter indexFromTop: The index from the top of the stack.
     /// - Returns: A `Result` containing the `UInt` value if successful, or an `ExitError` if an error occurs.
@@ -115,7 +115,6 @@ struct Stack {
     func peekUInt(indexFromTop: Int) -> Result<UInt, Machine.ExitError> {
         switch self.peek(indexFromTop: indexFromTop) {
         case .success(let u256):
-            // This situation possible only for 32-bit context (for example wasm32)
             guard let intValue = u256.getUInt else { return .failure(.OutOfOffset) }
             return .success(intValue)
         case .failure(let error):

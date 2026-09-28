@@ -6,19 +6,23 @@ public extension BigUInt {
         if shift <= 0 {
             return self
         }
-        var result = [UInt64](repeating: 0, count: self.BYTES.count)
+        if shift >= Int(Self.numberBytes) * 8 {
+            return Self.ZERO
+        }
+        let words = BYTES
+        var result = [UInt64](repeating: 0, count: words.count)
         let wordShift = shift / 64
         let bitShift = shift % 64
 
         // Shift
-        for i in wordShift ..< self.BYTES.count {
-            result[i] = self.BYTES[i - wordShift] << bitShift
+        for i in wordShift ..< words.count {
+            result[i] = words[i - wordShift] << bitShift
         }
 
         // Carry
         if bitShift > 0 {
-            for i in wordShift + 1 ..< self.BYTES.count {
-                result[i] |= self.BYTES[i - 1 - wordShift] >> (64 - bitShift)
+            for i in wordShift + 1 ..< words.count {
+                result[i] |= words[i - 1 - wordShift] >> (64 - bitShift)
             }
         }
         return Self(from: result)
@@ -30,19 +34,23 @@ public extension BigUInt {
         if shift <= 0 {
             return self
         }
-        var result = [UInt64](repeating: 0, count: self.BYTES.count)
+        if shift >= Int(Self.numberBytes) * 8 {
+            return Self.ZERO
+        }
+        let words = BYTES
+        var result = [UInt64](repeating: 0, count: words.count)
         let wordShift = shift / 64
         let bitShift = shift % 64
 
         // Shift
-        for i in wordShift ..< self.BYTES.count {
-            result[i - wordShift] = self.BYTES[i] >> bitShift
+        for i in wordShift ..< words.count {
+            result[i - wordShift] = words[i] >> bitShift
         }
 
         // Carry
         if bitShift > 0 {
-            for i in wordShift + 1 ..< self.BYTES.count {
-                result[i - wordShift - 1] |= self.BYTES[i] << (64 - bitShift)
+            for i in wordShift + 1 ..< words.count {
+                result[i - wordShift - 1] |= words[i] << (64 - bitShift)
             }
         }
         return Self(from: result)
