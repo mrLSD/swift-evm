@@ -16,25 +16,36 @@ final class AccountSpec: QuickSpec {
             describe("BasicAccount") {
                 context("initialization") {
                     it("should correctly set initial balance and nonce") {
-                        let account = BasicAccount(balance: hundred, nonce: one)
+                        let account = BasicAccount(balance: hundred, nonce: 1)
                         expect(account.balance).to(equal(hundred))
-                        expect(account.nonce).to(equal(one))
+                        expect(account.nonce).to(equal(UInt64(1)))
                     }
                 }
 
                 context("mutations") {
                     it("should increment nonce") {
-                        var account = BasicAccount(balance: hundred, nonce: zero)
+                        var account = BasicAccount(balance: hundred, nonce: 0)
 
                         account.incNonce()
-                        expect(account.nonce).to(equal(one))
+                        expect(account.nonce).to(equal(UInt64(1)))
 
                         account.incNonce()
-                        expect(account.nonce).to(equal(U256(from: 2)))
+                        expect(account.nonce).to(equal(UInt64(2)))
+                    }
+
+                    // Regression: `incNonce()` must use checked `+= 1` (not wrapping `&+= 1`).
+                    // If the caller skips the `MaxNonce` guard in `MemoryState.incNonce` and invokes
+                    // this directly with `nonce == UInt64.max`, the overflow MUST trap loudly —
+                    // silent wrap-around to 0 would mask a serious caller-side bug.
+                    it("traps on UInt64.max + 1 (no silent wrap)") {
+                        var account = BasicAccount(balance: hundred, nonce: UInt64.max)
+                        expect {
+                            account.incNonce()
+                        }.to(throwAssertion())
                     }
 
                     it("should set balance") {
-                        var account = BasicAccount(balance: hundred, nonce: zero)
+                        var account = BasicAccount(balance: hundred, nonce: 0)
                         account.setBalance(zero)
 
                         expect(account.balance).to(equal(zero))
@@ -43,25 +54,25 @@ final class AccountSpec: QuickSpec {
 
                 context("saturating arithmetic") {
                     it("should add balance normally without overflow") {
-                        var account = BasicAccount(balance: hundred, nonce: zero)
+                        var account = BasicAccount(balance: hundred, nonce: 0)
                         account.addBalance(hundred)
                         expect(account.balance).to(equal(U256(from: 200)))
                     }
 
                     it("should cap at MAX on balance overflow (saturating add)") {
-                        var account = BasicAccount(balance: maxU256, nonce: zero)
+                        var account = BasicAccount(balance: maxU256, nonce: 0)
                         account.addBalance(one)
                         expect(account.balance).to(equal(maxU256))
                     }
 
                     it("should subtract balance normally without underflow") {
-                        var account = BasicAccount(balance: hundred, nonce: zero)
+                        var account = BasicAccount(balance: hundred, nonce: 0)
                         account.subBalance(one)
                         expect(account.balance).to(equal(U256(from: 99)))
                     }
 
                     it("should cap at ZERO on balance underflow (saturating sub)") {
-                        var account = BasicAccount(balance: hundred, nonce: zero)
+                        var account = BasicAccount(balance: hundred, nonce: 0)
                         account.subBalance(U256(from: 101))
                         expect(account.balance).to(equal(zero))
                     }
@@ -69,7 +80,7 @@ final class AccountSpec: QuickSpec {
             }
 
             describe("StateAccount") {
-                let basic = BasicAccount(balance: hundred, nonce: one)
+                let basic = BasicAccount(balance: hundred, nonce: 1)
 
                 it("should initialize with provided values") {
                     let state = StateAccount(basic: basic, code: codeSample, reset: true)
@@ -87,7 +98,7 @@ final class AccountSpec: QuickSpec {
                     }
 
                     it("should not be equal if basic info differs") {
-                        let differentBasic = BasicAccount(balance: zero, nonce: zero)
+                        let differentBasic = BasicAccount(balance: zero, nonce: 0)
                         let state2 = StateAccount(basic: differentBasic, code: codeSample, reset: false)
                         expect(state1).toNot(equal(state2))
                     }

@@ -1,3 +1,5 @@
+import PrimitiveTypes
+
 /// EVM Opcodes
 public enum Opcode: UInt8, CustomStringConvertible {
     //
@@ -412,6 +414,7 @@ public enum Opcode: UInt8, CustomStringConvertible {
 
     /// Represent attributes as `String`: `OPCODE(0xNN)`
     public var description: String {
-        "\(name)(0x\(String(format: "%02x", rawValue)))"
+        let (hi, lo) = hexByteAscii(rawValue, uppercase: false)
+        return "\(name)(0x\(String(decoding: [hi, lo], as: UTF8.self)))"
     }
 }

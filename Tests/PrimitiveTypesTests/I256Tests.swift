@@ -3,6 +3,37 @@ import Nimble
 import Quick
 
 final class I256Spec: QuickSpec {
+    private static func checkDivisionSigns(dividend: [UInt64], divisor: [UInt64], description: String) {
+        let minimum: [UInt64] = [0, 0, 0, 0x8000_0000_0000_0000]
+        for negativeDividend in [false, true] where dividend != minimum || negativeDividend {
+            for negativeDivisor in [false, true] where divisor != minimum || negativeDivisor {
+                let a = I256(from: dividend, signExtend: negativeDividend)
+                let d = I256(from: divisor, signExtend: negativeDivisor)
+                let q = a / d
+                let r = a % d
+                let description = "\(description), dividend \(dividend), divisor \(divisor), signs \(negativeDividend), \(negativeDivisor)"
+                let quotientIsZero = q.BYTES.allSatisfy { $0 == 0 }
+                let remainderIsZero = r.BYTES.allSatisfy { $0 == 0 }
+                // EVM keeps MIN / -1 negative; the magnitude identity still holds.
+                let minimumQuotient = dividend == minimum && divisor == [1, 0, 0, 0]
+
+                expectDivisionIdentity(dividend: dividend, divisor: divisor, quotient: q.BYTES, remainder: r.BYTES, description: description)
+                expect(q.signExtend).to(equal(!quotientIsZero && (minimumQuotient || negativeDividend != negativeDivisor)), description: description)
+                expect(r.signExtend).to(equal(!remainderIsZero && negativeDividend), description: description)
+            }
+        }
+    }
+
+    private static func randomMagnitude(words: Int, generator: inout SeededGenerator) -> [UInt64] {
+        var magnitude = [UInt64](repeating: 0, count: 4)
+        for i in 0 ..< words {
+            magnitude[i] = generator.next()
+        }
+        magnitude[3] &= 0x7FFF_FFFF_FFFF_FFFF
+        magnitude[words - 1] = max(1, magnitude[words - 1])
+        return magnitude
+    }
+
     override class func spec() {
         describe("I256 type") {
             context("when init data wrong panics with message") {
@@ -138,6 +169,15 @@ final class I256Spec: QuickSpec {
                 it("correct transformed from Big Endian") {
                     expect(I256.fromBigEndian(from: val.toBigEndian)).to(equal(val))
                 }
+                it("normalizes zero with sign extension") {
+                    let fieldZero = I256(l0: 0, l1: 0, h0: 0, h1: 0, signExtend: true)
+                    let arrayZero = I256(from: [0, 0, 0, 0], signExtend: true)
+
+                    expect(fieldZero).to(equal(I256.ZERO))
+                    expect(arrayZero).to(equal(I256.ZERO))
+                    expect(fieldZero.signExtend).to(beFalse())
+                    expect(arrayZero.signExtend).to(beFalse())
+                }
             }
 
             context("when concrete I256 value") {
@@ -269,6 +309,16 @@ final class I256Spec: QuickSpec {
                     let val11 = I256(from: [2, 0, 0, 0])
                     let val12 = I256(from: [1, 0, 0, 0])
                     expect(val11 < val12).to(beFalse())
+
+                    // Differs only at h0 limb
+                    let val13 = I256(from: [9, 9, 1, 9])
+                    let val14 = I256(from: [9, 9, 2, 9])
+                    expect(val13 < val14).to(beTrue())
+
+                    // Differs only at l1 limb
+                    let val15 = I256(from: [9, 1, 9, 9])
+                    let val16 = I256(from: [9, 2, 9, 9])
+                    expect(val15 < val16).to(beTrue())
                 }
 
                 it("< [sign extend, not sign extend]") {
@@ -552,7 +602,74 @@ final class I256Spec: QuickSpec {
                 }
             }
 
+            context("bitwise AND") {
+                it("preserves signed patterns and canonical zero") {
+                    let minusOne = I256(from: [1, 0, 0, 0], signExtend: true)
+                    let minusSix = I256(from: [6, 0, 0, 0], signExtend: true)
+                    let cases: [(I256, I256, I256)] = [
+                        (minusOne, minusOne, minusOne),
+                        (minusSix, I256(from: [3, 0, 0, 0], signExtend: true), I256(from: [8, 0, 0, 0], signExtend: true)),
+                        (minusSix, I256(from: 3), I256(from: 2)),
+                        (I256(from: 3), minusSix, I256(from: 2)),
+                        (I256(from: 6), I256(from: 3), I256(from: 2)),
+                        (I256.minValue, minusOne, I256.minValue),
+                        (I256.minValue, I256.minValue, I256.minValue),
+                        (I256.minValue, I256(from: [.max, .max, .max, 0x7FFF_FFFF_FFFF_FFFF]), .ZERO),
+                        (.ZERO, minusOne, .ZERO),
+                    ]
+
+                    for (a, b, expected) in cases {
+                        let result = a & b
+                        let description = "lhs \(a.BYTES), rhs \(b.BYTES), signs \(a.signExtend), \(b.signExtend)"
+                        expect(result.BYTES).to(equal(expected.BYTES), description: description)
+                        expect(result.signExtend).to(equal(expected.signExtend), description: description)
+                    }
+                }
+
+                it("matches native limb AND across every bit boundary and seeded patterns") {
+                    let seed: UInt64 = 0xA256
+                    var generator = SeededGenerator(state: seed)
+
+                    for bit in 0 ..< 256 {
+                        var singleBit: [UInt64] = [0, 0, 0, 0]
+                        singleBit[bit / 64] = UInt64(1) << (bit % 64)
+                        let random = (0 ..< 4).map { _ in generator.next() }
+
+                        for lhs in [singleBit, singleBit.map { ~$0 }, random] {
+                            let rhs = (0 ..< 4).map { _ in generator.next() }
+                            let expected = zip(lhs, rhs).map { $0 & $1 }
+                            let result = I256.fromU256(U256(from: lhs)) & I256.fromU256(U256(from: rhs))
+                            let description = "seed \(seed), bit \(bit), lhs \(lhs), rhs \(rhs)"
+
+                            expect(result.toU256.BYTES).to(equal(expected), description: description)
+                            expect(result.signExtend).to(equal(expected[3] >> 63 != 0), description: description)
+                        }
+                    }
+                }
+            }
+
             context("shift arithmetic right (SAR)") {
+                func referenceShift(_ value: U256, by shift: Int) -> U256 {
+                    if shift <= 0 {
+                        return value
+                    }
+
+                    let signBit = U256(l0: 0, l1: 0, h0: 0, h1: 0x8000_0000_0000_0000)
+                    let isNegative = !(value & signBit).isZero
+                    if shift >= 256 {
+                        return isNegative ? U256.MAX : U256.ZERO
+                    }
+
+                    var result = value
+                    for _ in 0 ..< shift {
+                        result = result >> 1
+                        if isNegative {
+                            result = result | signBit
+                        }
+                    }
+                    return result
+                }
+
                 it("shiftRight with positive I256 value, no sign extension") {
                     let i256Value = I256(from: [0, 0, 0, 1], signExtend: false)
                     let result = i256Value >> 1
@@ -600,9 +717,73 @@ final class I256Spec: QuickSpec {
 
                     expect(result.toU256).to(equal(expected))
                 }
+
+                it("matches signed values and shift boundaries") {
+                    let values: [(String, U256)] = [
+                        ("zero", .ZERO),
+                        ("one", U256(from: 1)),
+                        ("signed max", I256.SIGN_BIT_MASK),
+                        ("mixed positive", U256(l0: .max, l1: 2, h0: 3, h1: 4)),
+                        ("signed min", I256.minValue.toU256),
+                        ("minus one", .MAX),
+                        ("minus three", U256.MAX - U256(from: 2)),
+                        ("mixed negative", U256(l0: 1, l1: 2, h0: 3, h1: 0x8000_0000_0000_0004)),
+                    ]
+                    let shifts = [-1, 0, 1, 2, 63, 64, 65, 127, 128, 129, 191, 192, 193, 254, 255, 256, 257]
+
+                    for (name, value) in values {
+                        for shift in shifts {
+                            let result = (I256.fromU256(value) >> shift).toU256
+                            expect(result).to(
+                                equal(referenceShift(value, by: shift)),
+                                description: "\(name) >> \(shift)"
+                            )
+                        }
+                    }
+                }
             }
 
             context("div operation") {
+                it("preserves the negative magnitude when dividing by one") {
+                    let dividend = I256(from: [6, 0, 0, 0], signExtend: true)
+                    expect(dividend / I256(from: 1)).to(equal(dividend))
+                }
+
+                it("preserves the magnitude identity and signs at signed and limb boundaries") {
+                    var magnitudes: [[UInt64]] = [
+                        [0, 0, 0, 0], [1, 0, 0, 0], [2, 0, 0, 0],
+                        [.max, .max, .max, 0x7FFF_FFFF_FFFF_FFFF], [0, 0, 0, 0x8000_0000_0000_0000],
+                    ]
+                    for limb in 1 ..< 4 {
+                        var power: [UInt64] = [0, 0, 0, 0]
+                        power[limb] = 1
+                        let below = [UInt64](repeating: .max, count: limb) + [UInt64](repeating: 0, count: 4 - limb)
+                        var above = power
+                        above[0] = 1
+                        magnitudes += [below, power, above]
+                    }
+
+                    for dividend in magnitudes {
+                        for divisor in magnitudes.dropFirst() {
+                            Self.checkDivisionSigns(dividend: dividend, divisor: divisor, description: "signed boundary")
+                        }
+                    }
+                }
+
+                it("preserves the magnitude identity and signs for seeded operands of every length") {
+                    let seed: UInt64 = 0x1256
+                    var generator = SeededGenerator(state: seed)
+                    for dividendWords in 1 ... 4 {
+                        for divisorWords in 1 ... 4 {
+                            for index in 0 ..< 16 {
+                                let dividend = Self.randomMagnitude(words: dividendWords, generator: &generator)
+                                let divisor = Self.randomMagnitude(words: divisorWords, generator: &generator)
+                                Self.checkDivisionSigns(dividend: dividend, divisor: divisor, description: "seed \(seed), iteration \(index)")
+                            }
+                        }
+                    }
+                }
+
                 it("by zero") {
                     expect(captureStandardError {
                         expect {
@@ -662,6 +843,25 @@ final class I256Spec: QuickSpec {
             }
 
             context("rem operation") {
+                it("preserves a negative dividend smaller than the divisor") {
+                    let dividend = I256(from: [6, 0, 0, 0], signExtend: true)
+                    expect(dividend % I256(from: 10)).to(equal(dividend))
+                }
+
+                it("returns canonical zero for seeded exact divisions with every sign combination") {
+                    let seed: UInt64 = 0x1257
+                    var generator = SeededGenerator(state: seed)
+                    for words in 1 ... 4 {
+                        for index in 0 ..< 16 {
+                            let magnitude = Self.randomMagnitude(words: words, generator: &generator)
+                            let description = "seed \(seed), iteration \(index)"
+                            Self.checkDivisionSigns(dividend: magnitude, divisor: [1, 0, 0, 0], description: description)
+                            Self.checkDivisionSigns(dividend: magnitude, divisor: magnitude, description: description)
+                            Self.checkDivisionSigns(dividend: [0, 0, 0, 0], divisor: magnitude, description: description)
+                        }
+                    }
+                }
+
                 it("by zero") {
                     expect(captureStandardError {
                         expect {

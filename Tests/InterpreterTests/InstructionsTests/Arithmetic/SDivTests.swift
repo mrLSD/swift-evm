@@ -10,6 +10,45 @@ final class InstructionSDivSpec: QuickSpec {
 
     override class func spec() {
         describe("Instruction SDiv") {
+            it("preserves a negative dividend when dividing by one") {
+                let m = Self.machine
+                let minusSix = U256(from: [.max - 5, .max, .max, .max])
+                _ = m.stack.push(value: U256(from: 1))
+                _ = m.stack.push(value: minusSix)
+                m.evalLoop()
+
+                expect(m.machineStatus).to(equal(.Exit(.Success(.Stop))))
+                expect(m.stack.peek(indexFromTop: 0)).to(beSuccess(minusSix))
+                expect(m.stack.length).to(equal(1))
+                expect(m.gas.remaining).to(equal(10 - GasConstant.LOW))
+            }
+
+            it("preserves quotient signs when word division carries the high remainder bit") {
+                for negativeDividend in [false, true] {
+                    for negativeDivisor in [false, true] {
+                        let m = Self.machine
+                        let dividend = negativeDividend
+                            ? U256(from: [0, 0x8000000000000000, .max, .max])
+                            : U256(from: [0, 0x8000000000000000, 0, 0])
+                        let divisor = negativeDivisor
+                            ? U256(from: [1, .max, .max, .max])
+                            : U256(from: UInt64.max)
+                        let expected = negativeDividend != negativeDivisor
+                            ? U256(from: [0x8000000000000000, .max, .max, .max])
+                            : U256(from: 0x8000000000000000)
+
+                        _ = m.stack.push(value: divisor)
+                        _ = m.stack.push(value: dividend)
+                        m.evalLoop()
+
+                        expect(m.machineStatus).to(equal(.Exit(.Success(.Stop))))
+                        expect(m.stack.peek(indexFromTop: 0)).to(beSuccess(expected), description: "negative dividend \(negativeDividend), negative divisor \(negativeDivisor)")
+                        expect(m.stack.length).to(equal(1))
+                        expect(m.gas.remaining).to(equal(10 - GasConstant.LOW))
+                    }
+                }
+            }
+
             it("5/2") {
                 let m = Self.machine
 

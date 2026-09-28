@@ -339,7 +339,7 @@ public class MemoryState {
     /// Increment nonce for address in the state
     public func incNonce(address: H160) -> Result<Void, Machine.ExitError> {
         let account = getAccountAndTouch(address)
-        if account.basic.nonce >= U256(from: UInt64.max) {
+        if account.basic.nonce == UInt64.max {
             return .failure(Machine.ExitError.MaxNonce)
         }
         accounts[address]?.basic.incNonce()
@@ -399,7 +399,7 @@ public class MemoryState {
     /// - Returns: `true` if the account is empty, `false` otherwise.
     public func isEmpty(address: H160) -> Bool {
         if let account = knownAccount(address) {
-            if !account.basic.balance.isZero || !account.basic.nonce.isZero {
+            if !account.basic.balance.isZero || account.basic.nonce != 0 {
                 return false
             }
 
@@ -414,7 +414,7 @@ public class MemoryState {
 
         // Account is empty if: balance == 0 AND nonce == 0 AND code is empty.
         return basic.balance.isZero &&
-            basic.nonce.isZero &&
+            basic.nonce == 0 &&
             backend.code(address: address).isEmpty
     }
 

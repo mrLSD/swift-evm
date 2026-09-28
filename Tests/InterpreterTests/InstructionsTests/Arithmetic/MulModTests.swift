@@ -14,6 +14,20 @@ final class InstructionMulModSpec: QuickSpec {
 
     override class func spec() {
         describe("Instruction MulMod") {
+            it("reduces a product above 256 bits with a high-bit remainder") {
+                let m = Self.machine
+
+                _ = m.stack.push(value: U256(from: UInt64.max))
+                _ = m.stack.push(value: U256(from: [0, 0, 1, 0]))
+                _ = m.stack.push(value: U256(from: [0, 0, 0, 0x8000_0000_0000_0000]))
+                m.evalLoop()
+
+                expect(m.machineStatus).to(equal(.Exit(.Success(.Stop))))
+                expect(m.stack.peek(indexFromTop: 0)).to(beSuccess(U256(from: 0x8000_0000_0000_0000)))
+                expect(m.stack.length).to(equal(1))
+                expect(m.gas.remaining).to(equal(10 - GasConstant.MID))
+            }
+
             it("(2 * 6) % 5") {
                 let m = Self.machine
 

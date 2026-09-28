@@ -1,5 +1,3 @@
-import Foundation
-
 /// `BigUInt` Protocol - represent Bit Unsigner Integers
 public protocol BigUInt: CustomStringConvertible, Equatable, Sendable, Hashable {
     /// `BigUInt` bytes
@@ -229,64 +227,7 @@ public extension BigUInt {
             return "0"
         }
 
-        // Use BigEndian for human-readable string
-        let bytes = self.toBigEndian
-        let format = uppercase ? "%02X" : "%02x"
-
-        // Strip leading zeros
-        return bytes
-            .drop { $0 == 0 }
-            .map { String(format: format, $0) }
-            .joined()
-    }
-}
-
-/// Implementation of `Equatable`
-public extension BigUInt {
-    /// Compare if `lhs` is less than `rhs`
-    static func cmpLess(lhs: Self, rhs: Self) -> Bool {
-        // Reversed iteration
-        for i in stride(from: Int(self.numberBase) - 1, through: 0, by: -1) {
-            if lhs.BYTES[i] < rhs.BYTES[i] {
-                return true
-            } else if lhs.BYTES[i] > rhs.BYTES[i] {
-                return false
-            }
-        }
-        // If all blocks are equal
-        return false
-    }
-
-    /// Operator `==`: Check if two `BigUInt` values are equal
-    static func == (lhs: Self, rhs: Self) -> Bool {
-        lhs.BYTES == rhs.BYTES
-    }
-
-    /// Operator `!=`: Check if two `BigUInt` values are not equal
-    static func != (lhs: Self, rhs: Self) -> Bool {
-        !(lhs == rhs)
-    }
-
-    /// Operator `<`: Compare two `BigUInt` values
-    ///
-    /// For arbitrary precision numbers, as for any number, the digit with the greatest weight
-    /// (the most significant digit) is the most important when comparing.
-    static func < (lhs: Self, rhs: Self) -> Bool {
-        self.cmpLess(lhs: lhs, rhs: rhs)
-    }
-
-    /// Operator `>`: Compare two `BigUInt` values
-    static func > (lhs: Self, rhs: Self) -> Bool {
-        rhs < lhs
-    }
-
-    /// Operator `<=`: Compare two `BigUInt` values for less than or equal
-    static func <= (lhs: Self, rhs: Self) -> Bool {
-        !(lhs > rhs)
-    }
-
-    /// Operator `>=`: Compare two `BigUInt` values for less than or equal
-    static func >= (lhs: Self, rhs: Self) -> Bool {
-        !(lhs < rhs)
+        // Use BigEndian for human-readable string. `BigUInt` semantics: strip leading zero bytes.
+        return hexEncode(self.toBigEndian.drop { $0 == 0 }, uppercase: uppercase)
     }
 }
