@@ -10,6 +10,21 @@ final class InstructionModSpec: QuickSpec {
 
     override class func spec() {
         describe("Instruction Mod") {
+            it("returns the remainder on both sides of twice a multiword divisor") {
+                let cases: [(UInt64, U256)] = [(1, U256(from: [0, 1, 0, 0])), (2, .ZERO), (3, U256(from: 1))]
+                for (low, expected) in cases {
+                    let m = Self.machine
+                    _ = m.stack.push(value: U256(from: [1, 1, 0, 0]))
+                    _ = m.stack.push(value: U256(from: [low, 2, 0, 0]))
+                    m.evalLoop()
+
+                    expect(m.machineStatus).to(equal(.Exit(.Success(.Stop))))
+                    expect(m.stack.peek(indexFromTop: 0)).to(beSuccess(expected))
+                    expect(m.stack.length).to(equal(1))
+                    expect(m.gas.remaining).to(equal(10-GasConstant.LOW))
+                }
+            }
+
             it("returns the remainder after Knuth remainder-estimate overflow") {
                 let m = Self.machine
 

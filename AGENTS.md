@@ -53,6 +53,9 @@ operations needed by the EVM. It is not a general-purpose mathematics library.
   narrating statements, repeating signatures, or preserving obsolete history.
 - Keep changes focused. Preserve unrelated working-tree and staged changes.
   An audit-only request does not authorize implementation or test changes.
+- Do not build with `-Ounchecked`. Release builds use `-O`: checked unwraps
+  and preconditions must trap if an invariant is violated, rather than allow
+  undefined behavior. Unwraps after validation must explain the invariant.
 
 # Test requirements
 
@@ -67,7 +70,8 @@ operations needed by the EVM. It is not a general-purpose mathematics library.
   where applicable to the operation's contract.
 - Division tests must validate `a = q*b + r` without accidental fixed-width
   truncation and `0 <= r < b`; exercise normalization, quotient correction,
-  add-back, small divisors, and both availability implementations.
+  add-back and small divisors. Word division uses `UInt64.dividingFullWidth`
+  on all supported OS versions; test its `hi < divisor` precondition domain.
 - Use reproducible random/property tests with a fixed seed and failing inputs
   in diagnostics. Cover U256 and U512, not only U128. Reference-generated
   fixtures may use Rust or independent arbitrary-precision arithmetic without

@@ -4,7 +4,7 @@
 /// Generic division materializes each operand once and runs Knuth on limb arrays.
 public extension BigUInt {
     /// Multiply-accumulate primitive: `lhs += a*b + carry`, returns the high carry.
-    /// Used by per-type multiplication implementations and by Knuth division helpers.
+    /// Used by per-type multiplication implementations.
     @inline(__always)
     static func mac(_ lhs: inout UInt64, _ a: UInt64, _ b: UInt64, _ carry: UInt64) -> UInt64 {
         let (productHigh, productLow) = a.multipliedFullWidth(by: b)
@@ -72,6 +72,7 @@ public extension BigUInt {
     }
 
     /// Subtracts the second slice from the first slice.
+    /// Retained as a public utility for limb-slice subtraction with borrow reporting.
     /// - Parameters:
     ///   - a: The first slice to be mutated.
     ///   - b: The second slice to be subtracted.
@@ -116,15 +117,24 @@ public extension BigUInt {
         y.dividingFullWidth((high: hi, low: lo))
     }
 
-    /// `a * b`, widened by one limb for the final carry.
-    private static func mul(_ a: [UInt64], by b: UInt64) -> [UInt64] {
-        var res = [UInt64](repeating: 0, count: a.count + 1)
+    /// Subtracts q*v from n+1 dividend limbs without a temporary product.
+    private static func subMul(_ u: inout [UInt64], at j: Int, _ v: [UInt64], count n: Int, by q: UInt64) -> Bool {
         var carry: UInt64 = 0
-        for i in 0 ..< a.count {
-            carry = Self.mac(&res[i], a[i], b, carry)
+        var borrow = false
+        for i in 0 ..< n {
+            let (hi, lo) = v[i].multipliedFullWidth(by: q)
+            let (low, overflow) = lo.addingReportingOverflow(carry)
+            // A word product plus a word carry fits in two words.
+            carry = hi + (overflow ? 1 : 0)
+            let (difference, b0) = u[j + i].subtractingReportingOverflow(low)
+            let (value, b1) = difference.subtractingReportingOverflow(borrow ? 1 : 0)
+            u[j + i] = value
+            borrow = b0 || b1
         }
-        res[a.count] = carry
-        return res
+        let (difference, b0) = u[j + n].subtractingReportingOverflow(carry)
+        let (value, b1) = difference.subtractingReportingOverflow(borrow ? 1 : 0)
+        u[j + n] = value
+        return b0 || b1
     }
 
     /// `a << shift` for `0 <= shift < 64`; bits shifted out of the top limb are dropped.
@@ -223,9 +233,7 @@ public extension BigUInt {
             // D4.
             // let's assume optimistically q_hat == q_j
             // subtract (q_hat * v) from u[j..]
-            let q_hat_v = Self.mul(v, by: q_hat)
-            // u[j..] -= q_hat_v;
-            let c = Self.subSlice(a: &u, from: j, b: q_hat_v, to: n + 1)
+            let c = Self.subMul(&u, at: j, v, count: n, by: q_hat)
 
             // D6.
             // Actually, q_hat == q_j + 1 and u[j..] has overflowed

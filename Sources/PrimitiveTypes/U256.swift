@@ -411,7 +411,7 @@ public extension U256 {
 // MARK: - Division (fast paths on stored fields)
 
 public extension U256 {
-    /// Returns quotient and remainder, using stored fields for small divisors.
+    /// Returns quotient and remainder, using stored fields for small divisors and quotient one.
     /// - Precondition: `divisor` must not be zero.
     func divRem(divisor: U256) -> (quotient: U256, remainder: U256) {
         precondition(!divisor.isZero, "Division by zero")
@@ -420,6 +420,11 @@ public extension U256 {
         }
         if (divisor.l1 | divisor.h0 | divisor.h1) == 0 {
             return divRem(word: divisor.l0)
+        }
+        // self >= divisor; a remainder below divisor proves the quotient is one.
+        let remainder = self - divisor
+        if remainder < divisor {
+            return (U256(from: 1), remainder)
         }
         return divMod(divisor)
     }

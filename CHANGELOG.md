@@ -7,9 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] — 0.6.0-rc.1 candidate
 
-This is a draft for the next minor release, not a published version. The seven
-commits after v0.5.26 belong to [PR #70](https://github.com/mrLSD/swift-evm/pull/70),
-which is still open; the division optimization follow-up is currently uncommitted.
+This is a draft for the next minor release, not a published version.
 See [release preparation](docs/release-v0.6.0.md) for provenance and migration notes.
 
 ### Breaking changes
@@ -35,6 +33,11 @@ See [release preparation](docs/release-v0.6.0.md) for provenance and migration n
 - Standardize validated stack access across instruction handlers without
   removing stack-underflow or out-of-gas checks.
 - Remove Foundation from production modules and use stdlib hex encoding.
+- Fuse Knuth's multiply-subtract step to avoid a temporary product array for
+  each quotient digit.
+- Add a U256 quotient-one fast path using subtraction without overflowing `2*d`.
+- Prohibit `-Ounchecked` builds in project policy so validated unwraps and
+  preconditions retain their traps under release `-O` optimization.
 
 ### Fixed
 - Replace the faulty OS-dependent word-division fallback with
@@ -52,6 +55,10 @@ See [release preparation](docs/release-v0.6.0.md) for provenance and migration n
 - Cover negative SIGNEXTEND, partial memory reads, and `peekUInt` overflow.
 - Record release timings, allocator calls, code size, independent Python checks,
   and raw coverage in the [division audit](docs/division-audit.md).
+- Cover quotient-one boundaries, public `subSlice`, and deterministic memory
+  allocation failures through Memory and MSTORE; document validated buffer
+  invariants and the remaining coverage fixes in the
+  [follow-up audit](docs/division-followup-audit.md).
 
 ## [0.5.26] - 2026-05-11
 
@@ -541,6 +548,7 @@ This is the **initial public release** of `swift-evm` — a Swift-native Ethereu
 
 
 <!-- Versions -->
+[Unreleased]: https://github.com/mrLSD/swift-evm/compare/v0.5.26...HEAD
 [0.5.26]: https://github.com/mrLSD/swift-evm/compare/v0.5.25...v0.5.26
 [0.5.25]: https://github.com/mrLSD/swift-evm/compare/v0.5.24...v0.5.25
 [0.5.24]: https://github.com/mrLSD/swift-evm/compare/v0.5.23...v0.5.24

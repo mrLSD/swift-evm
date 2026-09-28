@@ -3,9 +3,67 @@ import Nimble
 import PrimitiveTypes
 import Quick
 
+#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(visionOS) || os(Linux)
+final class FailingAllocationMemory: Memory {
+    var failAllocations = false
+
+    override func allocateBuffer(byteCount: Int) -> UnsafeMutableRawPointer? {
+        failAllocations ? nil : super.allocateBuffer(byteCount: byteCount)
+    }
+
+    override func reallocateBuffer(_ buffer: UnsafeMutableRawPointer, byteCount: Int) -> UnsafeMutableRawPointer? {
+        failAllocations ? nil : super.reallocateBuffer(buffer, byteCount: byteCount)
+    }
+}
+#endif
+
 final class InterpreterMemorySpec: QuickSpec {
     override class func spec() {
         describe("Interpreter Memory") {
+            #if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(visionOS) || os(Linux)
+            context("allocation failure") {
+                it("preserves length and contents when allocation or reallocation fails, and can retry") {
+                    let memory = FailingAllocationMemory()
+                    memory.failAllocations = true
+                    expect(memory.resize(end: 1)).to(beFalse())
+                    expect(memory.effectiveLength).to(equal(0))
+                    expect(memory.get(offset: 0, size: 1)).to(equal([0]))
+
+                    memory.failAllocations = false
+                    expect(memory.set(offset: 0, value: [0xAB], size: 1)).to(beSuccess())
+                    memory.failAllocations = true
+                    expect(memory.resize(end: 33)).to(beFalse())
+                    expect(memory.effectiveLength).to(equal(32))
+                    expect(memory.get(offset: 0, size: 33)).to(equal([0xAB] + [UInt8](repeating: 0, count: 32)))
+
+                    memory.failAllocations = false
+                    expect(memory.resize(end: 33)).to(beTrue())
+                    expect(memory.effectiveLength).to(equal(64))
+                    expect(memory.get(offset: 0, size: 64)).to(equal([0xAB] + [UInt8](repeating: 0, count: 63)))
+                }
+
+                it("propagates write and copy allocation failures without modifying existing bytes") {
+                    let operations: [(Memory) -> Result<Void, Machine.ExitReason>] = [
+                        { $0.set(offset: 32, value: [0xCD], size: 1) },
+                        { $0.copy(srcOffset: 0, dstOffset: 32, size: 1) },
+                        { $0.copyData(memoryOffset: 32, dataOffset: 0, size: 1, data: [0xCD]) },
+                    ]
+                    for operation in operations {
+                        for initialized in [false, true] {
+                            let memory = FailingAllocationMemory()
+                            if initialized {
+                                expect(memory.set(offset: 0, value: [0xAB], size: 1)).to(beSuccess())
+                            }
+                            memory.failAllocations = true
+                            expect(operation(memory)).to(beFailure(equal(.Fatal(.ReadMemory))))
+                            expect(memory.effectiveLength).to(equal(initialized ? 32 : 0))
+                            expect(memory.get(offset: 0, size: 1)).to(equal([initialized ? 0xAB : 0]))
+                        }
+                    }
+                }
+            }
+            #endif
+
             context("initialization") {
                 it("should have a length of 0 after initialization") {
                     let memory = Memory(limit: 100)

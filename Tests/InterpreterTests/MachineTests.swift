@@ -12,6 +12,32 @@ final class InterpreterMachineTestsSpec: QuickSpec {
 
     override class func spec() {
         describe("Machine tests") {
+            #if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(visionOS) || os(Linux)
+            it("stops MSTORE with OutOfGas on allocation failure after charging memory gas") {
+                for initialized in [false, true] {
+                    let memory = FailingAllocationMemory()
+                    if initialized {
+                        expect(memory.set(offset: 0, value: [0xAB], size: 1)).to(beSuccess())
+                    }
+                    memory.failAllocations = true
+                    let m = Machine(
+                        data: [], code: [Opcode.MSTORE.rawValue], gasLimit: 100,
+                        context: TestMachine.defaultContext(), state: ExecutionState(), handler: TestHandler(), memory: memory
+                    )
+                    m.stackPush(value: U256(from: 0xCD))
+                    m.stackPush(value: U256(from: 32))
+                    m.evalLoop()
+
+                    expect(m.machineStatus).to(equal(.Exit(.Error(.OutOfGas))))
+                    expect(m.gas.remaining).to(equal(91))
+                    expect(m.gas.memoryGas.numWords).to(equal(2))
+                    expect(m.memory.effectiveLength).to(equal(initialized ? 32 : 0))
+                    expect(m.memory.get(offset: 0, size: 1)).to(equal([initialized ? 0xAB : 0]))
+                    expect(m.stack.length).to(equal(0))
+                }
+            }
+            #endif
+
             it("Int or fail tests") {
                 let m1 = TestMachine.machine(opcodes: [], gasLimit: 1)
                 let res1 = m1.getIntOrFail(U256(from: [1, 1, 0, 0]))
