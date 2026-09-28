@@ -1,8 +1,5 @@
-/// `U512` is a 512-bit unsigned integer represented as eight `UInt64` limbs in little-endian order.
-///
-/// Storage is fixed-size value layout (`l0`..`l3` / `h0`..`h3`) — no heap allocation per instance.
-/// EVM uses `U512` only for `ADDMOD`/`MULMOD` intermediate results (`+`, `*`, `%`), so only those
-/// hot paths are specialized. Rare operations fall back to the generic `BigUInt` extension.
+/// Unsigned 512-bit value stored in eight little-endian UInt64 limbs.
+/// Provides full-width ADDMOD/MULMOD intermediates with generic division for reduction.
 public struct U512: BigUInt {
     @usableFromInline let l0: UInt64
     @usableFromInline let l1: UInt64
@@ -28,8 +25,7 @@ public struct U512: BigUInt {
     /// Direct field initializer (no allocation).
     @inlinable @inline(__always)
     public init(l0: UInt64, l1: UInt64, l2: UInt64, l3: UInt64,
-                h0: UInt64, h1: UInt64, h2: UInt64, h3: UInt64)
-    {
+                h0: UInt64, h1: UInt64, h2: UInt64, h3: UInt64) {
         self.l0 = l0
         self.l1 = l1
         self.l2 = l2
@@ -114,7 +110,7 @@ public extension U512 {
     }
 }
 
-// MARK: - Arithmetic (specialized; only `+` and `*` are exercised on hot paths)
+// MARK: - Arithmetic
 
 public extension U512 {
     /// Helper that adds `b` to `a` with incoming carry, returning `(a+b+carry, carryOut)`.

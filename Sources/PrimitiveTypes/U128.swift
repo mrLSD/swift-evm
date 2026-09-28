@@ -1,9 +1,5 @@
-/// `U128` is a 128-bit unsigned integer type represented as two `UInt64` limbs in little-endian order.
-///
-/// Storage is fixed-size value layout (`l0`, `h0`) — no heap allocation per instance. The hot
-/// internal uses of `U128` are multiply-accumulate (`Arithmetic.mulUInt64`) and Knuth division
-/// (`q_hat * v_n_2` correction): for these, specialized `+`, `*`, `==`, `<`, `isZero` operate
-/// directly on fields. Rare operations fall back to the generic `BigUInt` extension.
+/// Unsigned 128-bit value stored in two little-endian UInt64 limbs.
+/// Supports addition, multiplication, and generic division; it is not a general-purpose integer.
 public struct U128: BigUInt {
     /// Low limb (bits 0..63).
     @usableFromInline let l0: UInt64
@@ -37,7 +33,7 @@ public struct U128: BigUInt {
     }
 }
 
-// MARK: - Equality / Comparison (specialized)
+// MARK: - Equality
 
 public extension U128 {
     @inlinable @inline(__always)
@@ -51,7 +47,7 @@ public extension U128 {
     }
 }
 
-// MARK: - Arithmetic (specialized; only `+` and `*` are exercised on hot paths)
+// MARK: - Arithmetic
 
 public extension U128 {
     /// Addition with overflow flag (full-width 128-bit add).

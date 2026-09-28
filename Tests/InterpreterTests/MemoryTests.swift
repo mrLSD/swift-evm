@@ -118,6 +118,12 @@ final class InterpreterMemorySpec: QuickSpec {
             }
 
             context("Get memory method") {
+                it("zero-fills reads crossing the allocated boundary") {
+                    let memory = Memory(limit: 100)
+                    expect(memory.set(offset: 30, value: [7, 8], size: 2)).to(beSuccess())
+                    expect(memory.get(offset: 30, size: 4)).to(equal([7, 8, 0, 0]))
+                }
+
                 it("zero size") {
                     let memory = Memory(limit: 100)
                     let res1 = memory.resize(offset: 0, size: 3)

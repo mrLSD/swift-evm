@@ -26,9 +26,11 @@ enum SystemInstructions {
             return
         }
 
-        // After stack verification this guard will always succeed. But we keep it for safety and clarity.
+        // Stack size was verified above; these unwraps cannot fail.
         // Peek the required values from the stack: memory offset, code offset, and size.
-        guard let rawMemoryOffset = m.stackPeek(indexFromTop: 0), let rawCodeOffset = m.stackPeek(indexFromTop: 1), let rawSize = m.stackPeek(indexFromTop: 2) else { return }
+        let rawMemoryOffset = m.stackPeek(indexFromTop: 0)!
+        let rawCodeOffset = m.stackPeek(indexFromTop: 1)!
+        let rawSize = m.stackPeek(indexFromTop: 2)!
 
         // This situation possible only for 32-bit context (for example wasm32)
         guard let size = m.getIntOrFail(rawSize) else {
@@ -59,7 +61,7 @@ enum SystemInstructions {
             return
         }
 
-        // After stack verification this guard will always succeed. But we keep it for safety and clarity.
+        // Stack depth was verified above.
         m.stack.consume(count: 3)
 
         // Perform the code copy. If the copy fails, update the machine status with the error.
@@ -88,9 +90,11 @@ enum SystemInstructions {
             return
         }
 
-        // After stack verification this guard will always succeed. But we keep it for safety and clarity.
+        // Stack size was verified above; these unwraps cannot fail.
         // Peek the required values from the stack: memory offset, code offset, and size.
-        guard let rawMemoryOffset = m.stackPeek(indexFromTop: 0), let rawDataOffset = m.stackPeek(indexFromTop: 1), let rawSize = m.stackPeek(indexFromTop: 2) else { return }
+        let rawMemoryOffset = m.stackPeek(indexFromTop: 0)!
+        let rawDataOffset = m.stackPeek(indexFromTop: 1)!
+        let rawSize = m.stackPeek(indexFromTop: 2)!
 
         // This situation possible only for 32-bit context (for example wasm32)
         guard let size = m.getIntOrFail(rawSize) else {
@@ -121,7 +125,7 @@ enum SystemInstructions {
             return
         }
 
-        // After stack verification this guard will always succeed. But we keep it for safety and clarity.
+        // Stack depth was verified above.
         m.stack.consume(count: 3)
 
         // Perform the call-data copy. If the copy fails, update the machine status with the error.
@@ -140,8 +144,8 @@ enum SystemInstructions {
             return
         }
 
-        // After stack verification this guard will always succeed. But we keep it for safety and clarity.
-        guard let index = m.stackPop() else { return }
+        // Stack size was verified above; these unwraps cannot fail.
+        let index = m.stackPop()!
 
         var load = [UInt8](repeating: 0, count: 32)
         let dataCount = m.data.count
@@ -205,9 +209,10 @@ enum SystemInstructions {
             return
         }
 
-        // After stack verification this guard will always succeed. But we keep it for safety and clarity.
+        // Stack size was verified above; these unwraps cannot fail.
         // Peek the required values from the stack: memory offset and size.
-        guard let rawMemoryOffset = m.stackPeek(indexFromTop: 0), let rawSize = m.stackPeek(indexFromTop: 1) else { return }
+        let rawMemoryOffset = m.stackPeek(indexFromTop: 0)!
+        let rawSize = m.stackPeek(indexFromTop: 1)!
 
         // This situation possible only for 32-bit context (for example wasm32)
         guard let size = m.getIntOrFail(rawSize) else {
@@ -226,7 +231,7 @@ enum SystemInstructions {
         // Per Yellow Paper: with size == 0 no memory access happens, so memory offset
         // validation and memory expansion are both skipped.
         if size == 0 {
-            // After stack verification this guard will always succeed. But we keep it for safety and clarity.
+            // Stack depth was verified above.
             m.stack.consume(count: 2)
             m.stackPush(value: U256.fromBigEndian(from: H256.KECCAK_EMPTY.BYTES))
             return
@@ -241,7 +246,7 @@ enum SystemInstructions {
             return
         }
 
-        // After stack verification this guard will always succeed. But we keep it for safety and clarity.
+        // Stack depth was verified above.
         m.stack.consume(count: 2)
 
         let data = m.memory.get(offset: memoryOffset, size: size)

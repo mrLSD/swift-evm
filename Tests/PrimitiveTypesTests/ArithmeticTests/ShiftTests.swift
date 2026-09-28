@@ -6,6 +6,23 @@ import Quick
 final class ArithmeticShiftSpec: QuickSpec {
     override class func spec() {
         describe("U128.shiftLeft") {
+            it("returns zero for oversized generic shifts") {
+                for shift in [129, 191, 192, 256, Int.max] {
+                    expect(U128.MAX.shiftLeftForBytes(shift)).to(equal(U128.ZERO), description: "shift \(shift)")
+                    expect(U128.MAX.shiftRightForBytes(shift)).to(equal(U128.ZERO), description: "shift \(shift)")
+                }
+
+                for shift in [257, 320, Int.max] {
+                    expect(U256.MAX.shiftLeftForBytes(shift)).to(equal(U256.ZERO), description: "shift \(shift)")
+                    expect(U256.MAX.shiftRightForBytes(shift)).to(equal(U256.ZERO), description: "shift \(shift)")
+                }
+
+                for shift in [513, 576, Int.max] {
+                    expect(U512.MAX.shiftLeftForBytes(shift)).to(equal(U512.ZERO), description: "shift \(shift)")
+                    expect(U512.MAX.shiftRightForBytes(shift)).to(equal(U512.ZERO), description: "shift \(shift)")
+                }
+            }
+
             it("should return the same value when shifting by 0") {
                 let value = U128(from: [0x1234567890abcdef, 0x0fedcba098765432])
                 let shifted = value.shiftLeftForBytes(0)

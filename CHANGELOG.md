@@ -5,6 +5,54 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] — 0.6.0-rc.1 candidate
+
+This is a draft for the next minor release, not a published version. The seven
+commits after v0.5.26 belong to [PR #70](https://github.com/mrLSD/swift-evm/pull/70),
+which is still open; the division optimization follow-up is currently uncommitted.
+See [release preparation](docs/release-v0.6.0.md) for provenance and migration notes.
+
+### Breaking changes
+- Primitive values now use inline word storage. `BYTES` is a computed conversion
+  array; callers should avoid repeatedly reading it in hot paths.
+- `BigUInt` no longer supplies general arithmetic, comparison, and shift operator
+  defaults. For example, `U128 <`, `U128 << Int`, `U512 -`, and generic
+  `<T: BigUInt>` addition no longer compile. Concrete types expose the operations
+  needed by the EVM; generic division and explicit limb-shift helpers remain.
+- Removed `FixedArray.getMax` / `getZero` and default equality / `isZero`
+  implementations. Custom conformers must provide their own implementations;
+  use concrete `MAX` / `ZERO` values.
+- `BasicAccount.nonce` and its initializer parameter are now `UInt64`, not `U256`.
+  Direct increment at `UInt64.max` traps; `MemoryState.incNonce` reports `.MaxNonce`.
+- Knuth's implementation is now private. Replace direct calls to
+  `divModKnuth(v:n:m:)` with `divRem(divisor:)`.
+
+### Changed
+- Run generic Knuth division on limb arrays materialized once per operand, with
+  native full-width multiplication instead of temporary U128 values.
+- Add field-based U256 initialization and division paths for one-word divisors
+  and dividends below the divisor; retain full-width intermediates for MULMOD.
+- Standardize validated stack access across instruction handlers without
+  removing stack-underflow or out-of-gas checks.
+- Remove Foundation from production modules and use stdlib hex encoding.
+
+### Fixed
+- Replace the faulty OS-dependent word-division fallback with
+  `UInt64.dividingFullWidth` on every supported path.
+- Correct I256 zero normalization, arithmetic right shifts, signed bitwise AND,
+  and signed compound division/remainder.
+- Return zero for generic limb shifts at or beyond the integer width.
+- Correct stale arithmetic documentation and narrowly suppress false-positive
+  Data-to-String lint diagnostics for generated ASCII byte arrays.
+
+### Tests
+- Extend existing Quick/Nimble specs with seeded U256/U512 division invariants,
+  Knuth normalization/correction/add-back families, signed division properties,
+  direct and generic dispatch, carry chains, and oversized shifts.
+- Cover negative SIGNEXTEND, partial memory reads, and `peekUInt` overflow.
+- Record release timings, allocator calls, code size, independent Python checks,
+  and raw coverage in the [division audit](docs/division-audit.md).
+
 ## [0.5.26] - 2026-05-11
 
 ### Added

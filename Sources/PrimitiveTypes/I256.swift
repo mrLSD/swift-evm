@@ -23,8 +23,7 @@ public struct I256: BigUInt {
         h1: 0x7fff_ffff_ffff_ffff
     )
 
-    /// Masks the stored magnitude independently of two's-complement bitwise operations.
-    /// Clears `signExtend`, which `divRem` may preserve by returning `self` on early exits.
+    /// Returns a nonnegative 255-bit magnitude, independent of signed bitwise operations.
     @inline(__always)
     private var maskedMagnitude: Self {
         Self(l0: l0, l1: l1, h0: h0, h1: h1 & Self.SIGN_BIT_MASK.h1, signExtend: false)
@@ -242,5 +241,13 @@ public extension I256 {
 
     static func % (lhs: Self, rhs: Self) -> Self {
         lhs.rem(rhs: rhs)
+    }
+
+    static func /= (lhs: inout Self, rhs: Self) {
+        lhs = lhs / rhs
+    }
+
+    static func %= (lhs: inout Self, rhs: Self) {
+        lhs = lhs % rhs
     }
 }

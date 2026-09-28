@@ -744,6 +744,17 @@ final class I256Spec: QuickSpec {
             }
 
             context("div operation") {
+                it("preserves signed semantics for compound division") {
+                    let values = [I256.ZERO, I256(from: 6), I256(from: [6, 0, 0, 0], signExtend: true), I256.minValue]
+                    for value in values {
+                        for divisor in [I256(from: 1), I256(from: [2, 0, 0, 0], signExtend: true)] {
+                            var result = value
+                            result /= divisor
+                            expect(result).to(equal(value / divisor), description: "value \(value.BYTES), divisor \(divisor.BYTES), signs \(value.signExtend), \(divisor.signExtend)")
+                        }
+                    }
+                }
+
                 it("preserves the negative magnitude when dividing by one") {
                     let dividend = I256(from: [6, 0, 0, 0], signExtend: true)
                     expect(dividend / I256(from: 1)).to(equal(dividend))
@@ -843,6 +854,17 @@ final class I256Spec: QuickSpec {
             }
 
             context("rem operation") {
+                it("preserves signed semantics for compound remainder") {
+                    let values = [I256.ZERO, I256(from: 6), I256(from: [6, 0, 0, 0], signExtend: true), I256.minValue]
+                    for value in values {
+                        for divisor in [I256(from: 1), I256(from: [10, 0, 0, 0], signExtend: true)] {
+                            var result = value
+                            result %= divisor
+                            expect(result).to(equal(value % divisor), description: "value \(value.BYTES), divisor \(divisor.BYTES), signs \(value.signExtend), \(divisor.signExtend)")
+                        }
+                    }
+                }
+
                 it("preserves a negative dividend smaller than the divisor") {
                     let dividend = I256(from: [6, 0, 0, 0], signExtend: true)
                     expect(dividend % I256(from: 10)).to(equal(dividend))

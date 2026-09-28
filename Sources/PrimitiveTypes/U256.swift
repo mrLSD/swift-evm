@@ -34,6 +34,12 @@ public struct U256: BigUInt {
         self.h1 = h1
     }
 
+    /// Initializes one limb without an array conversion.
+    @inlinable @inline(__always)
+    public init(from value: UInt64) {
+        self.init(l0: value, l1: 0, h0: 0, h1: 0)
+    }
+
     /// Array initializer (validates length).
     public init(from value: [UInt64]) {
         precondition(value.count == Self.numberBase, "U256 must be initialized with \(Self.numberBase) UInt64 values.")
@@ -399,5 +405,47 @@ public extension U256 {
     @inlinable @inline(__always)
     static func >> (lhs: U256, shift: Int) -> U256 {
         lhs.shiftRight(shift)
+    }
+}
+
+// MARK: - Division (fast paths on stored fields)
+
+public extension U256 {
+    /// Returns quotient and remainder, using stored fields for small divisors.
+    /// - Precondition: `divisor` must not be zero.
+    func divRem(divisor: U256) -> (quotient: U256, remainder: U256) {
+        precondition(!divisor.isZero, "Division by zero")
+        if self < divisor {
+            return (.ZERO, self)
+        }
+        if (divisor.l1 | divisor.h0 | divisor.h1) == 0 {
+            return divRem(word: divisor.l0)
+        }
+        return divMod(divisor)
+    }
+
+    /// Division by a single limb: four chained full-width word divisions, no arrays.
+    private func divRem(word d: UInt64) -> (quotient: U256, remainder: U256) {
+        let (q3, r3) = d.dividingFullWidth((high: 0, low: h1))
+        let (q2, r2) = d.dividingFullWidth((high: r3, low: h0))
+        let (q1, r1) = d.dividingFullWidth((high: r2, low: l1))
+        let (q0, r0) = d.dividingFullWidth((high: r1, low: l0))
+        return (U256(l0: q0, l1: q1, h0: q2, h1: q3), U256(from: r0))
+    }
+
+    static func / (lhs: U256, rhs: U256) -> U256 {
+        lhs.divRem(divisor: rhs).quotient
+    }
+
+    static func % (lhs: U256, rhs: U256) -> U256 {
+        lhs.divRem(divisor: rhs).remainder
+    }
+
+    static func /= (lhs: inout U256, rhs: U256) {
+        lhs = lhs / rhs
+    }
+
+    static func %= (lhs: inout U256, rhs: U256) {
+        lhs = lhs % rhs
     }
 }

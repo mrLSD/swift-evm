@@ -6,6 +6,26 @@ import Quick
 final class ArithmeticDivRemSpec: QuickSpec {
     override class func spec() {
         describe("divRem operation") {
+            it("preserves division operators through BigUInt generic dispatch") {
+                func check<T: BigUInt>(_ type: T.Type) {
+                    let dividend = T(from: 17)
+                    let divisor = T(from: 5)
+                    var quotient = dividend
+                    var remainder = dividend
+                    quotient /= divisor
+                    remainder %= divisor
+
+                    expect(dividend/divisor).to(equal(T(from: 3)))
+                    expect(dividend % divisor).to(equal(T(from: 2)))
+                    expect(quotient).to(equal(T(from: 3)))
+                    expect(remainder).to(equal(T(from: 2)))
+                }
+
+                check(U128.self)
+                check(U256.self)
+                check(U512.self)
+            }
+
             context("common division cases") {
                 it("dividing by one") {
                     let a = U256(from: [1, 2, 3, 4])

@@ -10,6 +10,18 @@ final class InstructionSignextendSpec: QuickSpec {
 
     override class func spec() {
         describe("Instruction Signextend") {
+            it("extends a negative low byte through all limbs") {
+                let m = Self.machine
+                _ = m.stack.push(value: U256(from: 0x80))
+                _ = m.stack.push(value: U256.ZERO)
+                m.evalLoop()
+
+                expect(m.machineStatus).to(equal(.Exit(.Success(.Stop))))
+                expect(m.stack.peek(indexFromTop: 0)).to(beSuccess(U256(from: [.max - 127, .max, .max, .max])))
+                expect(m.stack.length).to(equal(1))
+                expect(m.gas.remaining).to(equal(10 - GasConstant.LOW))
+            }
+
             it("40 sign") {
                 let m = Self.machine
 
