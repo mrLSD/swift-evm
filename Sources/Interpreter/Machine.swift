@@ -25,7 +25,7 @@ public final class Machine {
     /// A map of valid `jump` destinations.
     private var jumpTable: [Bool] = []
     /// Machine Memory.
-    private(set) var memory: Memory = .init()
+    private(set) var memory: Memory
     /// Machine Stack
     var stack: Stack = .init()
     /// Machine Gasometer
@@ -340,9 +340,10 @@ public final class Machine {
     ///   - context: Execution context, such as caller/target addresses and call value.
     ///   - state: Mutable execution state used by opcodes (e.g., for host interactions).
     ///   - handler: Hook provider invoked before opcode execution to extend/intercept behavior.
-    init(data: [UInt8], code: [UInt8], gasLimit: UInt64, context: Context, state: ExecutionState, handler: InterpreterHandler) {
+    init(data: [UInt8], code: [UInt8], gasLimit: UInt64, context: Context, state: ExecutionState, handler: InterpreterHandler, memory: Memory = .init()) {
         self.data = data
         self.code = code
+        self.memory = memory
         self.jumpTable = Self.analyzeJumpTable(code: code)
         self.context = context
         self.returnData = ReturnData(buffer: [], length: 0, offset: 0)
@@ -614,16 +615,11 @@ public final class Machine {
                 guard self.gasRecordCost(cost: resizeMemoryCost) else {
                     return false
                 }
-                // Attempt to resize the memory block using the specified `offset` and `size`.
-                // Although previous validations ensure that the parameters are correct and prevent common errors,
-                // there remains a impossibility that an unexpected condition causes the resize function to return `false`.
-                // To handle this edge case safely, we perform an additional check on the return value anyway.
-                // If the memory resize `fails`, we update the machine's status to exit with an `OutOfGas` error,
-                // thereby ensuring that the machine stops execution in a controlled manner.
-                //
-                // NOTE: This guard statement is written as a one-line expression to facilitate test coverage,
-                // even though the failure scenario is highly unlikely (for example memory I/O crash).
-                guard self.memory.resize(offset: offset, size: size) else { self.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.OutOfGas)); return false }
+                // Allocation can fail even after the size and gas checks succeed.
+                guard self.memory.resize(offset: offset, size: size) else {
+                    self.machineStatus = .Exit(.Error(.OutOfGas))
+                    return false
+                }
             }
         case .failure(let err):
             self.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(err))

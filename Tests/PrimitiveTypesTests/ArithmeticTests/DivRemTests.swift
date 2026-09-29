@@ -5,6 +5,36 @@ import Quick
 
 final class ArithmeticDivRemSpec: QuickSpec {
     override class func spec() {
+        describe("quotient-one boundary") {
+            it("distinguishes d-1, d, d+1, 2d-1, 2d and 2d+1 without overflow") {
+                // d = 2^64+1. Expected quotient/remainder limbs are independent constants.
+                let d = U256(from: [1, 1, 0, 0])
+                let cases: [(U256, UInt64, U256)] = [
+                    (U256(from: [0, 1, 0, 0]), 0, U256(from: [0, 1, 0, 0])),
+                    (U256(from: [1, 1, 0, 0]), 1, .ZERO),
+                    (U256(from: [2, 1, 0, 0]), 1, U256(from: 1)),
+                    (U256(from: [1, 2, 0, 0]), 1, U256(from: [0, 1, 0, 0])),
+                    (U256(from: [2, 2, 0, 0]), 2, .ZERO),
+                    (U256(from: [3, 2, 0, 0]), 2, U256(from: 1)),
+                ]
+
+                for (a, q, r) in cases {
+                    let actual = a.divRem(divisor: d)
+                    expect(actual.quotient).to(equal(U256(from: q)), description: "a \(a)")
+                    expect(actual.remainder).to(equal(r), description: "a \(a)")
+                    expectDivisionIdentity(dividend: a.BYTES, divisor: d.BYTES, quotient: actual.quotient.BYTES, remainder: actual.remainder.BYTES, description: "a \(a)")
+                }
+            }
+
+            it("handles a divisor whose double would overflow U256") {
+                let divisor = U256(from: [1, 0, 0, 0x8000000000000000])
+                let actual = U256.MAX.divRem(divisor: divisor)
+                expect(actual.quotient).to(equal(U256(from: 1)))
+                expect(actual.remainder).to(equal(U256(from: [.max - 1, .max, .max, 0x7fffffffffffffff])))
+                expectDivisionIdentity(dividend: U256.MAX.BYTES, divisor: divisor.BYTES, quotient: actual.quotient.BYTES, remainder: actual.remainder.BYTES, description: "MAX / (2^255+1)")
+            }
+        }
+
         describe("divRem operation") {
             it("preserves division operators through BigUInt generic dispatch") {
                 func check<T: BigUInt>(_ type: T.Type) {
@@ -312,6 +342,28 @@ final class ArithmeticDivRemSpec: QuickSpec {
                     expect(r).to(equal(a))
                     expect(r < divisor).to(beTrue())
                     expect(U512(from: q) * U512(from: divisor) + U512(from: r)).to(equal(U512(from: a)))
+                }
+            }
+
+            context("subSlice") {
+                it("propagates borrow through zero and maximum limbs within the selected slice") {
+                    var a: [UInt64] = [7, 0, 0, 1, 9]
+                    let borrow = U256.subSlice(a: &a, from: 1, b: [1, .max, 0], to: 3)
+                    // (b^2) - ((b-1)*b+1) = b-1, b = 2^64.
+                    expect(a).to(equal([7, .max, 0, 0, 9]))
+                    expect(borrow).to(beFalse())
+                }
+
+                it("reports final borrow and respects the source and destination bounds") {
+                    var a: [UInt64] = [7, 0, 0, 9]
+                    expect(U256.subSlice(a: &a, from: 1, b: [1, 0, 5], to: 2)).to(beTrue())
+                    expect(a).to(equal([7, .max, .max, 9]))
+
+                    var b: [UInt64] = [5, 9]
+                    expect(U256.subSlice(a: &b, from: 1, b: [3], to: 4)).to(beFalse())
+                    expect(b).to(equal([5, 6]))
+                    expect(U256.subSlice(a: &b, from: 0, b: [], to: 2)).to(beFalse())
+                    expect(b).to(equal([5, 6]))
                 }
             }
 

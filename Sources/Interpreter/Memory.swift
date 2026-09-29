@@ -5,6 +5,7 @@ import Glibc
 #endif
 
 /// Machine Memory with  specific limit.
+/// Interpreter offsets and sizes are nonnegative. A positive effective length owns a buffer.
 public class Memory {
     /// Memory data
     private var buffer: UnsafeMutableRawPointer?
@@ -29,6 +30,18 @@ public class Memory {
     init() {
         self.limit = Int.max
     }
+
+    #if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(visionOS) || os(Linux)
+    /// Allocation boundary; overrides must return malloc-compatible storage or nil.
+    func allocateBuffer(byteCount: Int) -> UnsafeMutableRawPointer? {
+        malloc(byteCount)
+    }
+
+    /// On failure, the existing allocation must remain valid and owned by Memory.
+    func reallocateBuffer(_ buffer: UnsafeMutableRawPointer, byteCount: Int) -> UnsafeMutableRawPointer? {
+        realloc(buffer, byteCount)
+    }
+    #endif
 
     /// Deinitializes the instance by freeing any allocated buffer memory.
     ///
@@ -58,7 +71,7 @@ public class Memory {
     ///            `false` if the length is zero, an overflow occurred, or if resizing fails.
     /// - Note: This function is marked with `@inline(__always)` to encourage aggressive inlining in performance-critical contexts.
     @inline(__always)
-    func resize(offset: Int, size: Int) -> Bool {
+    final func resize(offset: Int, size: Int) -> Bool {
         if size == 0 {
             return false
         }
@@ -82,7 +95,7 @@ public class Memory {
     /// - Returns: `true` if the buffer is already large enough or if resizing succeeds; otherwise, `false` when memory allocation fails.
     /// - Note: This function is marked with `@inline(__always)` to suggest aggressive inlining for performance-critical contexts.
     @inline(__always)
-    func resize(end: Int) -> Bool {
+    final func resize(end: Int) -> Bool {
         guard end > self.effectiveLength else {
             return true
         }
@@ -90,13 +103,13 @@ public class Memory {
         let newSize = Memory.ceil32(end)
         #if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(visionOS) || os(Linux)
         if let oldBuffer = self.buffer {
-            guard let newBuffer = realloc(oldBuffer, newSize) else { return false }
+            guard let newBuffer = reallocateBuffer(oldBuffer, byteCount: newSize) else { return false }
             let offset = self.effectiveLength
             // Set resized `newSize` with zero
             Self.memSet(dstPtr: newBuffer.advanced(by: offset), value: 0, count: newSize - offset)
             self.buffer = newBuffer
         } else {
-            guard let newBuffer = malloc(newSize) else { return false }
+            guard let newBuffer = allocateBuffer(byteCount: newSize) else { return false }
             Self.memSet(dstPtr: newBuffer, value: 0, count: newSize)
             self.buffer = newBuffer
         }
@@ -184,7 +197,8 @@ public class Memory {
         let requiredLength = offset + size
 
         guard self.resize(end: requiredLength) else { return .failure(.Fatal(.ReadMemory)) }
-        guard let buf = self.buffer else { return .failure(.Fatal(.ReadMemory)) }
+        // Successful resize to a positive length guarantees an allocated buffer.
+        let buf = self.buffer!
 
         return value.withUnsafeBytes { src in
             // Get correct range for copy
@@ -211,9 +225,8 @@ public class Memory {
     /// or if the required length exceeds `limit`, the function returns a failure result with an appropriate error message.
     ///
     /// Before performing the copy, the Memory is resized to guarantee that the required range is available. The actual copy is
-    /// executed using the C standard library function `memmove`, which safely handles overlapping memory regions. If either the
-    /// resize operation fails or the internal buffer is unexpectedly `nil`, the function terminates via `fatalError`, reflecting
-    /// that such conditions should never occur under normal operation.
+    /// executed using the C standard library function `memmove`, which safely handles overlapping memory regions.
+    /// Allocation failure returns `.Fatal(.ReadMemory)` without changing the existing buffer.
     ///
     /// - Parameters:
     ///   - srcOffset: The starting offset from which bytes are to be copied.
@@ -238,7 +251,8 @@ public class Memory {
         let requiredLength = maxOffset + size
 
         guard self.resize(end: requiredLength) else { return .failure(.Fatal(.ReadMemory)) }
-        guard let buf = self.buffer else { return .failure(.Fatal(.ReadMemory)) }
+        // Successful resize to a positive length guarantees an allocated buffer.
+        let buf = self.buffer!
 
         // SAFETY: We guaranty that buffer is not nil
         let srcPtr = buf.advanced(by: srcOffset)
@@ -310,7 +324,8 @@ public class Memory {
 
         // Ensure the internal buffer is resized to accommodate the required length.
         guard self.resize(end: requiredLength) else { return .failure(.Fatal(.ReadMemory)) }
-        guard let buf = self.buffer else { return .failure(.Fatal(.ReadMemory)) }
+        // Successful resize to a positive length guarantees an allocated buffer.
+        let buf = self.buffer!
 
         return data.withUnsafeBytes { rawBuffer in
             let dstPtr = buf.advanced(by: memoryOffset)

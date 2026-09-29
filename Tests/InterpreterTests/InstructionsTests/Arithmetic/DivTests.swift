@@ -10,6 +10,20 @@ final class InstructionDivSpec: QuickSpec {
 
     override class func spec() {
         describe("Instruction Div") {
+            it("distinguishes quotients one and two at the multiword divisor boundary") {
+                for (low, expected): (UInt64, UInt64) in [(1, 1), (2, 2), (3, 2)] {
+                    let m = Self.machine
+                    _ = m.stack.push(value: U256(from: [1, 1, 0, 0]))
+                    _ = m.stack.push(value: U256(from: [low, 2, 0, 0]))
+                    m.evalLoop()
+
+                    expect(m.machineStatus).to(equal(.Exit(.Success(.Stop))))
+                    expect(m.stack.peek(indexFromTop: 0)).to(beSuccess(U256(from: expected)))
+                    expect(m.stack.length).to(equal(1))
+                    expect(m.gas.remaining).to(equal(10-GasConstant.LOW))
+                }
+            }
+
             it("returns the quotient after Knuth remainder-estimate overflow") {
                 let m = Self.machine
 
