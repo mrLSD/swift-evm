@@ -40,6 +40,18 @@ public struct U256: BigUInt {
         self.init(l0: value, l1: 0, h0: 0, h1: 0)
     }
 
+    /// Keeps the low 256 bits of a full-width EVM intermediate.
+    @inlinable @inline(__always)
+    public init(truncating value: U512) {
+        self.init(l0: value.l0, l1: value.l1, h0: value.l2, h1: value.l3)
+    }
+
+    /// Interprets a hash as a big-endian EVM word.
+    @inlinable @inline(__always)
+    public init(from value: H256) {
+        self.init(l0: value.l3, l1: value.l2, h0: value.l1, h1: value.l0)
+    }
+
     /// Array initializer (validates length).
     public init(from value: [UInt64]) {
         precondition(value.count == Self.numberBase, "U256 must be initialized with \(Self.numberBase) UInt64 values.")
@@ -68,12 +80,16 @@ public extension U256 {
         return Int(exactly: l0)
     }
 
-    /// Big-endian byte representation (32 bytes, MSB-first).
-    /// Pulls bytes directly from limb fields without going through the array view of `BYTES`.
+    /// Converts an EVM offset to Int without materializing limbs.
+    @inlinable @inline(__always)
+    var saturatingInt: Int {
+        getInt ?? Int.max
+    }
+
+    /// Big-endian byte representation (32 bytes, MSB first).
     var toBigEndian: [UInt8] {
         var out = [UInt8]()
         out.reserveCapacity(32)
-        // Limbs from most to least significant: h1, h0, l1, l0.
         for limb in [h1, h0, l1, l0] {
             out.append(UInt8(truncatingIfNeeded: limb >> 56))
             out.append(UInt8(truncatingIfNeeded: limb >> 48))
@@ -87,26 +103,42 @@ public extension U256 {
         return out
     }
 
-    /// Construct `U256` from a big-endian byte array (length ≤ 32). Packs bytes directly into
-    /// limb fields; no intermediate `[UInt64]` buffer.
-    static func fromBigEndian(from val: [UInt8]) -> U256 {
-        precondition(val.count <= Int(numberBytes), "BigUInt must be initialized with not more than \(numberBytes) bytes.")
+    /// Writes exactly 32 bytes; the destination need not be aligned.
+    @inlinable
+    func writeBigEndian(to buffer: UnsafeMutableRawBufferPointer) {
+        precondition(buffer.count == 32, "U256 requires a 32-byte destination.")
+        var words = (h1.bigEndian, h0.bigEndian, l1.bigEndian, l0.bigEndian)
+        withUnsafeBytes(of: &words) { buffer.copyMemory(from: $0) }
+    }
+
+    /// Reads up to 32 big-endian bytes, with leading zero padding and no alignment requirement.
+    init(bigEndian bytes: UnsafeRawBufferPointer) {
+        precondition(bytes.count <= 32, "BigUInt must be initialized with not more than 32 bytes.")
+        if bytes.count == 32 {
+            self.init(
+                l0: UInt64(bigEndian: bytes.loadUnaligned(fromByteOffset: 24, as: UInt64.self)),
+                l1: UInt64(bigEndian: bytes.loadUnaligned(fromByteOffset: 16, as: UInt64.self)),
+                h0: UInt64(bigEndian: bytes.loadUnaligned(fromByteOffset: 8, as: UInt64.self)),
+                h1: UInt64(bigEndian: bytes.loadUnaligned(as: UInt64.self))
+            )
+            return
+        }
         var l0: UInt64 = 0, l1: UInt64 = 0, h0: UInt64 = 0, h1: UInt64 = 0
-        let n = val.count
-        // val[n-1] is the LSB byte (lowest position), val[0] is the MSB byte (highest position).
-        for i in 0 ..< n {
-            let byte = UInt64(val[n - 1 - i])
-            let block = i / 8
-            let shift = (i % 8) * 8
-            let v = byte << shift
-            switch block {
-            case 0: l0 |= v
-            case 1: l1 |= v
-            case 2: h0 |= v
-            default: h1 |= v
+        for i in 0 ..< bytes.count {
+            let value = UInt64(bytes[bytes.count - 1 - i]) << ((i % 8) * 8)
+            switch i / 8 {
+            case 0: l0 |= value
+            case 1: l1 |= value
+            case 2: h0 |= value
+            default: h1 |= value
             }
         }
-        return U256(l0: l0, l1: l1, h0: h0, h1: h1)
+        self.init(l0: l0, l1: l1, h0: h0, h1: h1)
+    }
+
+    /// Reads at most 32 bytes, padding shorter input on the left.
+    static func fromBigEndian(from val: [UInt8]) -> U256 {
+        val.withUnsafeBytes { U256(bigEndian: $0) }
     }
 }
 
@@ -130,9 +162,15 @@ public extension U256 {
         if (lhs.l1 | lhs.h0 | lhs.h1 | rhs.l1 | rhs.h0 | rhs.h1) == 0 {
             return lhs.l0 < rhs.l0
         }
-        if lhs.h1 != rhs.h1 { return lhs.h1 < rhs.h1 }
-        if lhs.h0 != rhs.h0 { return lhs.h0 < rhs.h0 }
-        if lhs.l1 != rhs.l1 { return lhs.l1 < rhs.l1 }
+        if lhs.h1 != rhs.h1 {
+            return lhs.h1 < rhs.h1
+        }
+        if lhs.h0 != rhs.h0 {
+            return lhs.h0 < rhs.h0
+        }
+        if lhs.l1 != rhs.l1 {
+            return lhs.l1 < rhs.l1
+        }
         return lhs.l0 < rhs.l0
     }
 
@@ -222,9 +260,9 @@ public extension U256 {
         return U256(l0: r0, l1: r1, h0: r2, h1: r3)
     }
 
-    /// Multiplication with overflow flag (computes the high 256 bits and reports if any nonzero).
-    @inline(__always)
-    func overflowMul(_ value: U256) -> (U256, Bool) {
+    /// Exact 256-by-256 product for EVM modular arithmetic.
+    @inlinable @inline(__always)
+    func fullMul(_ value: U256) -> U512 {
         var r0: UInt64 = 0, r1: UInt64 = 0, r2: UInt64 = 0, r3: UInt64 = 0
         var r4: UInt64 = 0, r5: UInt64 = 0, r6: UInt64 = 0, r7: UInt64 = 0
         var carry: UInt64
@@ -257,8 +295,14 @@ public extension U256 {
         carry = U256.mac(&r6, h1, value.h1, carry)
         r7 = carry
 
-        let isOverflow = (r4 | r5 | r6 | r7) != 0
-        return (U256(l0: r0, l1: r1, h0: r2, h1: r3), isOverflow)
+        return U512(l0: r0, l1: r1, l2: r2, l3: r3, h0: r4, h1: r5, h2: r6, h3: r7)
+    }
+
+    /// Low 256 bits and a flag indicating nonzero high bits.
+    @inline(__always)
+    func overflowMul(_ value: U256) -> (U256, Bool) {
+        let product = fullMul(value)
+        return (U256(truncating: product), (product.h0 | product.h1 | product.h2 | product.h3) != 0)
     }
 
     @inlinable @inline(__always)
@@ -318,8 +362,12 @@ public extension U256 {
     /// Logical left shift.
     @inline(__always)
     func shiftLeft(_ shift: Int) -> U256 {
-        if shift <= 0 { return self }
-        if shift >= 256 { return .ZERO }
+        if shift <= 0 {
+            return self
+        }
+        if shift >= 256 {
+            return .ZERO
+        }
         let wordShift = shift / 64
         let bitShift = shift % 64
 
@@ -360,8 +408,12 @@ public extension U256 {
     /// Logical right shift.
     @inline(__always)
     func shiftRight(_ shift: Int) -> U256 {
-        if shift <= 0 { return self }
-        if shift >= 256 { return .ZERO }
+        if shift <= 0 {
+            return self
+        }
+        if shift >= 256 {
+            return .ZERO
+        }
         let wordShift = shift / 64
         let bitShift = shift % 64
 

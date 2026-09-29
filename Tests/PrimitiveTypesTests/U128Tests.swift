@@ -40,7 +40,29 @@ final class U128Spec: QuickSpec {
                     }
                 }
 
-                context("wrong String for conversion") {
+                context("String validation") {
+                    it("rejects signs, whitespace and non-ASCII hex digits") {
+                        let cases: [(hex: String, invalid: String)] = [
+                            ("+1", "+1"), ("-1", "-1"), ("-0", "-0"), ("00+a", "+a"), ("0x+1", "+1"), ("0X+F", "+F"),
+                            (" 1", " 1"), ("1 ", "1 "), ("\t1", "\t1"), ("1\n", "1\n"), ("Ａ1", "Ａ1"), ("é0", "é0")
+                        ]
+                        for (hex, invalid) in cases {
+                            expect(U128.fromString(hex: hex)).to(beFailure { error in
+                                expect(error).to(equal(.InvalidHexCharacter(invalid)))
+                            }, description: "hex \(hex)")
+                        }
+                    }
+
+                    it("preserves empty, prefixed, odd-length and mixed-case hex") {
+                        for hex in ["", "0x", "0X", "0", "00"] {
+                            expect(U128.fromString(hex: hex)).to(beSuccess(U128.ZERO), description: "hex \(hex)")
+                        }
+
+                        for hex in ["aBc", "0xaBc", "0XaBc", "0AbC"] {
+                            expect(U128.fromString(hex: hex)).to(beSuccess(U128(from: 0xabc)), description: "hex \(hex)")
+                        }
+                    }
+
                     it("too big String") {
                         let res = U128.fromString(hex: String(repeating: "A", count: 33))
                         expect(res).to(beFailure { error in
@@ -262,7 +284,7 @@ final class U128Spec: QuickSpec {
                 }
 
                 context("when divisor has leading zeros in high word") {
-                    it("should correctly normalize and divide with shift=16") {
+                    it("normalizes a two-word divisor by 16 bits") {
                         let dividend = U128(from: [0x0000000000000000, 0x0000ffff00000000])
                         let divisor = U128(from: [0x0000000000000000, 0x0000ffff00000000])
 
@@ -285,35 +307,8 @@ final class U128Spec: QuickSpec {
                         expect(remainder).to(equal(dividend))
                     }
                 }
-                /*
-                 context("when division involves multiple qHat adjustments") {
-                     it("should correctly adjust qHat multiple times if necessary") {
-                         let dividend = U128(from: [0x0000000000000000, 0x8000000000000000])
-                         let divisor = U128(from: [0x0000000000000001, 0x0000000000000000])
-
-                         let (quotient, remainder) = dividend.divRem(divisor: divisor)
-
-                         // Expected quotient = 0x8000000000000000, remainder = 0
-                         expect(quotient).to(equal(U128(from: [0x8000000000000000, 0x0000000000000000])))
-                         expect(remainder).to(equal(U128.ZERO))
-                     }
-                 }
-
-                 context("when division results in borrow adjustment") {
-                     it("should correctly handle borrow during subtraction") {
-                         let dividend = U128(from: [0x8000000000000000, 0x0000000000000001])
-                         let divisor = U128(from: [0x8000000000000000, 0x0000000000000000])
-
-                         let (quotient, remainder) = dividend.divRem(divisor: divisor)
-
-                         // Expected quotient = 1, remainder = 0
-                         expect(quotient).to(equal(U128(from: [1, 0])))
-                         expect(remainder).to(equal(U128.ZERO))
-                     }
-                 }
-                 */
-                context("when dividend has leading zeros in high word") {
-                    it("should correctly normalize and divide with shift=32") {
+                context("when equal operands have a zero high word") {
+                    it("divides equal 48-bit operands through the word path") {
                         let dividend = U128(from: [0x0000ffff00000000, 0x0000000000000000])
                         let divisor = U128(from: [0x0000ffff00000000, 0x0000000000000000])
 
@@ -384,8 +379,8 @@ final class U128Spec: QuickSpec {
                     }
                 }
 
-                context("when divisor has leading zeros and requires normalization") {
-                    it("should correctly normalize and divide with shift=48") {
+                context("when equal operands fit in one word") {
+                    it("divides equal one-word operands") {
                         let dividend = U128(from: [0x00000000ffff0000, 0x0000000000000000])
                         let divisor = U128(from: [0x00000000ffff0000, 0x0000000000000000])
 
@@ -396,8 +391,8 @@ final class U128Spec: QuickSpec {
                     }
                 }
 
-                context("when high word of divisor is zero and requires additional shift") {
-                    it("should correctly normalize and divide with shift=64 + leading zeros in low word") {
+                context("when both operands are one") {
+                    it("returns one for one divided by one") {
                         let dividend = U128(from: [0x0000000000000001, 0x0000000000000000]) // 1
                         let divisor = U128(from: [0x0000000000000001, 0x0000000000000000]) // 1
 
@@ -422,8 +417,8 @@ final class U128Spec: QuickSpec {
                     }
                 }
 
-                context("when dividend and divisor require maximum shift") {
-                    it("should correctly normalize and divide with maximum shift") {
+                context("when a high-bit dividend is divided by one") {
+                    it("preserves the high-bit dividend") {
                         let dividend = U128(from: [0x0000000000000000, 0x8000000000000000]) // 2^127
                         let divisor = U128(from: [0x0000000000000001, 0x0000000000000000]) // 1
 
@@ -434,7 +429,7 @@ final class U128Spec: QuickSpec {
                     }
                 }
 
-                context("when dividend is multiple of divisor with high word") {
+                context("when both operands have a nonzero high word and division leaves a remainder") {
                     it("should correctly compute quotient and remainder") {
                         let dividend = U128(from: [0x0000000000000000, 0x0000000000000002])
                         let divisor = U128(from: [0x0000000000000001, 0x0000000000000001])
@@ -456,8 +451,8 @@ final class U128Spec: QuickSpec {
                     }
                 }
 
-                context("when dividend and divisor require partial normalization") {
-                    it("should correctly normalize and divide with shift=1") {
+                context("when the one-word divisor has its high bit set") {
+                    it("divides a two-word dividend by 2^63") {
                         let dividend = U128(from: [0x8000000000000000, 0x0000000000000001])
                         let divisor = U128(from: [0x8000000000000000, 0x0000000000000000])
                         let (quotient, remainder) = dividend.divRem(divisor: divisor)
@@ -468,7 +463,7 @@ final class U128Spec: QuickSpec {
                 }
 
                 context("when dividing") {
-                    it("should correctly normalize and divide with shift=1") {
+                    it("divides an even one-word dividend by two") {
                         let dividend = U128(from: 2) * U128(from: [0x0000001fc0000000, 0x0000000000000000])
                         let divisor = U128(from: 2)
                         let (quotient, remainder) = dividend.divRem(divisor: divisor)

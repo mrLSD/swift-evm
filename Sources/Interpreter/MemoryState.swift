@@ -473,10 +473,8 @@ public class MemoryState {
         // 4. Handle Storage Resets
         // If an account in the substate has the 'reset' flag, we clear the storage
         // for that address in the parent state (which is now 'self').
-        for (address, account) in exited.accounts {
-            if account.reset {
-                storages[address] = nil
-            }
+        for (address, account) in exited.accounts where account.reset {
+            storages[address] = nil
         }
 
         // 5. Merge substate data into current state

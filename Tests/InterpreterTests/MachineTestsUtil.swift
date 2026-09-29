@@ -1,6 +1,7 @@
 // NOTE: we're testing each opcode separately. And it includes be default
 // each step of Machine eval loop.
 
+import Foundation
 @testable import Interpreter
 import PrimitiveTypes
 
@@ -93,4 +94,33 @@ enum TestMachine {
     static func machine(opcodes code: [Opcode], gasLimit: UInt64, context: Machine.Context, hardFork: HardFork) -> Machine {
         Machine(data: [], code: code.map(\.rawValue), gasLimit: gasLimit, memoryLimit: 32000, context: context, state: ExecutionState(), handler: TestHandler(), hardFork: hardFork)
     }
+}
+
+func withStandardErrorRedirected(to writeStream: FileHandle, action: () -> Void) {
+    let originalStderr = dup(fileno(stderr))
+    dup2(writeStream.fileDescriptor, fileno(stderr))
+    action()
+    fflush(stderr)
+    dup2(originalStderr, fileno(stderr))
+    close(originalStderr)
+}
+
+func captureStandardError(action: () -> Void) -> String {
+    let pipe = Pipe()
+    let writeHandle = pipe.fileHandleForWriting
+    let readHandle = pipe.fileHandleForReading
+
+    defer { readHandle.closeFile() }
+
+    do {
+        defer { writeHandle.closeFile() }
+
+        withStandardErrorRedirected(to: writeHandle) {
+            action()
+        }
+    }
+
+    let data = readHandle.readDataToEndOfFile()
+
+    return String(data: data, encoding: .utf8) ?? ""
 }

@@ -7,6 +7,21 @@ import Quick
 final class MStoreSpec: QuickSpec {
     override class func spec() {
         describe("Instruction MSTORE") {
+            it("writes and reloads an unaligned word with exact gas and byte order") {
+                let m = TestMachine.machine(rawCode: [Opcode.MSTORE.rawValue, Opcode.PUSH1.rawValue, 1, Opcode.MLOAD.rawValue], gasLimit: 100)
+                let word = U256(from: [0x18191A1B1C1D1E1F, 0x1011121314151617, 0x08090A0B0C0D0E0F, 0x0001020304050607])
+                _ = m.stack.push(value: word)
+                _ = m.stack.push(value: U256(from: 1))
+
+                m.evalLoop()
+
+                expect(m.stack.peek(indexFromTop: 0)).to(beSuccess(word))
+                expect(m.stack.length).to(equal(1))
+                expect(m.memory.get(offset: 0, size: 34)).to(equal([0] + Array(0 ..< 32) + [0]))
+                expect(m.machineStatus).to(equal(.Exit(.Success(.Stop))))
+                expect(m.gas.remaining).to(equal(85))
+            }
+
             it("with OutOfGas result for index=0") {
                 let m = TestMachine.machine(opcode: Opcode.MSTORE, gasLimit: 1)
                 _ = m.stack.push(value: U256(from: 0))

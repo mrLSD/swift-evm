@@ -73,7 +73,7 @@ struct Stack {
         #if TRACING && TRACE_STACK_INOUT
             self.traceStackOut.append(value)
         #endif
-        return .success(H256(from: value.toBigEndian))
+        return .success(H256(from: value))
     }
 
     /// Peeks `U256` value at a given index from the top of the stack.
@@ -102,7 +102,7 @@ struct Stack {
     @inline(__always)
     func peekH256(indexFromTop: Int) -> Result<H256, Machine.ExitError> {
         self.peek(indexFromTop: indexFromTop).map { u256 in
-            H256(from: u256.toBigEndian)
+            H256(from: u256)
         }
     }
 

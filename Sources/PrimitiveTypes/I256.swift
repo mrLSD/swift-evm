@@ -1,7 +1,6 @@
-/// `I256`: signed 256-bit integer type.
-///
-/// Storage mirrors `U256` (four `UInt64` limbs in little-endian order) plus a `signExtend` flag
-/// that indicates a negative value in two's-complement representation.
+/// EVM signed integer: a magnitude in four little-endian limbs and a negative flag.
+/// Use fromU256/toU256 for two's-complement words. BigUInt byte conversions expose the magnitude.
+/// Signed operations require magnitudes <= 2^255, with 2^255 allowed only for minValue.
 public struct I256: BigUInt {
     @usableFromInline let l0: UInt64
     @usableFromInline let l1: UInt64
@@ -10,7 +9,7 @@ public struct I256: BigUInt {
 
     /// Number of bytes in `I256`.
     public static let numberBytes: UInt8 = 32
-    /// Maximum value of `I256` (positive max — the bit pattern is `0xff..ff`, but here it's the all-ones representation per BigUInt contract).
+    /// All-ones magnitude for the BigUInt storage contract, not the signed maximum (2^255-1).
     public static let MAX: Self = .init(l0: .max, l1: .max, h0: .max, h1: .max, signExtend: false)
     /// Zero value of `I256`.
     public static let ZERO: Self = .init(l0: 0, l1: 0, h0: 0, h1: 0, signExtend: false)
@@ -228,7 +227,7 @@ public extension I256 {
     /// Bitwise AND of the two's-complement representations.
     @inlinable @inline(__always)
     static func & (lhs: Self, rhs: Self) -> Self {
-        Self.fromU256(lhs.toU256 & rhs.toU256)
+        fromU256(lhs.toU256 & rhs.toU256)
     }
 }
 

@@ -14,6 +14,22 @@ final class BigUintSpec: QuickSpec {
             precondition(value.count == Self.numberBase, "BigUInt must be initialized with \(Self.numberBase) UInt64 values.")
             self.bytes = value
         }
+
+        static func / (lhs: Self, rhs: Self) -> Self {
+            lhs.divRem(divisor: rhs).quotient
+        }
+
+        static func % (lhs: Self, rhs: Self) -> Self {
+            lhs.divRem(divisor: rhs).remainder
+        }
+
+        static func /= (lhs: inout Self, rhs: Self) {
+            lhs = lhs / rhs
+        }
+
+        static func %= (lhs: inout Self, rhs: Self) {
+            lhs = lhs % rhs
+        }
     }
 
     override class func spec() {

@@ -78,7 +78,29 @@ final class I256Spec: QuickSpec {
                     }
                 }
 
-                context("wrong String for conversion") {
+                context("String validation") {
+                    it("rejects signs, whitespace and non-ASCII hex digits") {
+                        let cases: [(hex: String, invalid: String)] = [
+                            ("+1", "+1"), ("-1", "-1"), ("-0", "-0"), ("00+a", "+a"), ("0x+1", "+1"), ("0X+F", "+F"),
+                            (" 1", " 1"), ("1 ", "1 "), ("\t1", "\t1"), ("1\n", "1\n"), ("Ａ1", "Ａ1"), ("é0", "é0")
+                        ]
+                        for (hex, invalid) in cases {
+                            expect(I256.fromString(hex: hex)).to(beFailure { error in
+                                expect(error).to(equal(.InvalidHexCharacter(invalid)))
+                            }, description: "hex \(hex)")
+                        }
+                    }
+
+                    it("preserves empty, prefixed, odd-length and mixed-case hex") {
+                        for hex in ["", "0x", "0X", "0", "00"] {
+                            expect(I256.fromString(hex: hex)).to(beSuccess(I256.ZERO), description: "hex \(hex)")
+                        }
+
+                        for hex in ["aBc", "0xaBc", "0XaBc", "0AbC"] {
+                            expect(I256.fromString(hex: hex)).to(beSuccess(I256(from: 0xABC)), description: "hex \(hex)")
+                        }
+                    }
+
                     it("too big String") {
                         let res = I256.fromString(hex: String(repeating: "A", count: 65))
                         expect(res).to(beFailure { error in
@@ -654,20 +676,18 @@ final class I256Spec: QuickSpec {
                         return value
                     }
 
-                    let signBit = U256(l0: 0, l1: 0, h0: 0, h1: 0x8000_0000_0000_0000)
-                    let isNegative = !(value & signBit).isZero
-                    if shift >= 256 {
-                        return isNegative ? U256.MAX : U256.ZERO
-                    }
-
-                    var result = value
-                    for _ in 0 ..< shift {
-                        result = result >> 1
-                        if isNegative {
-                            result = result | signBit
+                    let source = value.BYTES
+                    let negative = source[3] >> 63 != 0
+                    var words = [UInt64](repeating: 0, count: 4)
+                    // Copy individual source bits, with sign fill outside the 256-bit word.
+                    for bit in 0 ..< 256 {
+                        let sourceBit = shift >= 256 ? 256 : bit + shift
+                        let set = sourceBit >= 256 ? negative : ((source[sourceBit / 64] >> (sourceBit % 64)) & 1) != 0
+                        if set {
+                            words[bit / 64] |= UInt64(1) << (bit % 64)
                         }
                     }
-                    return result
+                    return U256(from: words)
                 }
 
                 it("shiftRight with positive I256 value, no sign extension") {
@@ -744,6 +764,47 @@ final class I256Spec: QuickSpec {
             }
 
             context("div operation") {
+                it("preserves signs through generic division and compound operators") {
+                    func check<T: BigUInt>(_ a: T, _ b: T, quotient: T, remainder: T) {
+                        let description = "seed 0x516ED, a \(String(reflecting: a)), b \(String(reflecting: b))"
+                        let directQuotient = a / b, directRemainder = a % b
+                        let optionalQuotient: T? = a / b, optionalRemainder: T? = a % b
+                        func divide(_ a: T, _ b: T) -> T { a / b }
+                        func modulo(_ a: T, _ b: T) -> T { a % b }
+                        let returnedQuotient = divide(a, b), returnedRemainder = modulo(a, b)
+                        var q = a, r = a
+                        q /= b
+                        r %= b
+                        expect(directQuotient).to(equal(quotient), description: description)
+                        expect(directRemainder).to(equal(remainder), description: description)
+                        expect(optionalQuotient).to(equal(quotient), description: description)
+                        expect(optionalRemainder).to(equal(remainder), description: description)
+                        expect(returnedQuotient).to(equal(quotient), description: description)
+                        expect(returnedRemainder).to(equal(remainder), description: description)
+                        expect(q).to(equal(quotient), description: description)
+                        expect(r).to(equal(remainder), description: description)
+                    }
+                    for dividend in [false, true] {
+                        for divisor in [false, true] {
+                            check(I256(from: [9, 0, 0, 0], signExtend: dividend), I256(from: [2, 0, 0, 0], signExtend: divisor),
+                                  quotient: I256(from: [4, 0, 0, 0], signExtend: dividend != divisor),
+                                  remainder: I256(from: [1, 0, 0, 0], signExtend: dividend))
+                        }
+                    }
+                    check(I256.minValue, I256(from: [1, 0, 0, 0], signExtend: true), quotient: I256.minValue, remainder: I256.ZERO)
+                    check(I256.ZERO, I256(from: 2), quotient: I256.ZERO, remainder: I256.ZERO)
+
+                    func signed(_ value: Int64) -> I256 {
+                        I256(from: [value.magnitude, 0, 0, 0], signExtend: value < 0)
+                    }
+                    var generator = SeededGenerator(state: 0x516ED)
+                    for _ in 0 ..< 1024 {
+                        let a = Int64(bitPattern: generator.next()) >> 1
+                        let b = Int64(generator.next() % 1_000_000 + 1) * (generator.next() & 1 == 0 ? 1 : -1)
+                        check(signed(a), signed(b), quotient: signed(a / b), remainder: signed(a % b))
+                    }
+                }
+
                 it("preserves signed semantics for compound division") {
                     let values = [I256.ZERO, I256(from: 6), I256(from: [6, 0, 0, 0], signExtend: true), I256.minValue]
                     for value in values {

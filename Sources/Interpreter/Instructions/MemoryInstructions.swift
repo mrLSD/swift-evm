@@ -24,8 +24,7 @@ enum MemoryInstructions {
         guard m.resizeMemoryAndRecordGas(offset: index, size: 32) else {
             return
         }
-        let val = m.memory.get(offset: index, size: 32)
-        m.stackPush(value: U256.fromBigEndian(from: val))
+        m.stackPush(value: m.memory.getWord(offset: index))
     }
 
     /// Stores a 32-byte word to memory at the byte offset popped from the stack.
@@ -52,7 +51,7 @@ enum MemoryInstructions {
             return
         }
 
-        if case .failure(let err) = m.memory.set(offset: index, value: value.toBigEndian, size: 32) {
+        if case .failure(let err) = m.memory.set(offset: index, word: value) {
             m.machineStatus = Machine.MachineStatus.Exit(err)
         }
     }

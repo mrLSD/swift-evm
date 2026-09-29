@@ -6,6 +6,28 @@ import Quick
 final class InstructionPushSpec: QuickSpec {
     override class func spec() {
         describe("Instruction PUSH") {
+            it("pads every missing PUSH suffix with zeros") {
+                for width in 1 ... 32 {
+                    for available in 0 ... width {
+                        let bytes = (0 ..< available).map { UInt8($0 + 1) }
+                        let m = TestMachine.machine(rawCode: [Opcode.PUSH1.rawValue + UInt8(width - 1)] + bytes, gasLimit: 10)
+                        var expected = [UInt64](repeating: 0, count: 4)
+                        for i in 0 ..< available {
+                            let byteIndex = width - 1 - i
+                            expected[byteIndex / 8] |= UInt64(bytes[i]) << ((byteIndex % 8) * 8)
+                        }
+
+                        m.evalLoop()
+
+                        expect(m.stack.peek(indexFromTop: 0)).to(beSuccess(U256(from: expected)), description: "PUSH \(width), available \(available)")
+                        expect(m.stack.length).to(equal(1))
+                        expect(m.pc).to(equal(width + 1))
+                        expect(m.machineStatus).to(equal(.Exit(.Success(.Stop))))
+                        expect(m.gas.remaining).to(equal(7))
+                    }
+                }
+            }
+
             it("PUSH n with complete code size") {
                 for n in 1 ... UInt8(32) {
                     var code: [UInt8] = [Opcode.PUSH1.rawValue + n - 1]

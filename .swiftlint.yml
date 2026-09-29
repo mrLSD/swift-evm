@@ -3,6 +3,14 @@ disabled_rules:
   - line_length
   - file_length
   - type_body_length
+  # Xcode SwiftFormat infers trailing commas per file. Accept both styles.
+  - trailing_comma
 excluded:
   - Tests
   - .build
+
+# Match SwiftFormat for Xcode's wrapMultilineStatementBraces rule.
+opening_brace:
+  ignore_multiline_type_headers: true
+  ignore_multiline_statement_conditions: true
+  ignore_multiline_function_signatures: true

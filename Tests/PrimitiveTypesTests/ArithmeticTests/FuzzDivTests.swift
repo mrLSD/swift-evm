@@ -132,6 +132,7 @@ final class FuzzDivRemSpec: QuickSpec {
                     let power = UInt64(1) << bit
                     divisors.formUnion([power - 1, power, power + 1])
                 }
+
                 for divisor in divisors.sorted() where divisor != 0 {
                     for hi in Set([0, divisor / 2, divisor - 1]).sorted() {
                         for lo: UInt64 in [0, 1, .max] {

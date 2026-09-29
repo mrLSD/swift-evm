@@ -44,6 +44,12 @@ operations needed by the EVM. It is not a general-purpose mathematics library.
 
 - Read neighboring implementations and existing tests before editing. Follow
   the project's naming, layout, access control, assertions, and abstractions.
+- Separate consecutive loops at the same nesting level with a blank line.
+  This rule concerns sibling loops, not nested loops.
+- Omit explicit `internal` modifiers; use Swift's default access level. Put
+  internal helpers in an unqualified extension, not a `public extension`.
+- SwiftFormat for Xcode owns formatting. Keep SwiftLint compatible with its
+  multiline braces and per-file inferred comma style; avoid formatting-only churn.
 - Tests use Quick and Nimble: `QuickSpec`, `describe`, `context`, `it`, `expect`.
   Extend the existing relevant specs in `Tests/PrimitiveTypesTests` and
   `Tests/InterpreterTests`. Do not introduce parallel XCTest/Swift Testing
@@ -76,8 +82,16 @@ operations needed by the EVM. It is not a general-purpose mathematics library.
   in diagnostics. Cover U256 and U512, not only U128. Reference-generated
   fixtures may use Rust or independent arbitrary-precision arithmetic without
   adding a production dependency.
+- Bind generic operator results to local values before passing them to Nimble;
+  its optional autoclosures can change overload resolution. Check external-module
+  dispatch when changing protocol operators.
 - For EVM-visible changes, verify opcode behavior as well as primitive helpers.
   A regression test must fail for the defect it is intended to prevent.
+- Assert the specific failure, not merely that something failed: match the
+  concrete error case of a `Result`, and for traps capture stderr and match the
+  message fragment that names the violated contract. A bare `throwAssertion()`
+  is acceptable only for a trap that carries no message, such as the arithmetic
+  overflow in `BasicAccount.incNonce`.
 
 # CI gates
 
@@ -92,18 +106,21 @@ The workflow currently uses
    binary and `codecov/default.profdata` under `swift build --show-bin-path`,
    excluding `\.build|Tests`, to `coverage/lcov.info`; use the workflow's exact
    discovery/export script.
-5. Upload that report through Codecov with `fail_ci_if_error: true` in CI.
+5. Upload LCOV through Codecov with `fail_ci_if_error: true` in CI.
 
 Run the applicable local checks after changes and report failures honestly.
-Codecov currently sets patch coverage to 50%, disables the project status, and
-ignores `Tests`. This does not
-enforce 100% coverage; the test requirement above is project policy, not an
-existing CI guarantee. Audit raw local coverage without excluding source files.
+Codecov requires 100% patch and project coverage with zero threshold and ignores
+only `Tests`. Inspect raw region coverage locally; do not add a separate CI
+coverage gate or checker script. Swift branch counters are not emitted by the current
+toolchain; do not describe 0/0 branches as measured branch coverage.
 Release benchmarks and additional OS testing are useful validation, but are
 not currently CI gates. Do not claim a local run verifies Codecov upload.
 
 # Git and reporting
 
+- Never stage or unstage files, or modify the Git index through any command or
+  API. Preserve the user's staged/unstaged boundaries; completing fixes, reviews,
+  or checks does not authorize staging.
 - Do not run `git commit` or `git push`, and do not create pull requests.
 - After changes, review the final diff again for correctness, scope, style,
   test quality, and unnecessary comments. State what was actually verified.

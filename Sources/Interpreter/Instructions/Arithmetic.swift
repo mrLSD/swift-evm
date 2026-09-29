@@ -183,8 +183,7 @@ enum ArithmeticInstructions {
             newValueu512 = (op1u512 + op2u512) % op3u512
         }
 
-        // Set first 4 elements from `U512`
-        let newValue = U256(from: Array(newValueu512.BYTES.prefix(4)))
+        let newValue = U256(truncating: newValueu512)
         m.stackPush(value: newValue)
     }
 
@@ -205,18 +204,8 @@ enum ArithmeticInstructions {
         let op2 = m.stackPop()!
         let op3 = m.stackPop()!
 
-        let op1u512 = U512(from: op1)
-        let op2u512 = U512(from: op2)
-        let op3u512 = U512(from: op3)
-
-        var newValueu512 = U512.ZERO
-        if !op3u512.isZero {
-            // We ignore possible overflow, as we takes only first 4 elements from array as results
-            newValueu512 = (op1u512 * op2u512) % op3u512
-        }
-
-        // Set first 4 elements from `U512`
-        let newValue = U256(from: Array(newValueu512.BYTES.prefix(4)))
+        let remainder = op3.isZero ? U512.ZERO : op1.fullMul(op2) % U512(from: op3)
+        let newValue = U256(truncating: remainder)
         m.stackPush(value: newValue)
     }
 

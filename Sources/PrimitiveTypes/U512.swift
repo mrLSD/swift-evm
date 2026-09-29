@@ -208,4 +208,20 @@ public extension U512 {
     static func * (lhs: U512, rhs: U512) -> U512 {
         lhs.mul(rhs)
     }
+
+    static func / (lhs: Self, rhs: Self) -> Self {
+        lhs.divRem(divisor: rhs).quotient
+    }
+
+    static func % (lhs: Self, rhs: Self) -> Self {
+        lhs.divRem(divisor: rhs).remainder
+    }
+
+    static func /= (lhs: inout Self, rhs: Self) {
+        lhs = lhs / rhs
+    }
+
+    static func %= (lhs: inout Self, rhs: Self) {
+        lhs = lhs % rhs
+    }
 }

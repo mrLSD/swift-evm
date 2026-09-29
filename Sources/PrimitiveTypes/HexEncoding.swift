@@ -1,19 +1,30 @@
-// Pure-stdlib hex encoding helpers used by `BigUInt`, `FixedArray`, opcode descriptions,
-// and tracing. Replaces `Foundation`'s `String(format:)` so production code in `Sources/`
-// does not need to `import Foundation`.
-//
-// All helpers go through `String(decoding: bytes, as: UTF8.self)` (Swift stdlib, Swift 4+).
+/// Decodes exactly two ASCII hex digits; signs and whitespace are invalid.
+func hexDecodeByte(_ value: String) -> UInt8? {
+    guard value.utf8.count == 2 else { return nil }
+    var result: UInt8 = 0
+    for byte in value.utf8 {
+        let digit: UInt8
+        switch byte {
+        case 48 ... 57: digit = byte - 48
+        case 65 ... 70: digit = byte - 55
+        case 97 ... 102: digit = byte - 87
+        default: return nil
+        }
+        result = (result << 4) | digit
+    }
+    return result
+}
 
 /// ASCII bytes for lowercase hex digits `0..f`.
 @usableFromInline
-internal let hexTableLower: [UInt8] = [
+let hexTableLower: [UInt8] = [
     0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, // '0'..'7'
     0x38, 0x39, 0x61, 0x62, 0x63, 0x64, 0x65, 0x66 // '8', '9', 'a'..'f'
 ]
 
 /// ASCII bytes for uppercase hex digits `0..F`.
 @usableFromInline
-internal let hexTableUpper: [UInt8] = [
+let hexTableUpper: [UInt8] = [
     0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, // '0'..'7'
     0x38, 0x39, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46 // '8', '9', 'A'..'F'
 ]

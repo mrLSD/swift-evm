@@ -26,7 +26,31 @@ final class H160Spec: QuickSpec {
                     }
                 }
 
-                context("wrong String for conversion") {
+                context("String validation") {
+                    it("rejects signs, whitespace and non-ASCII hex digits") {
+                        for pair in ["+1", "-1", "-0", " a", "a ", "\t1", "1\n", "Ａ1", "é0"] {
+                            let hex = pair + String(repeating: "00", count: 19)
+                            for prefix in ["", "0x", "0X"] {
+                                expect(H160.fromString(hex: prefix + hex)).to(beFailure { error in
+                                    expect(error).to(equal(.InvalidHexCharacter(pair)))
+                                }, description: "hex \(prefix + hex)")
+                            }
+                        }
+                    }
+
+                    it("accepts both hex cases and prefixes at the exact width") {
+                        let hex = String(repeating: "aF", count: 20)
+                        for prefix in ["", "0x", "0X"] {
+                            expect(H160.fromString(hex: prefix + hex)).to(beSuccess(H160(from: [UInt8](repeating: 0xaf, count: 20))))
+                        }
+
+                        for hex in ["", "0x", "0X", "0", String(repeating: "0", count: 41)] {
+                            expect(H160.fromString(hex: hex)).to(beFailure { error in
+                                expect(error).to(equal(.InvalidStringLength))
+                            }, description: "hex \(hex)")
+                        }
+                    }
+
                     it("too big String") {
                         let res = H160.fromString(hex: String(repeating: "A", count: 41))
                         expect(res).to(beFailure { error in

@@ -7,58 +7,69 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] — 0.6.0-rc.1 candidate
 
-This is a draft for the next minor release, not a published version.
-See [release preparation](docs/release-v0.6.0.md) for provenance and migration notes.
+Draft for the next minor release. Since v0.5.26, PRs [#70] and [#72] were merged.
+The subsequent division/memory work in commit
+[`0694153`](https://github.com/mrLSD/swift-evm/commit/06941532a052eac6d65156c5329f76f0cba630c8)
+is tracked by the still-open PR [#73]. The entries below also include the current
+uncommitted audit fixes; no release or tag has been published by this work.
 
 ### Breaking changes
-- Primitive values now use inline word storage. `BYTES` is a computed conversion
-  array; callers should avoid repeatedly reading it in hot paths.
-- `BigUInt` no longer supplies general arithmetic, comparison, and shift operator
-  defaults. For example, `U128 <`, `U128 << Int`, `U512 -`, and generic
-  `<T: BigUInt>` addition no longer compile. Concrete types expose the operations
-  needed by the EVM; generic division and explicit limb-shift helpers remain.
-- Removed `FixedArray.getMax` / `getZero` and default equality / `isZero`
-  implementations. Custom conformers must provide their own implementations;
-  use concrete `MAX` / `ZERO` values.
-- `BasicAccount.nonce` and its initializer parameter are now `UInt64`, not `U256`.
-  Direct increment at `UInt64.max` traps; `MemoryState.incNonce` reports `.MaxNonce`.
-- Knuth's implementation is now private. Replace direct calls to
-  `divModKnuth(v:n:m:)` with `divRem(divisor:)`.
+- Primitive values use inline word storage. `BYTES` is a computed conversion array.
+- Generic `BigUInt` addition, subtraction, multiplication, comparison and shift
+  operator defaults were removed. Concrete types retain the operations needed
+  by the EVM; explicit limb shifts and division remain ([#70]).
+- Removed `FixedArray.getMax` / `getZero` and default equality / zero detection.
+  Custom conformers must supply these values and implementations ([#70]).
+- `BasicAccount.nonce` is `UInt64`; incrementing the maximum value reports
+  `.MaxNonce` through `MemoryState` instead of silently wrapping ([#70]).
+- Knuth implementation details are no longer public: `divModKnuth`, `divMod`,
+  `mac`, slice helpers, `divModWord`, and `BigUInt.getMax` / `getZero`.
+  Unused `subSlice` was removed. Use concrete constants and `divRem(divisor:)`.
+- Existing `/`, `%`, `/=` and `%=` operators are now protocol requirements so
+  generic calls preserve concrete I256 signed semantics. Operator defaults were
+  removed from the protocol extension to prevent context-dependent static dispatch.
+  Custom conformers must implement all four operators; `divRem` divides stored magnitudes.
 
 ### Changed
-- Run generic Knuth division on limb arrays materialized once per operand, with
-  native full-width multiplication instead of temporary U128 values.
-- Add field-based U256 initialization and division paths for one-word divisors
-  and dividends below the divisor; retain full-width intermediates for MULMOD.
-- Standardize validated stack access across instruction handlers without
-  removing stack-underflow or out-of-gas checks.
-- Remove Foundation from production modules and use stdlib hex encoding.
-- Fuse Knuth's multiply-subtract step to avoid a temporary product array for
-  each quotient digit.
-- Add a U256 quotient-one fast path using subtraction without overflowing `2*d`.
-- Prohibit `-Ounchecked` builds in project policy so validated unwraps and
-  preconditions retain their traps under release `-O` optimization.
+- Eliminate repeated limb-array conversions in Knuth division; fuse its
+  multiply-subtract step and add U256 fast paths for small divisors, smaller
+  dividends and quotient one ([#72], [#73]).
+- Initialize U256 from UInt64 and convert U512/H256 intermediates directly on fields.
+- Use exact U256-by-U256 full multiplication for MULMOD, sharing its implementation
+  with overflow detection while retaining the full 512-bit intermediate.
+- Read and write big-endian U256 words through bounded, unaligned buffers.
+  MLOAD/MSTORE, PUSH, CALLDATALOAD and stack hash conversions avoid temporary arrays;
+  truncated PUSH and call data still receive the required right zero padding.
+- Specialize U256 `saturatingInt` to avoid generic limb-array conversions.
+- Keep validated stack/buffer unwraps checked in release; prohibit `-Ounchecked`.
+- Remove Foundation from production modules and use stdlib hex conversion ([#70]).
 
 ### Fixed
-- Replace the faulty OS-dependent word-division fallback with
-  `UInt64.dividingFullWidth` on every supported path.
-- Correct I256 zero normalization, arithmetic right shifts, signed bitwise AND,
-  and signed compound division/remainder.
-- Return zero for generic limb shifts at or beyond the integer width.
-- Correct stale arithmetic documentation and narrowly suppress false-positive
-  Data-to-String lint diagnostics for generated ASCII byte arrays.
+- Replace OS-dependent word division with `UInt64.dividingFullWidth`, eliminating
+  the fallback's lost remainder bit ([#70]).
+- Correct I256 canonical zero, SAR, signed AND, compound division and remainder
+  ([#70], [#72]); preserve signs through generic operator dispatch as well.
+- Return zero for generic shifts at or beyond the type width ([#72]).
+- Reject signs, whitespace and non-ASCII digits in all integer/address/hash hex
+  parsers, preserving existing prefix, length, odd-digit and empty-input rules.
+- Clarify I256 magnitude storage and `MAX`, integer conversion contracts, and
+  test names; remove the remaining SwiftLint warnings.
 
-### Tests
+### Tests and CI
 - Extend existing Quick/Nimble specs with seeded U256/U512 division invariants,
-  Knuth normalization/correction/add-back families, signed division properties,
-  direct and generic dispatch, carry chains, and oversized shifts.
-- Cover negative SIGNEXTEND, partial memory reads, and `peekUInt` overflow.
-- Record release timings, allocator calls, code size, independent Python checks,
-  and raw coverage in the [division audit](docs/division-audit.md).
-- Cover quotient-one boundaries, public `subSlice`, and deterministic memory
-  allocation failures through Memory and MSTORE; document validated buffer
-  invariants and the remaining coverage fixes in the
-  [follow-up audit](docs/division-followup-audit.md).
+  normalization, quotient correction and add-back cases; test real opcodes too.
+- Add independent full-product and SAR references, assert multiplication results
+  alongside overflow flags, and cover generic signed operators and strict hex.
+- Verify every byte-read length, unaligned word writes, truncated PUSH/call data,
+  full-width products, memory limits and allocation failure propagation.
+- Cover deterministic allocation failures through Memory and MSTORE ([#73]).
+- Verify 100% executable lines, regions and functions locally; set Codecov patch
+  and project targets to 100%. Keep the existing LCOV upload without a separate
+  CI coverage checker or script.
+- Document sibling-loop spacing and implicit internal access in AGENTS.md.
+- Align SwiftLint with Xcode SwiftFormat multiline braces and inferred comma style.
+- Test generic division before Nimble autoclosures and across optional, returned
+  and compound contexts; verify external-module dispatch in debug and release.
 
 ## [0.5.26] - 2026-05-11
 
@@ -647,3 +658,6 @@ This is the **initial public release** of `swift-evm` — a Swift-native Ethereu
 [#3]: https://github.com/mrLSD/swift-evm/pull/3
 [#2]: https://github.com/mrLSD/swift-evm/pull/2
 [#1]: https://github.com/mrLSD/swift-evm/pull/1
+[#70]: https://github.com/mrLSD/swift-evm/pull/70
+[#72]: https://github.com/mrLSD/swift-evm/pull/72
+[#73]: https://github.com/mrLSD/swift-evm/pull/73
