@@ -5,71 +5,60 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] — 0.6.0-rc.1 candidate
+## [Unreleased]
 
-Draft for the next minor release. Since v0.5.26, PRs [#70] and [#72] were merged.
-The subsequent division/memory work in commit
-[`0694153`](https://github.com/mrLSD/swift-evm/commit/06941532a052eac6d65156c5329f76f0cba630c8)
-is tracked by the still-open PR [#73]. The entries below also include the current
-uncommitted audit fixes; no release or tag has been published by this work.
+## [0.6.0] - 2026-09-30
 
-### Breaking changes
-- Primitive values use inline word storage. `BYTES` is a computed conversion array.
-- Generic `BigUInt` addition, subtraction, multiplication, comparison and shift
-  operator defaults were removed. Concrete types retain the operations needed
-  by the EVM; explicit limb shifts and division remain ([#70]).
-- Removed `FixedArray.getMax` / `getZero` and default equality / zero detection.
-  Custom conformers must supply these values and implementations ([#70]).
-- `BasicAccount.nonce` is `UInt64`; incrementing the maximum value reports
-  `.MaxNonce` through `MemoryState` instead of silently wrapping ([#70]).
-- Knuth implementation details are no longer public: `divModKnuth`, `divMod`,
-  `mac`, slice helpers, `divModWord`, and `BigUInt.getMax` / `getZero`.
-  Unused `subSlice` was removed. Use concrete constants and `divRem(divisor:)`.
-- Existing `/`, `%`, `/=` and `%=` operators are now protocol requirements so
-  generic calls preserve concrete I256 signed semantics. Operator defaults were
-  removed from the protocol extension to prevent context-dependent static dispatch.
-  Custom conformers must implement all four operators; `divRem` divides stored magnitudes.
+`PrimitiveTypes` now stores every value inline in fixed machine-word fields and implements only the arithmetic the EVM needs on each concrete type. This release contains source-breaking API changes; see **Breaking Changes** for migration notes. It also fixes wrong `DIV`, `MOD`, `SDIV`, `SMOD`, `ADDMOD` and `MULMOD` results on Apple OS versions without runtime `UInt128` support.
+
+### Breaking Changes
+- **`BasicAccount.nonce` is `UInt64`:** `BasicAccount.nonce` and `BasicAccount.init(balance:nonce:)` take `UInt64` instead of `U256`, matching the EIP-2681 nonce limit of 2^64 - 1. `incNonce()` uses checked arithmetic and traps at `UInt64.max`; `MemoryState.incNonce(address:)` still returns `.MaxNonce` before incrementing ([#70]).
+- **Generic `BigUInt` operators removed:** the protocol extension no longer implements arithmetic (`+`, `-`, `*`, `+=`, `-=`, `*=`, `overflowAdd`, `overflowSub`, `overflowMul`, `mul`), ordering (`<`, `<=`, `>`, `>=`, `cmpLess(lhs:rhs:)`) or bitwise operators (`~`, `&`, `|`, `^`, `<<`, `>>`). Each concrete type keeps only what the EVM needs: `U256` retains all of them except `cmpLess(lhs:rhs:)`; `U128` keeps `+`, `*`, `overflowAdd` and `mul`; `U512` keeps `+`, `*`, `overflowAdd`, `mul` and ordering; `I256` keeps signed ordering, arithmetic `>>` and `&` ([#70]).
+- **Division operators are protocol requirements:** `/`, `%`, `/=` and `%=` moved from `BigUInt` extension defaults to requirements, so generic code dispatches to the concrete type. All built-in types implement them; custom conformers must implement all four, for example by delegating to `divRem(divisor:)` ([#74]).
+- **Custom conformers define their own basics:** `BigUInt` and `FixedArray` no longer provide a default `==`, and `FixedArray` no longer provides a default `isZero` or the `getMax`/`getZero` helpers ([#70]); on `BigUInt` those helpers are internal ([#74]). Implement `==` (or rely on synthesized `Equatable`), `isZero`, `MAX` and `ZERO` explicitly.
+- **Generic shifts renamed:** `BigUInt.shiftLeft(_:)` and `shiftRight(_:)` are now `shiftLeftForBytes(_:)` and `shiftRightForBytes(_:)`. `U256` still provides `shiftLeft(_:)`, `shiftRight(_:)`, `<<` and `>>`; `I256.shiftRight(_:)` and `>>` remain the arithmetic shift ([#70]).
+- **Division internals are no longer public:** the public `divModKnuth(v:n:m:)` was replaced by a private helper that works on limb arrays ([#72]); `divMod(_:)`, `divModWord(hi:lo:y:)`, `addSlice(a:from:b:to:)` and `carryAddSlice(carry:q_hat:a:from:b:to:)` became internal, and `subSlice(a:from:b:to:)` was removed ([#74]). Use `divRem(divisor:)` or the division operators.
+- **`I256` behavior changed:** `&` uses two's-complement semantics, zero is always non-negative, and `shiftRight(_:)`/`>>` handle zero values and non-positive shifts differently; see **Fixed** ([#70]).
+- **No transitive `Foundation`:** `PrimitiveTypes` no longer imports `Foundation`. Code that used Foundation APIs (for example `String(format:)` or `Error.localizedDescription`) only through that transitive import must import `Foundation` itself ([#70]).
+
+### Added
+- **Field initializers:** `U128(l0:h0:)`, `U256(l0:l1:h0:h1:)`, `U512(l0:l1:l2:l3:h0:h1:h2:h3:)` and `I256(l0:l1:h0:h1:signExtend:)` take little-endian limbs; `H160(l0:l1:l2:)` and `H256(l0:l1:l2:l3:)` take big-endian fields, with `l0` holding the first eight bytes. They build values without an intermediate array ([#70]).
+- **EVM word conversions:** `U256(bigEndian:)` reads up to 32 big-endian bytes from an `UnsafeRawBufferPointer` without alignment requirements, padding shorter input on the left; `writeBigEndian(to:)` writes exactly 32 bytes to a raw buffer, also without alignment requirements; `U256(from: H256)` and `H256(from: U256)` convert between hashes and words in big-endian order; `U256(truncating: U512)` keeps the low 256 bits ([#74]).
+- **Exact 256-bit product:** `U256.fullMul(_:)` returns the full 512-bit product as `U512`; `overflowMul(_:)` derives its low half and overflow flag from it ([#74]).
+- **Hex encoding helpers:** public `hexEncode(_:uppercase:)`, `hexEncodeNoPad(_:uppercase:)` and `hexByteAscii(_:uppercase:)` provide hex encoding without `Foundation` ([#70]).
 
 ### Changed
-- Eliminate repeated limb-array conversions in Knuth division; fuse its
-  multiply-subtract step and add U256 fast paths for small divisors, smaller
-  dividends and quotient one ([#72], [#73]).
-- Initialize U256 from UInt64 and convert U512/H256 intermediates directly on fields.
-- Use exact U256-by-U256 full multiplication for MULMOD, sharing its implementation
-  with overflow detection while retaining the full 512-bit intermediate.
-- Read and write big-endian U256 words through bounded, unaligned buffers.
-  MLOAD/MSTORE, PUSH, CALLDATALOAD and stack hash conversions avoid temporary arrays;
-  truncated PUSH and call data still receive the required right zero padding.
-- Specialize U256 `saturatingInt` to avoid generic limb-array conversions.
-- Keep validated stack/buffer unwraps checked in release; prohibit `-Ounchecked`.
-- Remove Foundation from production modules and use stdlib hex conversion ([#70]).
+- **Inline value storage:** `U128`, `U256`, `U512`, `I256`, `H160` and `H256` keep their value in fixed machine-word fields instead of a heap-allocated array, so stored values need no heap buffer and copying them involves no reference counting. Array-based paths still allocate: `BYTES` is now a computed view that builds a new array on every access, and generic helpers such as `init(from: UInt64)` on `U128`, `U512` and `I256` go through a temporary array; prefer field-based APIs on hot paths. `H160` and `H256` hashing is synthesized from the stored fields ([#70]).
+- **Field-based operations:** concrete types implement their addition, subtraction, multiplication, comparison, bitwise and shift operators directly on stored fields, and `H160`↔`H256` conversions shuffle limbs without byte arrays ([#70]). `U256` also specializes `getInt`/`getUInt` and `fromBigEndian`/`toBigEndian` ([#70]), `init(from: UInt64)` ([#72]) and `saturatingInt` ([#74]) instead of going through `BYTES`.
+- **Faster division:** Knuth's Algorithm D runs on limb arrays, converting each operand once instead of rebuilding values at every step, and corrects quotient digits with `multipliedFullWidth` instead of `U128` temporaries ([#72]); step D4 subtracts `q_hat * v` in a single fused multiply-subtract pass without a temporary product ([#73]). `U256` division returns early when the dividend is smaller than the divisor, divides by a single limb with four chained `dividingFullWidth` steps ([#72]) and recognizes a quotient of one with a single subtraction ([#73]).
+- **Word division:** 128-by-64-bit division uses `UInt64.dividingFullWidth` on every platform; the `#available`-gated `DivModUtils`, with its `UInt128` path and bitwise fallback, was removed (see **Fixed**) ([#70]).
+- **Opcode word I/O:** `MLOAD` and `MSTORE` read and write 32-byte words directly in memory; `PUSH1`–`PUSH32` and `CALLDATALOAD` decode straight from code and call data, still zero-padding truncated input on the right; `ADDRESS`, `CALLER`, the empty-input `KECCAK256` hash and stack `H256` conversions no longer build byte arrays. `MULMOD` computes the exact product with `U256.fullMul` (4×4 limbs) instead of multiplying zero-extended 8-limb `U512` operands, and `ADDMOD`/`MULMOD` narrow results with `U256(truncating:)`. Opcode results are unchanged ([#74]).
+- **`SAR`:** delegates to the `I256` arithmetic shift and handles zero input and shifts of 256 or more up front; results are unchanged ([#70]).
+- **Formatting without `Foundation`:** hex strings of `BigUInt` and `FixedArray` values, `Opcode.description` and trace stack dumps use the new helpers; output is unchanged ([#70]).
+- **Checked invariants:** once `verifyStack` succeeds, opcode handlers force-unwrap stack reads instead of keeping unreachable `guard … else { return }` branches ([#70] for bitwise opcodes, [#72] for the rest), and `Memory` force-unwraps its buffer after a successful resize ([#73]). A broken invariant now traps instead of returning silently.
+- **Documented contracts:** `I256` documents its magnitude-plus-sign representation, the two's-complement boundary of `fromU256`/`toU256`, and that `MAX` is the all-ones magnitude rather than the signed maximum 2^255 - 1; `BigUInt` integer-conversion documentation was clarified ([#74]).
 
 ### Fixed
-- Replace OS-dependent word division with `UInt64.dividingFullWidth`, eliminating
-  the fallback's lost remainder bit ([#70]).
-- Correct I256 canonical zero, SAR, signed AND, compound division and remainder
-  ([#70], [#72]); preserve signs through generic operator dispatch as well.
-- Return zero for generic shifts at or beyond the type width ([#72]).
-- Reject signs, whitespace and non-ASCII digits in all integer/address/hash hex
-  parsers, preserving existing prefix, length, odd-digit and empty-input rules.
-- Clarify I256 magnitude storage and `MAX`, integer conversion contracts, and
-  test names; remove the remaining SwiftLint warnings.
+- **Word division on older Apple OS versions:** where `UInt128` is unavailable at runtime (macOS < 15, iOS < 18, tvOS < 18, watchOS < 11, visionOS < 2), the bitwise fallback for 128-by-64-bit division dropped the high bit of the running remainder, so `DIV`, `MOD`, `SDIV`, `SMOD`, `ADDMOD` and `MULMOD` could return wrong results; for example, 2^127 / (2^64 - 1) yielded 0 instead of 2^63. Linux and newer Apple OS versions already used the correct `UInt128` path ([#70]).
+- **`I256` compound division:** `/=` and `%=` resolved to the unsigned `BigUInt` defaults and dropped the sign (for example, `-6 /= 2` produced `3`); they now match `/` and `%` ([#72]).
+- **`I256` division in generic code:** `/` and `%` called through a generic `BigUInt` context performed unsigned magnitude division; they now dispatch to the signed implementation ([#74]).
+- **`I256` bitwise AND:** `&` now combines two's-complement representations and returns a correctly signed result; it previously ANDed magnitudes and always returned a non-negative value (for example, `-6 & -3` produced `2` instead of `-8`) ([#70]).
+- **`I256` zero and arithmetic shift:** initializers normalize a zero magnitude to non-negative, so a negative zero can no longer be constructed; `shiftRight(_:)` and `>>` return zero for a zero value (negative zero produced `-1`) and return the value unchanged for a non-positive shift (a negative shift produced `0` or `-1`) ([#70]).
+- **Strict hex parsing:** `fromString(hex:)` on every `BigUInt` and `FixedArray` type decoded byte pairs with `UInt8(_:radix:)`, which accepts a leading sign, so `"+f"` parsed as `0x0f` and `"-0"` as `0x00`. Only ASCII hex digits are accepted now; prefix, length, odd-length and empty-input rules are unchanged ([#74]).
+- **Oversized shifts:** `U256` `<<`, `>>`, `shiftLeft(_:)` and `shiftRight(_:)` ([#70]) and the generic `shiftLeftForBytes(_:)` and `shiftRightForBytes(_:)` ([#72]) return zero for any shift at or beyond the type width; previously every shift larger than the width trapped with a range error. `SHL`, `SHR` and `SAR` already bounded the shift and were not affected.
 
-### Tests and CI
-- Extend existing Quick/Nimble specs with seeded U256/U512 division invariants,
-  normalization, quotient correction and add-back cases; test real opcodes too.
-- Add independent full-product and SAR references, assert multiplication results
-  alongside overflow flags, and cover generic signed operators and strict hex.
-- Verify every byte-read length, unaligned word writes, truncated PUSH/call data,
-  full-width products, memory limits and allocation failure propagation.
-- Cover deterministic allocation failures through Memory and MSTORE ([#73]).
-- Verify 100% executable lines, regions and functions locally; set Codecov patch
-  and project targets to 100%. Keep the existing LCOV upload without a separate
-  CI coverage checker or script.
-- Document sibling-loop spacing and implicit internal access in AGENTS.md.
-- Align SwiftLint with Xcode SwiftFormat multiline braces and inferred comma style.
-- Test generic division before Nimble autoclosures and across optional, returned
-  and compound contexts; verify external-module dispatch in debug and release.
+### Tests
+- **Division properties:** `U256` and `U512` quotients and remainders are checked for `a = q * d + r` and `r < d` against an independent base-256 reference, with seeded (SplitMix64) operands for every normalization shift, operand length and full-width case through generic and concrete paths ([#70], [#72]) and with deterministic limb-boundary, saturated-estimate and quotient-one/two cases ([#70], [#73]). Knuth add-back, `r_hat` overflow and double-correction cases assert exact results ([#70]). Word division is checked around every divisor bit boundary and against `UInt128` where the runtime provides it, including traps for a zero divisor and for `hi >= divisor` ([#70]).
+- **Independent references:** `I256` division and remainder sign identities, `SAR` against a bit-level reference, two's-complement AND, canonical zero, and compound, optional, returned and generic-context division; `U128`, `U256` and `U512` multiplication, `fullMul` and `overflowMul` flags against an independent full product ([#70], [#72], [#74]).
+- **Encoding and conversions:** strict hex parsing for every integer, address and hash type, exhaustive `hexDecodeByte` ASCII cases, the hex helpers, `H160`/`H256` limb packing and per-limb equality, and unaligned big-endian word reads and writes of every length and offset, including precondition failures ([#70], [#74]).
+- **Opcode regressions:** `DIV`, `MOD`, `SDIV`, `SMOD`, `ADDMOD` and `MULMOD` with high-bit remainders, sign combinations and Knuth corrections; `SAR` boundaries; `SIGNEXTEND`; unaligned `MSTORE`/`MLOAD`; truncated `PUSH` immediates and `CALLDATALOAD` padding ([#70], [#72], [#73], [#74]).
+- **Failure paths:** deterministic allocation failures through internal `Memory` allocation hooks (contents preserved, errors propagated, `MSTORE` stopping with `OutOfGas` after charging memory gas), the `BasicAccount.incNonce()` overflow trap, and `Stack.peekUInt` rejecting values wider than `UInt` without consuming the stack ([#70], [#72], [#73]).
+
+### CI/Build
+- **Toolchain:** CI uses the Swift toolchain bundled with the runner's default Xcode instead of `SwiftyLab/setup-swift` pinned to Swift 6.0 ([#70]).
+- **Coverage gates:** the Codecov patch target rose from 50% to 100% and the project status is enabled at 100%, both with a zero threshold ([#74]); the obsolete `DivModUtils.swift` ignore entry was removed ([#70]).
+- **SwiftLint:** the configuration follows Xcode SwiftFormat — `trailing_comma` is disabled, and `opening_brace` accepts multiline type headers, statement conditions and function signatures ([#74]).
+- **Repository:** the local `docs/` directory is ignored by Git ([#74]).
 
 ## [0.5.26] - 2026-05-11
 
@@ -559,7 +548,8 @@ This is the **initial public release** of `swift-evm` — a Swift-native Ethereu
 
 
 <!-- Versions -->
-[Unreleased]: https://github.com/mrLSD/swift-evm/compare/v0.5.26...HEAD
+[Unreleased]: https://github.com/mrLSD/swift-evm/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/mrLSD/swift-evm/compare/v0.5.26...v0.6.0
 [0.5.26]: https://github.com/mrLSD/swift-evm/compare/v0.5.25...v0.5.26
 [0.5.25]: https://github.com/mrLSD/swift-evm/compare/v0.5.24...v0.5.25
 [0.5.24]: https://github.com/mrLSD/swift-evm/compare/v0.5.23...v0.5.24
@@ -593,6 +583,10 @@ This is the **initial public release** of `swift-evm` — a Swift-native Ethereu
 [0.1.0]: https://github.com/mrLSD/swift-evm/releases/tag/v0.1.0
 
 <!-- PRs -->
+[#74]: https://github.com/mrLSD/swift-evm/pull/74
+[#73]: https://github.com/mrLSD/swift-evm/pull/73
+[#72]: https://github.com/mrLSD/swift-evm/pull/72
+[#70]: https://github.com/mrLSD/swift-evm/pull/70
 [#69]: https://github.com/mrLSD/swift-evm/pull/69
 [#67]: https://github.com/mrLSD/swift-evm/pull/67
 [#66]: https://github.com/mrLSD/swift-evm/pull/66
@@ -658,6 +652,3 @@ This is the **initial public release** of `swift-evm` — a Swift-native Ethereu
 [#3]: https://github.com/mrLSD/swift-evm/pull/3
 [#2]: https://github.com/mrLSD/swift-evm/pull/2
 [#1]: https://github.com/mrLSD/swift-evm/pull/1
-[#70]: https://github.com/mrLSD/swift-evm/pull/70
-[#72]: https://github.com/mrLSD/swift-evm/pull/72
-[#73]: https://github.com/mrLSD/swift-evm/pull/73
