@@ -26,7 +26,31 @@ final class H256Spec: QuickSpec {
                     }
                 }
 
-                context("wrong String for conversion") {
+                context("String validation") {
+                    it("rejects signs, whitespace and non-ASCII hex digits") {
+                        for pair in ["+1", "-1", "-0", " a", "a ", "\t1", "1\n", "Ａ1", "é0"] {
+                            let hex = pair + String(repeating: "00", count: 31)
+                            for prefix in ["", "0x", "0X"] {
+                                expect(H256.fromString(hex: prefix + hex)).to(beFailure { error in
+                                    expect(error).to(equal(.InvalidHexCharacter(pair)))
+                                }, description: "hex \(prefix + hex)")
+                            }
+                        }
+                    }
+
+                    it("accepts both hex cases and prefixes at the exact width") {
+                        let hex = String(repeating: "aF", count: 32)
+                        for prefix in ["", "0x", "0X"] {
+                            expect(H256.fromString(hex: prefix + hex)).to(beSuccess(H256(from: [UInt8](repeating: 0xaf, count: 32))))
+                        }
+
+                        for hex in ["", "0x", "0X", "0", String(repeating: "0", count: 65)] {
+                            expect(H256.fromString(hex: hex)).to(beFailure { error in
+                                expect(error).to(equal(.InvalidStringLength))
+                            }, description: "hex \(hex)")
+                        }
+                    }
+
                     it("too big String") {
                         let res = H256.fromString(hex: String(repeating: "A", count: 65))
                         expect(res).to(beFailure { error in

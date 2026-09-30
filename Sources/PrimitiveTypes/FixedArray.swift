@@ -57,7 +57,7 @@ public extension FixedArray {
         while index < hex.endIndex {
             let nextIndex = hex.index(index, offsetBy: 2)
             let byteString = String(hex[index ..< nextIndex])
-            guard let byte = UInt8(byteString, radix: 16) else {
+            guard let byte = hexDecodeByte(byteString) else {
                 return .failure(.InvalidHexCharacter(byteString))
             }
             byteArray.append(byte)

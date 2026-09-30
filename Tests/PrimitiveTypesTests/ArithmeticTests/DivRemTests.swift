@@ -45,8 +45,10 @@ final class ArithmeticDivRemSpec: QuickSpec {
                     quotient /= divisor
                     remainder %= divisor
 
-                    expect(dividend/divisor).to(equal(T(from: 3)))
-                    expect(dividend % divisor).to(equal(T(from: 2)))
+                    let directQuotient = dividend / divisor
+                    let directRemainder = dividend % divisor
+                    expect(directQuotient).to(equal(T(from: 3)))
+                    expect(directRemainder).to(equal(T(from: 2)))
                     expect(quotient).to(equal(T(from: 3)))
                     expect(remainder).to(equal(T(from: 2)))
                 }
@@ -54,6 +56,7 @@ final class ArithmeticDivRemSpec: QuickSpec {
                 check(U128.self)
                 check(U256.self)
                 check(U512.self)
+                check(BigUintSpec.TestUint128.self)
             }
 
             context("common division cases") {
@@ -342,28 +345,6 @@ final class ArithmeticDivRemSpec: QuickSpec {
                     expect(r).to(equal(a))
                     expect(r < divisor).to(beTrue())
                     expect(U512(from: q) * U512(from: divisor) + U512(from: r)).to(equal(U512(from: a)))
-                }
-            }
-
-            context("subSlice") {
-                it("propagates borrow through zero and maximum limbs within the selected slice") {
-                    var a: [UInt64] = [7, 0, 0, 1, 9]
-                    let borrow = U256.subSlice(a: &a, from: 1, b: [1, .max, 0], to: 3)
-                    // (b^2) - ((b-1)*b+1) = b-1, b = 2^64.
-                    expect(a).to(equal([7, .max, 0, 0, 9]))
-                    expect(borrow).to(beFalse())
-                }
-
-                it("reports final borrow and respects the source and destination bounds") {
-                    var a: [UInt64] = [7, 0, 0, 9]
-                    expect(U256.subSlice(a: &a, from: 1, b: [1, 0, 5], to: 2)).to(beTrue())
-                    expect(a).to(equal([7, .max, .max, 9]))
-
-                    var b: [UInt64] = [5, 9]
-                    expect(U256.subSlice(a: &b, from: 1, b: [3], to: 4)).to(beFalse())
-                    expect(b).to(equal([5, 6]))
-                    expect(U256.subSlice(a: &b, from: 0, b: [], to: 2)).to(beFalse())
-                    expect(b).to(equal([5, 6]))
                 }
             }
 

@@ -40,7 +40,7 @@ enum StackInstructions {
 
     /// Pushes an immediate value (`n` bytes) from code onto the stack.
     ///
-    /// Reads up to `n` bytes starting at `pc + 1`, left-gpads to 32 bytes, pushes the resulting `U256`,
+    /// Reads up to `n` bytes starting at `pc + 1`, left-pads to 32 bytes, pushes the resulting `U256`,
     /// and advances `pc` by `n + 1`. Fails with `StackOverflow` (needs 1 free slot) or `OutOfGas` (`GasConstant.VERYLOW`).
     static func push(machine m: Machine, n: Int) {
         if !m.verifyStack(pop: 0, push: 1) {
@@ -52,11 +52,11 @@ enum StackInstructions {
         }
 
         let end = min(m.pc + 1 + n, m.codeSize)
-        let slice = m.code[(m.pc + 1) ..< end]
-        var val = [UInt8](repeating: 0, count: 32)
-        val.replaceSubrange(32 - n ..< 32 - n + slice.count, with: slice)
+        let start = m.pc + 1
+        let newValue = m.code.withUnsafeBytes {
+            U256(bigEndian: UnsafeRawBufferPointer(rebasing: $0[start ..< end]))
+        } << ((n - (end - start)) * 8)
 
-        let newValue = U256.fromBigEndian(from: val)
         m.machineStatus = Machine.MachineStatus.AddPC(n + 1)
         m.stackPush(value: newValue)
     }

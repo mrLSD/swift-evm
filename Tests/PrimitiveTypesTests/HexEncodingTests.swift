@@ -5,19 +5,42 @@ import Quick
 final class HexEncodingSpec: QuickSpec {
     override class func spec() {
         describe("HexEncoding helpers") {
+            context("hexDecodeByte") {
+                it("accepts exactly two ASCII digits in either case") {
+                    for byte in 0 ... 255 {
+                        for uppercase in [false, true] {
+                            let hex = String(format: uppercase ? "%02X" : "%02x", byte)
+                            expect(hexDecodeByte(hex)).to(equal(UInt8(byte)))
+                        }
+                    }
+
+                    for byte in UInt8(0) ... 127 {
+                        let char = String(UnicodeScalar(byte))
+                        if !(48 ... 57).contains(byte), !(65 ... 70).contains(byte), !(97 ... 102).contains(byte) {
+                            expect(hexDecodeByte(char + "0")).to(beNil(), description: "ASCII \(byte)")
+                            expect(hexDecodeByte("0" + char)).to(beNil(), description: "ASCII \(byte)")
+                        }
+                    }
+
+                    for hex in ["", "a", "aaa", "é", "Ａ1"] {
+                        expect(hexDecodeByte(hex)).to(beNil())
+                    }
+                }
+            }
+
             context("hexByteAscii") {
                 it("lowercase nibbles") {
                     expect(hexByteAscii(0x00, uppercase: false) == (0x30, 0x30)).to(beTrue()) // "00"
-                    expect(hexByteAscii(0xAB, uppercase: false) == (0x61, 0x62)).to(beTrue()) // "ab"
-                    expect(hexByteAscii(0xFF, uppercase: false) == (0x66, 0x66)).to(beTrue()) // "ff"
-                    expect(hexByteAscii(0x5A, uppercase: false) == (0x35, 0x61)).to(beTrue()) // "5a"
+                    expect(hexByteAscii(0xab, uppercase: false) == (0x61, 0x62)).to(beTrue()) // "ab"
+                    expect(hexByteAscii(0xff, uppercase: false) == (0x66, 0x66)).to(beTrue()) // "ff"
+                    expect(hexByteAscii(0x5a, uppercase: false) == (0x35, 0x61)).to(beTrue()) // "5a"
                 }
 
                 it("uppercase nibbles") {
                     expect(hexByteAscii(0x00, uppercase: true) == (0x30, 0x30)).to(beTrue()) // "00"
-                    expect(hexByteAscii(0xAB, uppercase: true) == (0x41, 0x42)).to(beTrue()) // "AB"
-                    expect(hexByteAscii(0xFF, uppercase: true) == (0x46, 0x46)).to(beTrue()) // "FF"
-                    expect(hexByteAscii(0x5A, uppercase: true) == (0x35, 0x41)).to(beTrue()) // "5A"
+                    expect(hexByteAscii(0xab, uppercase: true) == (0x41, 0x42)).to(beTrue()) // "AB"
+                    expect(hexByteAscii(0xff, uppercase: true) == (0x46, 0x46)).to(beTrue()) // "FF"
+                    expect(hexByteAscii(0x5a, uppercase: true) == (0x35, 0x41)).to(beTrue()) // "5A"
                 }
             }
 
@@ -56,9 +79,9 @@ final class HexEncodingSpec: QuickSpec {
                 it("single nibble values have no leading zero") {
                     expect(hexEncodeNoPad(1, uppercase: false)).to(equal("1"))
                     expect(hexEncodeNoPad(0xa, uppercase: false)).to(equal("a"))
-                    expect(hexEncodeNoPad(0xA, uppercase: true)).to(equal("A"))
-                    expect(hexEncodeNoPad(0xF, uppercase: false)).to(equal("f"))
-                    expect(hexEncodeNoPad(0xF, uppercase: true)).to(equal("F"))
+                    expect(hexEncodeNoPad(0xa, uppercase: true)).to(equal("A"))
+                    expect(hexEncodeNoPad(0xf, uppercase: false)).to(equal("f"))
+                    expect(hexEncodeNoPad(0xf, uppercase: true)).to(equal("F"))
                 }
 
                 it("multi-byte values strip leading zeros") {

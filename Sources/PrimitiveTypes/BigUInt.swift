@@ -1,4 +1,4 @@
-/// `BigUInt` Protocol - represent Bit Unsigner Integers
+/// Fixed-width limb storage and the operations required by the EVM.
 public protocol BigUInt: CustomStringConvertible, Equatable, Sendable, Hashable {
     /// `BigUInt` bytes
     var BYTES: [UInt64] { get }
@@ -6,7 +6,7 @@ public protocol BigUInt: CustomStringConvertible, Equatable, Sendable, Hashable 
     static var MAX: Self { get }
     /// Calculate `BigUInt` Zero value
     static var ZERO: Self { get }
-    /// Number bytes of `BigUInt`
+    /// Number of bytes in `BigUInt`
     static var numberBytes: UInt8 { get }
     /// Number base - count of `UInt64` (base) values. It's always: `numberBytes/8`
     static var numberBase: UInt8 { get }
@@ -21,10 +21,16 @@ public protocol BigUInt: CustomStringConvertible, Equatable, Sendable, Hashable 
     /// It suppose to be little endian array of values.
     init(from value: [UInt64])
 
-    /// Create `BitUInt` from `little-endian` array
+    /// Division semantics belong to the concrete type, including through generic calls.
+    static func / (lhs: Self, rhs: Self) -> Self
+    static func % (lhs: Self, rhs: Self) -> Self
+    static func /= (lhs: inout Self, rhs: Self)
+    static func %= (lhs: inout Self, rhs: Self)
+
+    /// Create `BigUInt` from `little-endian` array
     static func fromLittleEndian(from val: [UInt8]) -> Self
 
-    /// Create `BitUInt` from `big-endian` array
+    /// Create `BigUInt` from `big-endian` array
     static func fromBigEndian(from val: [UInt8]) -> Self
 
     /// Create `BigUInt` from hex `String`. Returns Result type
@@ -47,15 +53,7 @@ public protocol BigUInt: CustomStringConvertible, Equatable, Sendable, Hashable 
     var toBigEndian: [UInt8] { get }
 }
 
-/// Implementation of `BigUInt` common functionality
-public extension BigUInt {
-    /// Init `BigUInt` form `UInt64`
-    init(from value: UInt64) {
-        var data = [UInt64](repeating: 0, count: Int(Self.numberBase))
-        data[0] = value
-        self = Self(from: data)
-    }
-
+extension BigUInt {
     /// Calculate `BigUInt` Max value
     static var getMax: Self {
         Self(from: [UInt64](repeating: UInt64.max, count: Int(numberBase)))
@@ -65,35 +63,35 @@ public extension BigUInt {
     static var getZero: Self {
         Self(from: [UInt64](repeating: 0, count: Int(numberBase)))
     }
+}
+
+/// Implementation of `BigUInt` common functionality
+public extension BigUInt {
+    /// Init `BigUInt` from `UInt64`
+    init(from value: UInt64) {
+        var data = [UInt64](repeating: 0, count: Int(Self.numberBase))
+        data[0] = value
+        self = Self(from: data)
+    }
 
     /// Number base - count of `UInt64` (base) values. It's always: `numberBytes/8`
     static var numberBase: UInt8 {
         self.numberBytes / 8
     }
 
-    /// Get Uint value from `BigUInt`.
-    ///
-    /// - Returns:
-    ///   - `UInt` must be less than or equal to `UInt64(UInt.max)`. On 32-bit systems. For 64-bit systems always successful.
-    ///     `nil` corresponds to 32-bit systems, when `UInt` is greater than `UInt32.max`.
+    /// Converts the stored magnitude to UInt, or nil if it exceeds the host width.
     var getUInt: UInt? {
         guard BYTES.dropFirst().allSatisfy({ $0 == 0 }) else { return nil }
         return UInt(exactly: BYTES[0])
     }
 
-    /// Get int value from `BigUInt`.
-    ///
-    /// - Returns:
-    ///   - `Int` must be less than or equal to `UInt64(Int.max)`. On 32-bit systems. For 64-bit systems always successful.
-    ///     `nil` corresponds to 32-bit systems, when `Int` is greater than `Int32.max`.
+    /// Converts the stored magnitude to Int, or nil if it exceeds Int.max.
     var getInt: Int? {
         guard BYTES.dropFirst().allSatisfy({ $0 == 0 }) else { return nil }
         return Int(exactly: BYTES[0])
     }
 
-    /// Saturating conversion to Int. Returns `Int.max` when the value exceeds `Int.max`.
-    /// Per Yellow Paper: this preserves the "value is mathematically larger than any
-    /// property when narrowing 256-bit offsets to the host word size.
+    /// Converts the stored magnitude to Int, clamping oversized EVM offsets to Int.max.
     var saturatingInt: Int {
         return self.getInt ?? Int.max
     }
@@ -103,7 +101,7 @@ public extension BigUInt {
         return self.BYTES.allSatisfy { $0 == 0 }
     }
 
-    /// Create `BitUInt` from `little-endian` array
+    /// Create `BigUInt` from `little-endian` array
     ///
     /// - Precondition:
     ///   - `from` value must be less than or equal to `numberBytes` of `BigUInt`.
@@ -120,7 +118,7 @@ public extension BigUInt {
         return Self(from: data)
     }
 
-    /// Create `BitUInt` from `big-endian` array
+    /// Create `BigUInt` from `big-endian` array
     ///
     /// - Precondition:
     ///   - `from` value must be less than or equal to `numberBytes` of `BigUInt`.
@@ -192,7 +190,7 @@ public extension BigUInt {
         while index < hex.endIndex {
             let nextIndex = hex.index(index, offsetBy: 2)
             let byteString = String(hex[index ..< nextIndex])
-            guard let byte = UInt8(byteString, radix: 16) else {
+            guard let byte = hexDecodeByte(byteString) else {
                 return .failure(.InvalidHexCharacter(byteString))
             }
             byteArray.append(byte)

@@ -20,6 +20,38 @@ final class FailingAllocationMemory: Memory {
 final class InterpreterMemorySpec: QuickSpec {
     override class func spec() {
         describe("Interpreter Memory") {
+            context("word access") {
+                it("stores and loads unaligned words without touching neighboring bytes") {
+                    let word = U256(from: [0x18191A1B1C1D1E1F, 0x1011121314151617, 0x08090A0B0C0D0E0F, 0x0001020304050607])
+                    for offset in [0, 1, 7, 8, 31, 32, 33] {
+                        let memory = Memory(limit: offset + 33)
+                        expect(memory.set(offset: 0, value: [UInt8](repeating: 0xEE, count: offset + 33), size: offset + 33)).to(beSuccess())
+                        expect(memory.set(offset: offset, word: word)).to(beSuccess())
+                        expect(memory.get(offset: 0, size: offset + 33)).to(equal([UInt8](repeating: 0xEE, count: offset) + Array(0 ..< 32) + [0xEE]))
+                        expect(memory.getWord(offset: offset)).to(equal(word))
+                    }
+
+                    let memory = Memory(limit: 64)
+                    expect(memory.set(offset: 32, word: .MAX)).to(beSuccess())
+                    expect(memory.getWord(offset: 0)).to(equal(.ZERO))
+                    expect(memory.getWord(offset: 32)).to(equal(.MAX))
+                    expect(memory.set(offset: 33, word: .ZERO)).to(beFailure(equal(.Error(.MemoryOperation(.SetLimitExceeded)))))
+                    expect(memory.getWord(offset: 32)).to(equal(.MAX))
+                }
+
+                it("rejects word access outside its precondition domain") {
+                    let memory = Memory()
+                    for offset in [-1, 0, Int.max] {
+                        expect(captureStandardError {
+                            expect { _ = memory.getWord(offset: offset) }.to(throwAssertion())
+                        }).to(contain("Word read requires 32 allocated bytes"), description: "offset \(offset)")
+                    }
+                    expect(captureStandardError {
+                        expect { _ = memory.set(offset: -1, word: .ZERO) }.to(throwAssertion())
+                    }).to(contain("Memory offsets must be nonnegative"))
+                }
+            }
+
             #if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(visionOS) || os(Linux)
             context("allocation failure") {
                 it("preserves length and contents when allocation or reallocation fails, and can retry") {
@@ -45,6 +77,7 @@ final class InterpreterMemorySpec: QuickSpec {
                 it("propagates write and copy allocation failures without modifying existing bytes") {
                     let operations: [(Memory) -> Result<Void, Machine.ExitReason>] = [
                         { $0.set(offset: 32, value: [0xCD], size: 1) },
+                        { $0.set(offset: 32, word: .MAX) },
                         { $0.copy(srcOffset: 0, dstOffset: 32, size: 1) },
                         { $0.copyData(memoryOffset: 32, dataOffset: 0, size: 1, data: [0xCD]) },
                     ]

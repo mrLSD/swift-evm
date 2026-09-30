@@ -19,7 +19,7 @@ public struct H256: FixedArray, Hashable {
         0xc5, 0xd2, 0x46, 0x01, 0x86, 0xf7, 0x23, 0x3c,
         0x92, 0x7e, 0x7d, 0xb2, 0xdc, 0xc7, 0x03, 0xc0,
         0xe5, 0x00, 0xb6, 0x53, 0xca, 0x82, 0x27, 0x3b,
-        0x7b, 0xfa, 0xd8, 0x04, 0x5d, 0x85, 0xa4, 0x70,
+        0x7b, 0xfa, 0xd8, 0x04, 0x5d, 0x85, 0xa4, 0x70
     ])
     /// Max value of `H256`.
     public static let MAX: Self = .init(l0: .max, l1: .max, l2: .max, l3: .max)
@@ -111,6 +111,12 @@ public struct H256: FixedArray, Hashable {
             (UInt64(bytes[29]) << 16) |
             (UInt64(bytes[30]) << 8) |
             UInt64(bytes[31])
+    }
+
+    /// Serializes an EVM word in big-endian order without a byte array.
+    @inlinable @inline(__always)
+    public init(from value: U256) {
+        self.init(l0: value.h1, l1: value.h0, l2: value.l1, l3: value.l0)
     }
 
     /// Init from `H160` with 12-byte leading zero pad (left).

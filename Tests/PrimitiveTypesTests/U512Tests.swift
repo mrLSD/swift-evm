@@ -49,7 +49,29 @@ final class U512Spec: QuickSpec {
                     }
                 }
 
-                context("wrong String for conversion") {
+                context("String validation") {
+                    it("rejects signs, whitespace and non-ASCII hex digits") {
+                        let cases: [(hex: String, invalid: String)] = [
+                            ("+1", "+1"), ("-1", "-1"), ("-0", "-0"), ("00+a", "+a"), ("0x+1", "+1"), ("0X+F", "+F"),
+                            (" 1", " 1"), ("1 ", "1 "), ("\t1", "\t1"), ("1\n", "1\n"), ("Ａ1", "Ａ1"), ("é0", "é0")
+                        ]
+                        for (hex, invalid) in cases {
+                            expect(U512.fromString(hex: hex)).to(beFailure { error in
+                                expect(error).to(equal(.InvalidHexCharacter(invalid)))
+                            }, description: "hex \(hex)")
+                        }
+                    }
+
+                    it("preserves empty, prefixed, odd-length and mixed-case hex") {
+                        for hex in ["", "0x", "0X", "0", "00"] {
+                            expect(U512.fromString(hex: hex)).to(beSuccess(U512.ZERO), description: "hex \(hex)")
+                        }
+
+                        for hex in ["aBc", "0xaBc", "0XaBc", "0AbC"] {
+                            expect(U512.fromString(hex: hex)).to(beSuccess(U512(from: 0xABC)), description: "hex \(hex)")
+                        }
+                    }
+
                     it("too big String") {
                         let res = U512.fromString(hex: String(repeating: "A", count: 129))
                         expect(res).to(beFailure { error in

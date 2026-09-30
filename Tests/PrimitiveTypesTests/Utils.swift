@@ -79,3 +79,23 @@ func expectDivisionIdentity(
     expect(fileID: fileID, file: file, line: line, product).to(equal(expected), description: description)
     expect(fileID: fileID, file: file, line: line, r.reversed().lexicographicallyPrecedes(d.reversed())).to(beTrue(), description: description)
 }
+
+// Independent base-256 multiplication; returns all limbs, including the high half.
+func fullProduct(_ lhs: [UInt64], _ rhs: [UInt64]) -> [UInt64] {
+    let a = divisionBytes(lhs), b = divisionBytes(rhs)
+    var digits = [UInt32](repeating: 0, count: a.count + b.count)
+    for i in a.indices {
+        for j in b.indices {
+            digits[i + j] += UInt32(a[i]) * UInt32(b[j])
+        }
+    }
+
+    for i in 0 ..< digits.count - 1 {
+        digits[i + 1] += digits[i] >> 8
+        digits[i] &= 255
+    }
+
+    return stride(from: 0, to: digits.count, by: 8).map { start in
+        (0 ..< 8).reduce(UInt64(0)) { $0 | (UInt64(digits[start + $1]) << ($1 * 8)) }
+    }
+}

@@ -78,4 +78,20 @@ public extension U128 {
     static func * (lhs: U128, rhs: U128) -> U128 {
         lhs.mul(rhs)
     }
+
+    static func / (lhs: Self, rhs: Self) -> Self {
+        lhs.divRem(divisor: rhs).quotient
+    }
+
+    static func % (lhs: Self, rhs: Self) -> Self {
+        lhs.divRem(divisor: rhs).remainder
+    }
+
+    static func /= (lhs: inout Self, rhs: Self) {
+        lhs = lhs / rhs
+    }
+
+    static func %= (lhs: inout Self, rhs: Self) {
+        lhs = lhs % rhs
+    }
 }

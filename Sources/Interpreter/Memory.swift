@@ -1,3 +1,5 @@
+import PrimitiveTypes
+
 #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS) || os(visionOS)
 import Darwin
 #elseif os(Linux)
@@ -162,6 +164,27 @@ public class Memory {
             Self.memCpy(dstPtr: dest.baseAddress!, srcPtr: buf.advanced(by: offset), count: copySize)
         }
         return result
+    }
+
+    /// Reads a word from a range already expanded and charged by the interpreter.
+    func getWord(offset: Int) -> U256 {
+        precondition(offset >= 0 && offset <= self.effectiveLength - 32, "Word read requires 32 allocated bytes.")
+        // The validated positive range guarantees a buffer.
+        return U256(bigEndian: UnsafeRawBufferPointer(start: self.buffer!.advanced(by: offset), count: 32))
+    }
+
+    /// Stores a word with the same limit and allocation errors as byte-array writes.
+    func set(offset: Int, word: U256) -> Result<Void, Machine.ExitReason> {
+        precondition(offset >= 0, "Memory offsets must be nonnegative.")
+        if self.limit - offset < 32 {
+            return .failure(.Error(.MemoryOperation(.SetLimitExceeded)))
+        }
+        guard self.resize(end: offset + 32) else { return .failure(.Fatal(.ReadMemory)) }
+
+        // Successful resize to a positive length guarantees a buffer.
+        word.writeBigEndian(to: UnsafeMutableRawBufferPointer(start: self.buffer!.advanced(by: offset), count: 32))
+
+        return .success(())
     }
 
     /// Sets a segment of the Memory with the provided byte values.

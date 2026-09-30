@@ -5,6 +5,59 @@ import Quick
 final class U256Spec: QuickSpec {
     override class func spec() {
         describe("U256 type") {
+            context("word conversions") {
+                it("reads every big-endian length at unaligned offsets and preserves surrounding bytes") {
+                    let bytes = (0 ..< 32).map { UInt8($0 * 7 + 1) }
+                    for offset in 0 ... 7 {
+                        for length in 0 ... 32 {
+                            let storage = [UInt8](repeating: 0xFF, count: offset) + bytes + [0xFF]
+                            let actual = storage.withUnsafeBytes {
+                                U256(bigEndian: UnsafeRawBufferPointer(rebasing: $0[offset ..< offset + length]))
+                            }
+                            var expected = [UInt64](repeating: 0, count: 4)
+                            for i in 0 ..< length {
+                                expected[i / 8] |= UInt64(bytes[length - 1 - i]) << ((i % 8) * 8)
+                            }
+                            expect(actual.BYTES).to(equal(expected), description: "offset \(offset), length \(length)")
+                        }
+                        var storage = [UInt8](repeating: 0xEE, count: offset + 33)
+                        let value = U256(from: [0x0123456789ABCDEF, 0x1020304050607080, 0xFFEEDDCCBBAA9988, 0x8877665544332211])
+                        storage.withUnsafeMutableBytes {
+                            value.writeBigEndian(to: UnsafeMutableRawBufferPointer(rebasing: $0[offset ..< offset + 32]))
+                        }
+                        let expected: [UInt8] = [0x88, 0x77, 0x66, 0x55, 0x44, 0x33, 0x22, 0x11, 0xFF, 0xEE, 0xDD, 0xCC, 0xBB, 0xAA, 0x99, 0x88,
+                                                 0x10, 0x20, 0x30, 0x40, 0x50, 0x60, 0x70, 0x80, 0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF]
+                        expect(storage).to(equal([UInt8](repeating: 0xEE, count: offset) + expected + [0xEE]))
+                    }
+                }
+
+                it("rejects oversized reads and incorrectly sized write buffers") {
+                    expect(captureStandardError {
+                        expect {
+                            [UInt8](repeating: 0, count: 33).withUnsafeBytes { _ = U256(bigEndian: $0) }
+                        }.to(throwAssertion())
+                    }).to(contain("not more than 32 bytes"))
+                    for count in [0, 31, 33] {
+                        expect(captureStandardError {
+                            expect {
+                                var bytes = [UInt8](repeating: 0, count: count)
+                                bytes.withUnsafeMutableBytes { U256.ZERO.writeBigEndian(to: $0) }
+                            }.to(throwAssertion())
+                        }).to(contain("32-byte destination"))
+                    }
+                }
+
+                it("truncates only high limbs and converts hash words in big-endian order") {
+                    let wide = U512(from: [1, 2, 3, 4, 5, 6, 7, 8])
+                    expect(U256(truncating: wide).BYTES).to(equal([1, 2, 3, 4]))
+                    expect(U256(truncating: .MAX)).to(equal(.MAX))
+                    let hash = H256(from: Array(0 ..< 32))
+                    let word = U256(from: hash)
+                    expect(word.BYTES).to(equal([0x18191A1B1C1D1E1F, 0x1011121314151617, 0x08090A0B0C0D0E0F, 0x0001020304050607]))
+                    expect(H256(from: word)).to(equal(hash))
+                }
+            }
+
             context("when init data wrong panics with message") {
                 func expectFailInit(array arr: [UInt64]) {
                     expect(captureStandardError {
@@ -40,7 +93,29 @@ final class U256Spec: QuickSpec {
                     }
                 }
 
-                context("wrong String for conversion") {
+                context("String validation") {
+                    it("rejects signs, whitespace and non-ASCII hex digits") {
+                        let cases: [(hex: String, invalid: String)] = [
+                            ("+1", "+1"), ("-1", "-1"), ("-0", "-0"), ("00+a", "+a"), ("0x+1", "+1"), ("0X+F", "+F"),
+                            (" 1", " 1"), ("1 ", "1 "), ("\t1", "\t1"), ("1\n", "1\n"), ("Ａ1", "Ａ1"), ("é0", "é0")
+                        ]
+                        for (hex, invalid) in cases {
+                            expect(U256.fromString(hex: hex)).to(beFailure { error in
+                                expect(error).to(equal(.InvalidHexCharacter(invalid)))
+                            }, description: "hex \(hex)")
+                        }
+                    }
+
+                    it("preserves empty, prefixed, odd-length and mixed-case hex") {
+                        for hex in ["", "0x", "0X", "0", "00"] {
+                            expect(U256.fromString(hex: hex)).to(beSuccess(U256.ZERO), description: "hex \(hex)")
+                        }
+
+                        for hex in ["aBc", "0xaBc", "0XaBc", "0AbC"] {
+                            expect(U256.fromString(hex: hex)).to(beSuccess(U256(from: 0xABC)), description: "hex \(hex)")
+                        }
+                    }
+
                     it("too big String") {
                         let res = U256.fromString(hex: String(repeating: "A", count: 65))
                         expect(res).to(beFailure { error in
@@ -139,20 +214,20 @@ final class U256Spec: QuickSpec {
                         0xF, 1, 2, 3, 0xC1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                         0, 0xAC, 2,
                     ])
-                    expect(0x0000_0000_0000_AC02).to(equal(val.BYTES[0]))
+                    expect(0x000000000000AC02).to(equal(val.BYTES[0]))
                     expect(0).to(equal(val.BYTES[1]))
                     expect(0).to(equal(val.BYTES[2]))
-                    expect(0x0F01_0203_C100_0000).to(equal(val.BYTES[3]))
+                    expect(0x0F010203C1000000).to(equal(val.BYTES[3]))
                 }
                 it("from Little-Endian") {
                     let val = U256.fromLittleEndian(from: [
                         0xF, 1, 2, 3, 0xC1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
                         0, 0xAC, 2,
                     ])
-                    expect(0x0000_00C1_0302_010F).to(equal(val.BYTES[0]))
+                    expect(0x000000C10302010F).to(equal(val.BYTES[0]))
                     expect(0).to(equal(val.BYTES[1]))
                     expect(0).to(equal(val.BYTES[2]))
-                    expect(0x02AC_0000_0000_0000).to(equal(val.BYTES[3]))
+                    expect(0x02AC000000000000).to(equal(val.BYTES[3]))
                 }
 
                 it("getUInt") {

@@ -147,17 +147,16 @@ enum SystemInstructions {
         // Stack size was verified above; these unwraps cannot fail.
         let index = m.stackPop()!
 
-        var load = [UInt8](repeating: 0, count: 32)
-        let dataCount = m.data.count
         let offset = index.saturatingInt
-        if offset < dataCount {
-            let countToCopy = min(32, dataCount - offset)
-
-            let sourceRange = offset ..< (offset + countToCopy)
-            let destinationRange = 0 ..< countToCopy
-            load.replaceSubrange(destinationRange, with: m.data[sourceRange])
+        let newValue: U256
+        if offset < m.data.count {
+            let count = min(32, m.data.count - offset)
+            newValue = m.data.withUnsafeBytes {
+                U256(bigEndian: UnsafeRawBufferPointer(rebasing: $0[offset ..< offset + count]))
+            } << ((32 - count) * 8)
+        } else {
+            newValue = .ZERO
         }
-        let newValue = U256.fromBigEndian(from: load)
         m.stackPush(value: newValue)
     }
 
@@ -184,8 +183,7 @@ enum SystemInstructions {
         }
 
         // Push the address of the current contract onto the stack
-        let newValue = H256(from: m.context.targetAddress).BYTES
-        m.stackPush(value: U256.fromBigEndian(from: newValue))
+        m.stackPush(value: U256(from: H256(from: m.context.targetAddress)))
     }
 
     /// Pushes the caller address onto the stack.
@@ -199,8 +197,7 @@ enum SystemInstructions {
         }
 
         // Push the caller address onto the stack
-        let newValue = H256(from: m.context.callerAddress).BYTES
-        m.stackPush(value: U256.fromBigEndian(from: newValue))
+        m.stackPush(value: U256(from: H256(from: m.context.callerAddress)))
     }
 
     /// Computes the Keccak-256 hash of a memory region and pushes the result onto the stack.
@@ -233,7 +230,7 @@ enum SystemInstructions {
         if size == 0 {
             // Stack depth was verified above.
             m.stack.consume(count: 2)
-            m.stackPush(value: U256.fromBigEndian(from: H256.KECCAK_EMPTY.BYTES))
+            m.stackPush(value: U256(from: H256.KECCAK_EMPTY))
             return
         }
 

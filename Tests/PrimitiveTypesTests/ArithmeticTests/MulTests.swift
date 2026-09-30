@@ -6,6 +6,42 @@ import Quick
 final class ArithmeticMulSpec: QuickSpec {
     override class func spec() {
         describe("overflowMul operation") {
+            it("matches independent full products at limb boundaries and for seeded inputs") {
+                var generator = SeededGenerator(state: 0xA11CE)
+                func check<T: BigUInt>(_ type: T.Type, multiply: (T, T) -> T) {
+                    let count = Int(T.numberBase)
+                    var values = [[UInt64](repeating: 0, count: count), [UInt64](repeating: .max, count: count)]
+                    for bit in 0 ..< count * 64 {
+                        var value = [UInt64](repeating: 0, count: count)
+                        value[bit / 64] = UInt64(1) << (bit % 64)
+                        values.append(value)
+                    }
+
+                    for _ in 0 ..< 256 {
+                        values.append((0 ..< count).map { _ in generator.next() })
+                    }
+
+                    for (index, a) in values.enumerated() {
+                        let b = index % 2 == 0 ? [UInt64](repeating: .max, count: count) : (0 ..< count).map { _ in generator.next() }
+                        let expected = fullProduct(a, b)
+                        let description = "seed 0xA11CE, width \(count), a \(a), b \(b)"
+                        let actual = multiply(T(from: a), T(from: b))
+                        expect(actual.BYTES).to(equal(Array(expected.prefix(count))), description: description)
+                        if type == U256.self {
+                            let lhs = U256(from: a), rhs = U256(from: b)
+                            let (low, overflow) = lhs.overflowMul(rhs)
+                            expect(lhs.fullMul(rhs).BYTES).to(equal(expected), description: description)
+                            expect(low.BYTES).to(equal(Array(expected.prefix(4))), description: description)
+                            expect(overflow).to(equal(expected.dropFirst(4).contains { $0 != 0 }), description: description)
+                        }
+                    }
+                }
+
+                check(U128.self, multiply: *)
+                check(U256.self, multiply: *)
+                check(U512.self, multiply: *)
+            }
+
             context("without overflow") {
                 it("multiplying by zero") {
                     let a = U256(from: [1, 2, 3, 4])
@@ -83,8 +119,9 @@ final class ArithmeticMulSpec: QuickSpec {
                 it("full overflow") {
                     let a = U256(from: [UInt64.max, UInt64.max, UInt64.max, UInt64.max])
                     let b = U256(from: [UInt64.max, UInt64.max, UInt64.max, UInt64.max])
-                    let (_, isOverflow) = a.overflowMul(b)
+                    let (result, isOverflow) = a.overflowMul(b)
 
+                    expect(result).to(equal(U256(from: 1)))
                     expect(isOverflow).to(beTrue())
                 }
 
@@ -100,8 +137,9 @@ final class ArithmeticMulSpec: QuickSpec {
                 it("overflow with two max values at index 3") {
                     let a = U256(from: [0, 0, 0, UInt64.max])
                     let b = U256(from: [0, 0, 0, UInt64.max])
-                    let (_, isOverflow) = a.overflowMul(b)
+                    let (result, isOverflow) = a.overflowMul(b)
 
+                    expect(result).to(equal(U256.ZERO))
                     expect(isOverflow).to(beTrue())
                 }
 

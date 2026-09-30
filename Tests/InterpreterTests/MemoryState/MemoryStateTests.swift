@@ -1111,21 +1111,27 @@ final class MemoryStateSpec: QuickSpec {
                     let backend = MockBackend()
                     let state = MemoryState(gasLimit: 10000, backend: backend, hardFork: .Berlin)
                     expect(state.parent).to(beNil())
-                    expect { state.exitCommit() }.to(throwAssertion())
+                    expect(captureStandardError {
+                        expect { state.exitCommit() }.to(throwAssertion())
+                    }).to(contain("Cannot commit on root substate"))
                 }
 
                 it("exitRevert on root substate triggers fatalError") {
                     let backend = MockBackend()
                     let state = MemoryState(gasLimit: 10000, backend: backend, hardFork: .Berlin)
                     expect(state.parent).to(beNil())
-                    expect { state.exitRevert() }.to(throwAssertion())
+                    expect(captureStandardError {
+                        expect { state.exitRevert() }.to(throwAssertion())
+                    }).to(contain("Cannot revert on root substate"))
                 }
 
                 it("exitDiscard on root substate triggers fatalError") {
                     let backend = MockBackend()
                     let state = MemoryState(gasLimit: 10000, backend: backend, hardFork: .Berlin)
                     expect(state.parent).to(beNil())
-                    expect { state.exitDiscard() }.to(throwAssertion())
+                    expect(captureStandardError {
+                        expect { state.exitDiscard() }.to(throwAssertion())
+                    }).to(contain("Cannot discard on root substate"))
                 }
             }
         }

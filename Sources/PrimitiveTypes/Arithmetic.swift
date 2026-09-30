@@ -2,10 +2,10 @@
 ///
 /// Concrete types implement the arithmetic needed by the EVM on stored fields.
 /// Generic division materializes each operand once and runs Knuth on limb arrays.
-public extension BigUInt {
+extension BigUInt {
     /// Multiply-accumulate primitive: `lhs += a*b + carry`, returns the high carry.
     /// Used by per-type multiplication implementations.
-    @inline(__always)
+    @inlinable @inline(__always)
     static func mac(_ lhs: inout UInt64, _ a: UInt64, _ b: UInt64, _ carry: UInt64) -> UInt64 {
         let (productHigh, productLow) = a.multipliedFullWidth(by: b)
         let (sumLow1, carry1) = productLow.addingReportingOverflow(carry)
@@ -53,63 +53,25 @@ public extension BigUInt {
         return 64 * (index + 1) - a[index].leadingZeroBitCount
     }
 
-    /// Adds two slices of UInt64 and updates the first slice.
-    /// - Parameters:
-    ///   - a: The first slice to be mutated.
-    ///   - b: The second slice to be added.
-    /// - Returns: A boolean indicating whether there was an overflow.
+    /// Adds up to `to` limbs, returning the carry beyond the selected slice.
     static func addSlice(a: inout [UInt64], from: Int, b: borrowing [UInt64], to: Int) -> Bool {
-        self.binopSlice(a: &a, from: from, b: b, to: to, binop: { x, y in x.addingReportingOverflow(y) })
+        var carry = false
+        for i in 0 ..< min(a.count - from, b.count, to) {
+            let (sum, c0) = a[from + i].addingReportingOverflow(b[i])
+            let (value, c1) = sum.addingReportingOverflow(carry ? 1 : 0)
+            a[from + i] = value
+            carry = c0 || c1
+        }
+        return carry
     }
 
-    /// Add v to u[j..<j + n]
-    static func carryAddSlice(carry: Bool, q_hat: inout UInt64, a: inout [UInt64], from: Int, b: borrowing [UInt64], to: Int) { // // swiftlint:disable:this function_parameter_count
+    /// D6: restore the divisor after an overestimated quotient digit.
+    static func carryAddSlice(carry: Bool, q_hat: inout UInt64, a: inout [UInt64], from: Int, b: borrowing [UInt64], to: Int) { // swiftlint:disable:this function_parameter_count
         if carry {
             q_hat -= 1
             let c = Self.addSlice(a: &a, from: from, b: b, to: to)
             a[from + to] = a[from + to] &+ (c ? 1 : 0)
         }
-    }
-
-    /// Subtracts the second slice from the first slice.
-    /// Retained as a public utility for limb-slice subtraction with borrow reporting.
-    /// - Parameters:
-    ///   - a: The first slice to be mutated.
-    ///   - b: The second slice to be subtracted.
-    /// - Returns: A boolean indicating whether there was a borrow.
-    static func subSlice(a: inout [UInt64], from: Int, b: borrowing [UInt64], to: Int) -> Bool {
-        self.binopSlice(a: &a, from: from, b: b, to: to, binop: { x, y in x.subtractingReportingOverflow(y) })
-    }
-
-    /// Performs a binary operation on two slices of UInt64.
-    ///
-    /// It performs `zip` operation for to arrays.
-    /// Intersection of two ranges without going beyond each range for arrays.
-    ///
-    /// - Parameters:
-    ///   - a: The first slice to be mutated.
-    ///   - b: The second slice.
-    ///   - binop: A binary operation that takes two UInt64s and returns a tuple of (result, overflow).
-    /// - Returns: A boolean indicating whether there was an overflow.
-    private static func binopSlice(a: inout [UInt64], from: Int, b: borrowing [UInt64], to: Int, binop: (UInt64, UInt64) -> (UInt64, Bool)) -> Bool {
-        var carry = false
-        // Check correct range for zip operation.
-        let endIndex = min(a.count - from, b.count, to)
-        // Perform zip operation and calculations. The range.
-        // Intersection of two ranges without going beyond each range for arrays.
-        for i in 0 ..< endIndex {
-            let (result, c) = Self.binopCarry(a[from + i], b[i], carry, binop)
-            a[from + i] = result
-            carry = c
-        }
-        return carry
-    }
-
-    /// Performs a binary operation with carry.
-    private static func binopCarry(_ a: UInt64, _ b: UInt64, _ c: Bool, _ binop: (UInt64, UInt64) -> (UInt64, Bool)) -> (UInt64, Bool) {
-        let (res1, overflow1) = b.addingReportingOverflow(c ? 1 : 0)
-        let (res2, overflow2) = binop(a, res1)
-        return (res2, overflow1 || overflow2)
     }
 
     /// Divides `(hi << 64) | lo` by `y`. Requires `hi < y`, so the quotient fits in UInt64.
@@ -252,42 +214,7 @@ public extension BigUInt {
 
     /// Returns the unsigned quotient and remainder. The divisor must be nonzero.
     @inline(__always)
-    func divRem(divisor: Self) -> (quotient: Self, remainder: Self) {
+    public func divRem(divisor: Self) -> (quotient: Self, remainder: Self) {
         self.divMod(divisor)
-    }
-
-    /// Division of two values of the same type.
-    ///
-    ///   - lhs: The left-hand side value to be div.
-    ///   - rhs: The right-hand side value to be div.
-    ///
-    /// - Returns: The division of the two values.
-    static func / (lhs: Self, rhs: Self) -> Self {
-        let (result, _) = lhs.divRem(divisor: rhs)
-        return result
-    }
-
-    /// Performs `div` and updates the left-hand side with the result.
-    ///
-    /// - Parameters:
-    ///   - lhs: The left-hand side value to be modified.
-    ///   - rhs: The right-hand side value to be operated.
-    static func /= (lhs: inout Self, rhs: Self) {
-        lhs = lhs / rhs
-    }
-
-    /// Remainder of two values of the same type.
-    static func % (lhs: Self, rhs: Self) -> Self {
-        let (_, result) = lhs.divRem(divisor: rhs)
-        return result
-    }
-
-    /// Performs `rem` and updates the left-hand side with the result.
-    ///
-    /// - Parameters:
-    ///   - lhs: The left-hand side value to be modified.
-    ///   - rhs: The right-hand side value to be operated.
-    static func %= (lhs: inout Self, rhs: Self) {
-        lhs = lhs % rhs
     }
 }

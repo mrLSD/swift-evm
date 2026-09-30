@@ -504,20 +504,26 @@ final class InterpreterMachineStackSpec: QuickSpec {
                 it("should trigger assertion when count is negative") {
                     var stack = Stack(limit: 3)
                     _ = stack.push(value: U256(from: 10))
-                    expect { stack.consume(count: -1) }.to(throwAssertion())
+                    expect(captureStandardError {
+                        expect { stack.consume(count: -1) }.to(throwAssertion())
+                    }).to(contain("Stack underflow"))
                 }
 
                 it("should trigger assertion when count exceeds stack length") {
                     var stack = Stack(limit: 3)
                     _ = stack.push(value: U256(from: 10))
                     expect(stack.length).to(equal(1))
-                    expect { stack.consume(count: 2) }.to(throwAssertion())
+                    expect(captureStandardError {
+                        expect { stack.consume(count: 2) }.to(throwAssertion())
+                    }).to(contain("Stack underflow"))
                 }
 
                 it("should trigger assertion when count is positive on an empty stack") {
                     var stack = Stack(limit: 3)
                     expect(stack.length).to(equal(0))
-                    expect { stack.consume(count: 1) }.to(throwAssertion())
+                    expect(captureStandardError {
+                        expect { stack.consume(count: 1) }.to(throwAssertion())
+                    }).to(contain("Stack underflow"))
                 }
             }
         }
