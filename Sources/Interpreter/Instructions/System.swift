@@ -200,6 +200,19 @@ enum SystemInstructions {
         m.stackPush(value: U256(from: H256(from: m.context.callerAddress)))
     }
 
+    /// Pushes the remaining gas after paying for this instruction onto the stack.
+    static func gas(machine m: Machine) {
+        if !m.verifyStack(pop: 0, push: 1) {
+            return
+        }
+
+        if !m.gasRecordCost(cost: GasConstant.BASE) {
+            return
+        }
+
+        m.stackPush(value: U256(from: m.gas.remaining))
+    }
+
     /// Computes the Keccak-256 hash of a memory region and pushes the result onto the stack.
     static func keccak256(machine m: Machine) {
         if !m.verifyStack(pop: 2) {

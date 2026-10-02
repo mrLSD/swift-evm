@@ -229,6 +229,7 @@ public final class Machine {
         table[Opcode.CALLVALUE.index] = SystemInstructions.callValue
         table[Opcode.ADDRESS.index] = SystemInstructions.address
         table[Opcode.CALLER.index] = SystemInstructions.caller
+        table[Opcode.GAS.index] = SystemInstructions.gas
         table[Opcode.SHA3.index] = SystemInstructions.keccak256
 
         // Control
