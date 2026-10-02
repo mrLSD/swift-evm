@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-10-03
+
+### Added
+- **`GAS` opcode (0x5A):** pushes the gas remaining after the instruction's own `BASE` cost of 2, as specified by the Yellow Paper and the EELS `gas_left` instruction. The handler lives in `SystemInstructions`, mirroring aurora-evm and revm. Previously no handler was registered and the opcode executed as `InvalidOpcode` ([#76]).
+
+### Tests
+- **`GAS` behavior:** remaining gas after the instruction cost, exact-limit and `OutOfGas` cases, full 64-bit values, per-step updates across a sequence, inclusion of prior opcode and memory-expansion costs, exclusion of refunds, the stack-overflow check before charging, and availability in every hard fork ([#76]).
+
 ## [0.6.0] - 2026-09-30
 
 `PrimitiveTypes` now stores every value inline in fixed machine-word fields and implements only the arithmetic the EVM needs on each concrete type. This release contains source-breaking API changes; see **Breaking Changes** for migration notes. It also fixes wrong `DIV`, `MOD`, `SDIV`, `SMOD`, `ADDMOD` and `MULMOD` results on Apple OS versions without runtime `UInt128` support.
@@ -314,9 +322,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `JUMPI` (0x57): Conditional jump based on stack value.
   - `JUMPDEST` (0x5B): Marks a valid destination for jumps.
   - `PC` (0x58): Get the value of the program counter before to the increment.
-- **Gas & MSIZE:** Implemented logic for:
-  - `GAS` (0x5A): Get the amount of available gas, including reduction for the instruction itself.
-  - `MSIZE` (0x59): Get the size of active memory in bytes.
+- **MSIZE:** Implemented `MSIZE` (0x59): Get the size of active memory in bytes.
 - **Jump Validation:** Added `JumpTable` and valid destination verification logic to trap invalid jumps (jumping to non-JUMPDEST bytes or into immediate data) with `BadJumpDestination` error ([#43]).
 
 ### Tests
@@ -548,7 +554,8 @@ This is the **initial public release** of `swift-evm` — a Swift-native Ethereu
 
 
 <!-- Versions -->
-[Unreleased]: https://github.com/mrLSD/swift-evm/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/mrLSD/swift-evm/compare/v0.6.1...HEAD
+[0.6.1]: https://github.com/mrLSD/swift-evm/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/mrLSD/swift-evm/compare/v0.5.26...v0.6.0
 [0.5.26]: https://github.com/mrLSD/swift-evm/compare/v0.5.25...v0.5.26
 [0.5.25]: https://github.com/mrLSD/swift-evm/compare/v0.5.24...v0.5.25
@@ -583,6 +590,7 @@ This is the **initial public release** of `swift-evm` — a Swift-native Ethereu
 [0.1.0]: https://github.com/mrLSD/swift-evm/releases/tag/v0.1.0
 
 <!-- PRs -->
+[#76]: https://github.com/mrLSD/swift-evm/pull/76
 [#74]: https://github.com/mrLSD/swift-evm/pull/74
 [#73]: https://github.com/mrLSD/swift-evm/pull/73
 [#72]: https://github.com/mrLSD/swift-evm/pull/72
