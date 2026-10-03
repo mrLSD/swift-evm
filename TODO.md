@@ -10,20 +10,14 @@
 - [ ] SSTORE
 - [ ] TLOAD
 - [ ] TSTORE
-- [ ] LOG0
-- [ ] LOG1
-- [ ] LOG2
-- [ ] LOG3
-- [ ] LOG4
 - [ ] RETURNDATASIZE
 - [ ] RETURNDATACOPY
 - [ ] PREVRANDAO
-- [ ] GAS
 
-## Memory
+### Memory
 - [ ] MCOPY
 
-## Host
+### Host
 - [ ] BLOCKHASH
 - [ ] TIMESTAMP
 - [ ] GASLIMIT
@@ -33,7 +27,7 @@
 - [ ] BLOBHASH
 - [ ] BLOBBASEFEE
 
-## Other
+### Other
 - [ ] STATICCALL
 - [ ] SELFDESTRUCT
 - [ ] CREATE
@@ -41,3 +35,9 @@
 - [ ] CALL
 - [ ] CALLCODE
 - [ ] DELEGATECALL
+
+## isStatic
+
+At the moment in Handler as temporary solution.
+But when Runtime will implemented, it should be moved to the EVM runtime, 
+and the EVM runtime should be aware of the static context.

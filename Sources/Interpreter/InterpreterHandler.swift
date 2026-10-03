@@ -17,4 +17,8 @@ public protocol InterpreterHandler {
     func chainId() -> U256
     /// Get environmental transaction coinbase address.
     func coinbase() -> H160
+    /// Whether the current call forbids state changes.
+    func isStatic() -> Bool
+    /// Append to the current substate's logs; leave them unchanged on failure.
+    func log(address: H160, topics: [H256], data: [UInt8]) -> Result<Void, Machine.ExitError>
 }

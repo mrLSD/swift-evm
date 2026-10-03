@@ -165,6 +165,9 @@ public final class Machine {
         /// Execution runs out of gas (runtime).
         case OutOfGas
 
+        /// State modification was attempted in a static call.
+        case WriteInStaticContext
+
         /// Not enough fund to start the execution (runtime).
         case OutOfFund
 
@@ -231,6 +234,11 @@ public final class Machine {
         table[Opcode.CALLER.index] = SystemInstructions.caller
         table[Opcode.GAS.index] = SystemInstructions.gas
         table[Opcode.SHA3.index] = SystemInstructions.keccak256
+        table[Opcode.LOG0.index] = { (_ m: Machine) in SystemInstructions.log(machine: m, n: 0) }
+        table[Opcode.LOG1.index] = { (_ m: Machine) in SystemInstructions.log(machine: m, n: 1) }
+        table[Opcode.LOG2.index] = { (_ m: Machine) in SystemInstructions.log(machine: m, n: 2) }
+        table[Opcode.LOG3.index] = { (_ m: Machine) in SystemInstructions.log(machine: m, n: 3) }
+        table[Opcode.LOG4.index] = { (_ m: Machine) in SystemInstructions.log(machine: m, n: 4) }
 
         // Control
         table[Opcode.STOP.index] = ControlInstructions.stop

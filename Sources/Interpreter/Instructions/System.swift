@@ -213,6 +213,55 @@ enum SystemInstructions {
         m.stackPush(value: U256(from: m.gas.remaining))
     }
 
+    /// Appends a log with n topics and a snapshot of the specified memory range.
+    static func log(machine m: Machine, n: Int) {
+        if !m.verifyStack(pop: 2 + n) {
+            return
+        }
+
+        if m.handler.isStatic() {
+            m.machineStatus = .Exit(.Error(.WriteInStaticContext))
+            return
+        }
+
+        // Stack depth was verified above; these unwraps cannot fail.
+        let rawOffset = m.stackPeek(indexFromTop: 0)!
+        let rawSize = m.stackPeek(indexFromTop: 1)!
+        guard let size = rawSize.getInt, let cost = GasCost.logCost(size: size, n: n) else {
+            m.machineStatus = .Exit(.Error(.OutOfGas))
+            return
+        }
+
+        if !m.gasRecordCost(cost: cost) {
+            return
+        }
+
+        var data: [UInt8] = []
+        // An empty range ignores the offset and does not expand memory.
+        if size > 0 {
+            guard let offset = rawOffset.getInt else {
+                m.machineStatus = .Exit(.Error(.OutOfGas))
+                return
+            }
+            guard m.resizeMemoryAndRecordGas(offset: offset, size: size) else {
+                return
+            }
+            data = m.memory.get(offset: offset, size: size)
+        }
+
+        m.stack.consume(count: 2)
+        var topics: [H256] = []
+        topics.reserveCapacity(n)
+        for _ in 0 ..< n {
+            // All n topics were included in the stack check.
+            topics.append(m.stackPopH256()!)
+        }
+
+        if case .failure(let err) = m.handler.log(address: m.context.targetAddress, topics: topics, data: data) {
+            m.machineStatus = .Exit(.Error(err))
+        }
+    }
+
     /// Computes the Keccak-256 hash of a memory region and pushes the result onto the stack.
     static func keccak256(machine m: Machine) {
         if !m.verifyStack(pop: 2) {

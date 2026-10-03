@@ -10,6 +10,7 @@ class TestHandler: InterpreterHandler {
     static let address2: H160 = try! .fromString(hex: "9A6402EEa6d967dBd7609346c11A1702Db4E5002").get()
     static let address3: H160 = try! .fromString(hex: "9A6402EEa6d967dBd7609346c11A1702Db4E5003").get()
     static let testGasPrice: U256 = .init(from: 123)
+    var logs: [Log] = []
 
     func beforeOpcodeExecution(machine: Machine, opcode: Opcode?) -> Machine.ExitError? {
         return nil
@@ -40,6 +41,15 @@ class TestHandler: InterpreterHandler {
 
     func coinbase() -> H160 {
         Self.address2
+    }
+
+    func isStatic() -> Bool {
+        false
+    }
+
+    func log(address: H160, topics: [H256], data: [UInt8]) -> Result<Void, Machine.ExitError> {
+        logs.append(Log(address: address, topics: topics, data: data))
+        return .success(())
     }
 }
 
