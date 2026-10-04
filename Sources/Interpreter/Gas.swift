@@ -79,7 +79,7 @@ public struct Gas: Equatable, Sendable {
 }
 
 /// Memory gas data
-struct MemoryGas: Equatable, Sendable {
+struct MemoryGas: Equatable {
     /// Number of words in memory. Used for memory resize gas calculation
     var numWords: Int = 0
     /// Memory gas cost
@@ -89,7 +89,7 @@ struct MemoryGas: Equatable, Sendable {
     ///
     /// - Unchanged: Indicates that the memory size did not change, hence no additional gas cost was incurred.
     /// - Resized(UInt64): Indicates that the memory was resized, with the associated UInt64 representing the additional gas cost.
-    enum MemoryGasStatus: Equatable, Sendable {
+    enum MemoryGasStatus: Equatable {
         case Unchanged
         case Resized(UInt64)
     }
@@ -156,10 +156,31 @@ enum GasConstant {
     static let KECCAK256: UInt64 = 30
     /// Gas cost per word for KECCAK256 instruction.
     static let KECCAK256WORD: UInt64 = 6
+    /// Base gas cost for LOG instructions.
+    static let LOG: UInt64 = 375
+    /// Gas cost per byte of log data.
+    static let LOGDATA: UInt64 = 8
+    /// Gas cost per log topic.
+    static let LOGTOPIC: UInt64 = 375
 }
 
 /// Gas cost calculations
 enum GasCost {
+    /// Calculates the gas cost for a LOG instruction, excluding memory expansion.
+    /// Formula: `375 + 8 * size + 375 * n`
+    ///
+    /// - Parameters:
+    ///   - size: The nonnegative number of bytes in the log data.
+    ///   - n: The number of topics, from 0 through 4.
+    /// - Returns: The computed gas cost, or `nil` if it exceeds `UInt64` capacity.
+    static func logCost(size: Int, n: Int) -> UInt64? {
+        precondition(size >= 0 && (0 ... 4).contains(n), "LOG requires a nonnegative size and 0...4 topics.")
+        let (dataCost, dataOverflow) = UInt64(size).multipliedReportingOverflow(by: GasConstant.LOGDATA)
+        let (cost, costOverflow) = dataCost.addingReportingOverflow(GasConstant.LOG + GasConstant.LOGTOPIC * UInt64(n))
+
+        return dataOverflow || costOverflow ? nil : cost
+    }
+
     /// Calculates the memory gas cost for a given number of words.
     /// Formula: `3 * N + (N * N) / 512`
     ///

@@ -292,6 +292,43 @@ final class InterpreterGasSpec: QuickSpec {
                 }
             }
 
+            context("logCost") {
+                it("charges per byte and topic without rounding data to words") {
+                    for n in 0 ... 4 {
+                        for size in [0, 1, 31, 32, 33, 1024] {
+                            let expected = UInt64(375 + 375 * n + 8 * size)
+                            expect(GasCost.logCost(size: size, n: n)).to(equal(expected), description: "size \(size), topics \(n)")
+                        }
+                    }
+                }
+
+                #if arch(arm64) || arch(x86_64)
+                it("checks the last representable cost and the next byte") {
+                    for n in 0 ... 4 {
+                        let base = UInt64(375 + 375 * n)
+                        let size = (UInt64.max - base) / 8
+                        let expected = UInt64.max - (UInt64.max - base) % 8
+                        expect(GasCost.logCost(size: Int(size), n: n)).to(equal(expected), description: "topics \(n)")
+                        expect(GasCost.logCost(size: Int(size + 1), n: n)).to(beNil(), description: "topics \(n)")
+                    }
+                }
+
+                it("rejects overflow of the data cost before adding the base cost") {
+                    for size in [Int(UInt64.max / 8 + 1), Int.max] {
+                        expect(GasCost.logCost(size: size, n: 0)).to(beNil(), description: "size \(size)")
+                    }
+                }
+                #endif
+
+                it("rejects arguments outside the precondition domain") {
+                    for (size, n) in [(-1, 0), (0, -1), (0, 5)] {
+                        expect(captureStandardError {
+                            expect { _ = GasCost.logCost(size: size, n: n) }.to(throwAssertion())
+                        }).to(contain("LOG requires a nonnegative size and 0...4 topics."), description: "size \(size), topics \(n)")
+                    }
+                }
+            }
+
             context("costPerWord") {
                 it("success") {
                     let size = 70
