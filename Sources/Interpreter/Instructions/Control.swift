@@ -50,13 +50,7 @@ enum ControlInstructions {
         // Get jump destination
         let target = m.stackPop()!
 
-        // Convert jump destination
-        guard let dest = m.getIntOrFail(target) else {
-            return
-        }
-
-        // Validate jump destination
-        if m.isValidJumpDestination(at: dest) {
+        if let dest = target.getInt, m.isValidJumpDestination(at: dest) {
             m.machineStatus = Machine.MachineStatus.Jump(dest)
         } else {
             m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.InvalidJump))
@@ -80,19 +74,13 @@ enum ControlInstructions {
         let target = m.stackPop()!
         let value = m.stackPop()!
 
-        // Jump destination can't be zero
+        // A zero condition ignores the destination.
         if value.isZero {
             m.machineStatus = Machine.MachineStatus.Continue
             return
         }
 
-        // Convert jump destination
-        guard let dest = m.getIntOrFail(target) else {
-            return
-        }
-
-        // Validate jump destination
-        if m.isValidJumpDestination(at: dest) {
+        if let dest = target.getInt, m.isValidJumpDestination(at: dest) {
             m.machineStatus = Machine.MachineStatus.Jump(dest)
         } else {
             m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.InvalidJump))
@@ -103,32 +91,7 @@ enum ControlInstructions {
     ///
     /// Requires 2 stack items; resizes memory and charges the corresponding memory gas cost; exits with `.Return`.
     static func ret(machine m: Machine) {
-        if !m.verifyStack(pop: 2) {
-            return
-        }
-
-        // Stack size was verified above; these unwraps cannot fail.
-        let rawOffset = m.stackPop()!
-        let rawLength = m.stackPop()!
-
-        // Convert values
-        guard let offset = m.getIntOrFail(rawOffset) else {
-            return
-        }
-        guard let length = m.getIntOrFail(rawLength) else {
-            return
-        }
-
-        // Resize memory
-        if length > 0 {
-            guard m.resizeMemoryAndRecordGas(offset: offset, size: length) else {
-                return
-            }
-        }
-        // Set return range
-        m.returnRange = offset ..< (offset + length)
-        // Set machine status
-        m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Success(.Return))
+        returnFromMemory(machine: m, reason: .Success(.Return))
     }
 
     /// Reverts execution (`REVERT`, EIP-140), returning data from memory (`offset`, `length`) popped from the stack.
@@ -141,6 +104,19 @@ enum ControlInstructions {
             return
         }
 
+        returnFromMemory(machine: m, reason: .Revert)
+    }
+
+    /// Prepares the return-data range from stack operands and halts execution.
+    ///
+    /// Pops the offset followed by the length and charges for any required memory expansion.
+    /// A zero length ignores the offset and produces `0..<0` without accessing memory.
+    /// Stack underflow or a memory failure sets an error exit instead of the supplied reason.
+    ///
+    /// - Parameters:
+    ///   - m: The executing machine whose stack, memory, gas, and return state are updated.
+    ///   - reason: The exit reason applied after preparing the range: `.Success(.Return)` or `.Revert`.
+    private static func returnFromMemory(machine m: Machine, reason: Machine.ExitReason) {
         if !m.verifyStack(pop: 2) {
             return
         }
@@ -148,24 +124,24 @@ enum ControlInstructions {
         // Stack size was verified above; these unwraps cannot fail.
         let rawOffset = m.stackPop()!
         let rawLength = m.stackPop()!
-
-        // Convert values
-        guard let offset = m.getIntOrFail(rawOffset) else {
-            return
-        }
-        guard let length = m.getIntOrFail(rawLength) else {
+        guard let length = m.getMemoryIntOrFail(rawLength) else {
             return
         }
 
-        // Resize memory
+        // Empty output ignores the offset, even if it cannot fit in Int.
+        var offset = 0
         if length > 0 {
-            guard m.resizeMemoryAndRecordGas(offset: offset, size: length) else {
+            guard let memoryOffset = m.getMemoryIntOrFail(rawOffset) else {
                 return
             }
+            guard m.resizeMemoryAndRecordGas(offset: memoryOffset, size: length) else {
+                return
+            }
+            offset = memoryOffset
         }
-        // Set return range
+
+        // Memory expansion validated the nonempty range's upper bound.
         m.returnRange = offset ..< (offset + length)
-        // Set machine status
-        m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Revert)
+        m.machineStatus = Machine.MachineStatus.Exit(reason)
     }
 }

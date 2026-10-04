@@ -277,6 +277,14 @@ public class MemoryState {
         return parent?.knownStorage(address: address, key: key)
     }
 
+    /// A reset in any enclosing state makes the transaction's original storage zero.
+    private func knownOriginalStorage(_ address: H160) -> H256? {
+        if let account = accounts[address], account.reset {
+            return H256.ZERO
+        }
+        return parent?.knownOriginalStorage(address)
+    }
+
     /// Check is account address is cold by address.
     public func isCold(_ address: H160) -> Bool {
         return recursiveIsCold { accessed in accessed.addresses.contains(address) }
@@ -478,8 +486,12 @@ public class MemoryState {
         }
 
         // 5. Merge substate data into current state
-        // Merge Accounts
-        accounts.merge(exited.accounts) { _, new in new }
+        // A child account snapshot must not erase an earlier parent reset.
+        accounts.merge(exited.accounts) { old, new in
+            var merged = new
+            merged.reset = old.reset || new.reset
+            return merged
+        }
 
         // Merge Storages (Dictionary of Dictionaries)
         for (address, subStorage) in exited.storages {
@@ -707,38 +719,22 @@ extension MemoryState: Backend {
         return backend.getBlobHash(index: index)
     }
 
-    // MARK: - State Information (Cache First, then Backend)
+    // MARK: - State Information
 
     public func exists(address: H160) -> Bool {
         return knownAccount(address) != nil || backend.exists(address: address)
     }
 
     public func basic(address: H160) -> BasicAccount {
-        guard let basic = knownAccount(address)?.basic else {
-            let account = getAccountAndTouch(address)
-            return account.basic
-        }
-        return basic
+        return knownAccount(address)?.basic ?? backend.basic(address: address)
     }
 
     public func code(address: H160) -> [UInt8] {
-        guard let code = knownAccount(address)?.code else {
-            let code = backend.code(address: address)
-            // Cache code in the state for future accesses.
-            setCode(address: address, code: code)
-            return code
-        }
-        return code
+        return knownAccount(address)?.code ?? backend.code(address: address)
     }
 
     public func storage(address: H160, index: H256) -> H256 {
-        guard let value = knownStorage(address: address, key: index) else {
-            let value = backend.storage(address: address, index: index)
-            // Cache storage value in the state for future accesses.
-            setStorage(address: address, key: index, value: value)
-            return value
-        }
-        return value
+        return knownStorage(address: address, key: index) ?? backend.storage(address: address, index: index)
     }
 
     public func isEmptyStorage(address: H160) -> Bool {
@@ -746,6 +742,6 @@ extension MemoryState: Backend {
     }
 
     public func originalStorage(address: H160, index: H256) -> H256? {
-        backend.originalStorage(address: address, index: index)
+        knownOriginalStorage(address) ?? backend.originalStorage(address: address, index: index)
     }
 }

@@ -158,7 +158,7 @@ enum ArithmeticInstructions {
 
     /// Executes the EVM `ADDMOD` opcode (`0x08`).
     /// Pops three `U256` values, charges `MID` gas, and pushes `(a + b) % m` (or `0` if modulus is zero).
-    /// Returns early if the stack underflows or gas charging fails, leaving the machine unchanged.
+    /// Sets an error exit if the stack underflows or gas charging fails.
     static func addMod(machine m: Machine) {
         if !m.verifyStack(pop: 3) {
             return
@@ -179,7 +179,7 @@ enum ArithmeticInstructions {
 
         var newValueu512 = U512.ZERO
         if !op3u512.isZero {
-            // We ignore possible overflow, as we takes only first 4 elements from array as results
+            // The 257-bit sum fits in U512; reducing modulo a U256 value makes the result fit in U256.
             newValueu512 = (op1u512 + op2u512) % op3u512
         }
 

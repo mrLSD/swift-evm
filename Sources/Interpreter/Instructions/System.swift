@@ -32,8 +32,7 @@ enum SystemInstructions {
         let rawCodeOffset = m.stackPeek(indexFromTop: 1)!
         let rawSize = m.stackPeek(indexFromTop: 2)!
 
-        // This situation possible only for 32-bit context (for example wasm32)
-        guard let size = m.getIntOrFail(rawSize) else {
+        guard let size = m.getMemoryIntOrFail(rawSize) else {
             return
         }
 
@@ -51,8 +50,7 @@ enum SystemInstructions {
             return
         }
 
-        // This situation possible only for 32-bit context (for example wasm32)
-        guard let memoryOffset = m.getIntOrFail(rawMemoryOffset) else {
+        guard let memoryOffset = m.getMemoryIntOrFail(rawMemoryOffset) else {
             return
         }
         let codeOffset = rawCodeOffset.saturatingInt
@@ -96,8 +94,7 @@ enum SystemInstructions {
         let rawDataOffset = m.stackPeek(indexFromTop: 1)!
         let rawSize = m.stackPeek(indexFromTop: 2)!
 
-        // This situation possible only for 32-bit context (for example wasm32)
-        guard let size = m.getIntOrFail(rawSize) else {
+        guard let size = m.getMemoryIntOrFail(rawSize) else {
             return
         }
 
@@ -115,8 +112,7 @@ enum SystemInstructions {
             return
         }
 
-        // This situation possible only for 32-bit context (for example wasm32)
-        guard let memoryOffset = m.getIntOrFail(rawMemoryOffset) else {
+        guard let memoryOffset = m.getMemoryIntOrFail(rawMemoryOffset) else {
             return
         }
         let dataOffset = rawDataOffset.saturatingInt
@@ -273,8 +269,7 @@ enum SystemInstructions {
         let rawMemoryOffset = m.stackPeek(indexFromTop: 0)!
         let rawSize = m.stackPeek(indexFromTop: 1)!
 
-        // This situation possible only for 32-bit context (for example wasm32)
-        guard let size = m.getIntOrFail(rawSize) else {
+        guard let size = m.getMemoryIntOrFail(rawSize) else {
             return
         }
 
@@ -296,8 +291,7 @@ enum SystemInstructions {
             return
         }
 
-        // This situation possible only for 32-bit context (for example wasm32)
-        guard let memoryOffset = m.getIntOrFail(rawMemoryOffset) else {
+        guard let memoryOffset = m.getMemoryIntOrFail(rawMemoryOffset) else {
             return
         }
 

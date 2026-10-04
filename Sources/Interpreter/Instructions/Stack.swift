@@ -21,12 +21,17 @@ enum StackInstructions {
     }
 
     /// ## Description
-    /// Pushes the constant value 0 onto the stack.
+    /// Pushes the constant value 0 onto the stack. Requires Shanghai or later.
     ///
     /// ## EIP
     /// EIP-3855: PUSH0 instruction
     /// https://eips.ethereum.org/EIPS/eip-3855
     static func push0(machine m: Machine) {
+        guard m.hardFork.isShanghai() else {
+            m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.HardForkNotActive))
+            return
+        }
+
         if !m.verifyStack(pop: 0, push: 1) {
             return
         }

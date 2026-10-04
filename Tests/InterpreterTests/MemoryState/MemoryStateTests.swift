@@ -112,6 +112,244 @@ final class MockBackend: Backend {
 final class MemoryStateSpec: QuickSpec {
     override class func spec() {
         describe("MemoryState") {
+            context("Read-only backend access") {
+                it("does not journal reads of existing or absent accounts, even across committed substates") {
+                    let backend = MockBackend()
+                    backend.accounts[backend.address1] = BasicAccount(balance: U256(from: 42), nonce: 9)
+                    backend.codes[backend.address1] = [0xab]
+                    backend.storages[backend.address1] = [backend.storageKey1: H256(from: U256(from: 7).toBigEndian)]
+
+                    for address in [H160.ZERO, backend.address1] {
+                        for read in 0 ... 2 {
+                            let state = MemoryState(gasLimit: 10000, backend: backend, hardFork: .Berlin)
+                            state.enter(gasLimit: 5000, isStatic: false)
+                            for _ in 0 ..< 2 {
+                                switch read {
+                                case 0:
+                                    expect(state.basic(address: address).balance).to(equal(backend.basic(address: address).balance))
+                                    expect(state.basic(address: address).nonce).to(equal(backend.basic(address: address).nonce))
+                                case 1:
+                                    expect(state.code(address: address)).to(equal(backend.code(address: address)))
+                                default:
+                                    expect(state.storage(address: address, index: backend.storageKey1)).to(equal(backend.storage(address: address, index: backend.storageKey1)))
+                                }
+
+                                expect(state.exists(address: address)).to(equal(address == backend.address1))
+                                expect(state.accounts.isEmpty).to(beTrue())
+                                expect(state.storages.isEmpty).to(beTrue())
+                                expect(state.parent?.accounts.isEmpty).to(beTrue())
+                                expect(state.parent?.storages.isEmpty).to(beTrue())
+                            }
+
+                            state.exitCommit()
+                            expect(state.accounts.isEmpty).to(beTrue())
+                            expect(state.storages.isEmpty).to(beTrue())
+                            expect(state.exists(address: address)).to(equal(address == backend.address1))
+                        }
+                    }
+                }
+
+                it("preserves zero and empty overrides in ancestor and local state") {
+                    let backend = MockBackend()
+                    let state = MemoryState(gasLimit: 10000, backend: backend, hardFork: .Berlin)
+                    state.resetBalance(address: backend.sender)
+                    state.setCode(address: backend.sender, code: [])
+                    state.setStorage(address: backend.sender, key: backend.storageKey1, value: .ZERO)
+                    state.enter(gasLimit: 5000, isStatic: false)
+
+                    expect(state.basic(address: backend.sender).balance).to(equal(U256.ZERO))
+                    expect(state.code(address: backend.sender)).to(equal([]))
+                    expect(state.storage(address: backend.sender, index: backend.storageKey1)).to(equal(H256.ZERO))
+                    expect(state.accounts.isEmpty).to(beTrue())
+                    expect(state.storages.isEmpty).to(beTrue())
+
+                    state.setCode(address: backend.sender, code: [0xcd])
+                    expect(state.code(address: backend.sender)).to(equal([0xcd]))
+                    expect(state.originalStorage(address: backend.sender, index: backend.storageKey1)).to(equal(H256(from: U256(from: 555).toBigEndian)))
+                }
+            }
+
+            context("Original storage after reset") {
+                it("preserves a parent reset when a touched child account is committed on every fork") {
+                    for fork in HardFork.allCases {
+                        let backend = MockBackend()
+                        let state = MemoryState(gasLimit: 10000, backend: backend, hardFork: fork)
+                        state.resetStorage(address: backend.sender)
+                        state.enter(gasLimit: 5000, isStatic: false)
+                        state.touch(address: backend.sender)
+
+                        expect(state.accounts[backend.sender]?.reset).to(beFalse())
+
+                        state.exitCommit()
+
+                        expect(state.accounts[backend.sender]?.reset).to(beTrue(), description: "fork=\(fork)")
+                        expect(state.storage(address: backend.sender, index: backend.storageKey1)).to(equal(H256.ZERO))
+                        expect(state.originalStorage(address: backend.sender, index: backend.storageKey1)).to(equal(H256.ZERO))
+                        expect(state.originalStorage(address: backend.sender, index: .ZERO)).to(equal(H256.ZERO))
+                        expect(backend.storage(address: backend.sender, index: backend.storageKey1)).to(equal(H256(from: U256(from: 555).toBigEndian)))
+                    }
+                }
+
+                it("keeps post-reset parent and child writes through nested commits") {
+                    let key1 = H256(from: U256(from: 1).toBigEndian)
+                    let key2 = H256(from: U256(from: 2).toBigEndian)
+                    let key3 = H256(from: U256(from: 3).toBigEndian)
+                    let parentValue = H256(from: U256(from: 11).toBigEndian)
+                    let childValue = H256(from: U256(from: 33).toBigEndian)
+
+                    for depth in 1 ... 3 {
+                        let backend = MockBackend()
+                        let state = MemoryState(gasLimit: 10000, backend: backend, hardFork: .Prague)
+                        backend.storages[backend.address1] = [key2: H256(from: U256(from: 555).toBigEndian)]
+                        state.resetStorage(address: backend.address1)
+                        state.setStorage(address: backend.address1, key: key1, value: parentValue)
+                        for _ in 0 ..< depth {
+                            state.enter(gasLimit: 1000, isStatic: false)
+                            state.touch(address: backend.address1)
+                        }
+
+                        state.setStorage(address: backend.address1, key: key3, value: childValue)
+                        state.setCode(address: backend.address1, code: [0xab])
+                        expect(state.incNonce(address: backend.address1)).to(beSuccess())
+
+                        for _ in 0 ..< depth {
+                            state.exitCommit()
+
+                            expect(state.storage(address: backend.address1, index: key1)).to(equal(parentValue))
+                            expect(state.storage(address: backend.address1, index: key2)).to(equal(H256.ZERO))
+                            expect(state.storage(address: backend.address1, index: key3)).to(equal(childValue))
+                            expect(state.originalStorage(address: backend.address1, index: key2)).to(equal(H256.ZERO))
+                            expect(state.code(address: backend.address1)).to(equal([0xab]))
+                            expect(state.basic(address: backend.address1).nonce).to(equal(1))
+                        }
+                        expect(state.accounts[backend.address1]?.reset).to(beTrue())
+                    }
+                }
+
+                it("clears parent writes only when the child itself resets storage") {
+                    let key1 = H256(from: U256(from: 1).toBigEndian)
+                    let key2 = H256(from: U256(from: 2).toBigEndian)
+                    let parentValue = H256(from: U256(from: 11).toBigEndian)
+                    let childValue = H256(from: U256(from: 33).toBigEndian)
+                    for parentReset in [false, true] {
+                        let backend = MockBackend()
+                        let state = MemoryState(gasLimit: 10000, backend: backend, hardFork: .Prague)
+                        if parentReset {
+                            state.resetStorage(address: backend.address1)
+                        } else {
+                            state.touch(address: backend.address1)
+                        }
+
+                        state.setStorage(address: backend.address1, key: key1, value: parentValue)
+                        state.setStorage(address: backend.address1, key: key2, value: parentValue)
+                        state.enter(gasLimit: 5000, isStatic: false)
+                        state.resetStorage(address: backend.address1)
+                        state.setStorage(address: backend.address1, key: key1, value: childValue)
+                        state.exitCommit()
+
+                        expect(state.accounts[backend.address1]?.reset).to(beTrue())
+                        expect(state.storage(address: backend.address1, index: key1)).to(equal(childValue))
+                        expect(state.storage(address: backend.address1, index: key2)).to(equal(H256.ZERO))
+                        expect(state.originalStorage(address: backend.address1, index: key1)).to(equal(H256.ZERO))
+                        expect(state.storages[backend.address1]?[key2]).to(beNil())
+                    }
+                }
+
+                it("does not introduce a reset when neither state resets storage") {
+                    let backend = MockBackend()
+                    let state = MemoryState(gasLimit: 10000, backend: backend, hardFork: .Prague)
+                    state.touch(address: backend.sender)
+                    state.enter(gasLimit: 5000, isStatic: false)
+                    state.touch(address: backend.sender)
+                    state.exitCommit()
+
+                    let original = H256(from: U256(from: 555).toBigEndian)
+                    expect(state.accounts[backend.sender]?.reset).to(beFalse())
+                    expect(state.storage(address: backend.sender, index: backend.storageKey1)).to(equal(original))
+                    expect(state.originalStorage(address: backend.sender, index: backend.storageKey1)).to(equal(original))
+                }
+
+                it("restores the outer reset flag and storage when a committed inner reset is reverted or discarded") {
+                    let parentValue = H256(from: U256(from: 11).toBigEndian)
+                    for parentReset in [false, true] {
+                        for discard in [false, true] {
+                            let backend = MockBackend()
+                            let state = MemoryState(gasLimit: 10000, backend: backend, hardFork: .Prague)
+                            if parentReset {
+                                state.resetStorage(address: backend.sender)
+                            } else {
+                                state.touch(address: backend.sender)
+                            }
+
+                            state.setStorage(address: backend.sender, key: backend.storageKey1, value: parentValue)
+                            state.enter(gasLimit: 5000, isStatic: false)
+                            state.resetStorage(address: backend.sender)
+                            state.enter(gasLimit: 1000, isStatic: false)
+                            state.touch(address: backend.sender)
+                            state.exitCommit()
+
+                            expect(state.originalStorage(address: backend.sender, index: backend.storageKey1)).to(equal(H256.ZERO))
+                            if discard {
+                                state.exitDiscard()
+                            } else {
+                                state.exitRevert()
+                            }
+
+                            let original = parentReset ? H256.ZERO : H256(from: U256(from: 555).toBigEndian)
+                            expect(state.accounts[backend.sender]?.reset).to(equal(parentReset))
+                            expect(state.storage(address: backend.sender, index: backend.storageKey1)).to(equal(parentValue))
+                            expect(state.originalStorage(address: backend.sender, index: backend.storageKey1)).to(equal(original))
+                        }
+                    }
+                }
+
+                it("uses zero after local and ancestor resets, regardless of subsequent writes") {
+                    let backend = MockBackend()
+                    let state = MemoryState(gasLimit: 10000, backend: backend, hardFork: .Berlin)
+                    let original = H256(from: U256(from: 555).toBigEndian)
+
+                    expect(state.originalStorage(address: backend.sender, index: backend.storageKey1)).to(equal(original))
+                    expect(state.originalStorage(address: backend.sender, index: .ZERO)).to(beNil())
+
+                    state.resetStorage(address: backend.sender)
+
+                    expect(state.originalStorage(address: backend.sender, index: backend.storageKey1)).to(equal(H256.ZERO))
+                    expect(state.originalStorage(address: backend.sender, index: .ZERO)).to(equal(H256.ZERO))
+
+                    state.setStorage(address: backend.sender, key: backend.storageKey1, value: original)
+
+                    expect(state.storage(address: backend.sender, index: backend.storageKey1)).to(equal(original))
+                    expect(state.originalStorage(address: backend.sender, index: backend.storageKey1)).to(equal(H256.ZERO))
+
+                    state.enter(gasLimit: 5000, isStatic: false)
+                    state.enter(gasLimit: 2000, isStatic: false)
+                    state.touch(address: backend.sender)
+
+                    expect(state.accounts[backend.sender]?.reset).to(beFalse())
+                    expect(state.originalStorage(address: backend.sender, index: backend.storageKey1)).to(equal(H256.ZERO))
+                    expect(state.originalStorage(address: backend.address1, index: backend.storageKey1)).to(beNil())
+                }
+
+                it("keeps committed resets and removes reverted or discarded resets") {
+                    for exit in 0 ... 2 {
+                        let backend = MockBackend()
+                        let state = MemoryState(gasLimit: 10000, backend: backend, hardFork: .Berlin)
+                        state.enter(gasLimit: 5000, isStatic: false)
+                        state.resetStorage(address: backend.sender)
+
+                        expect(state.originalStorage(address: backend.sender, index: backend.storageKey1)).to(equal(H256.ZERO))
+                        switch exit {
+                        case 0: state.exitCommit()
+                        case 1: state.exitRevert()
+                        default: state.exitDiscard()
+                        }
+
+                        let expected = exit == 0 ? H256.ZERO : H256(from: U256(from: 555).toBigEndian)
+                        expect(state.originalStorage(address: backend.sender, index: backend.storageKey1)).to(equal(expected))
+                    }
+                }
+            }
+
             context("Account lookups and Caching") {
                 it("should fetch account from backend and cache it locally for balance and nonce") {
                     let backend = MockBackend()
@@ -333,8 +571,7 @@ final class MemoryStateSpec: QuickSpec {
 
                     expect(state.knownAccount(backend.address1)?.code).to(beNil())
                     expect(state.code(address: backend.address1)).to(equal([]))
-                    // After call `backend.code`, the knownAccount for address1 should be updated with empty code, so it should not be nil anymore.
-                    expect(state.knownAccount(backend.address1)?.code).to(equal([]))
+                    expect(state.knownAccount(backend.address1)).to(beNil())
                     expect(backend.code(address: backend.address1)).to(equal([]))
 
                     state.setCode(address: backend.sender, code: [8, 5, 3])
@@ -357,10 +594,9 @@ final class MemoryStateSpec: QuickSpec {
                     expect(parentState.knownAccount(backend.sender)).to(beNil())
                     expect(childState.knownAccount(backend.sender)).to(beNil())
 
-                    // Account cashed in parent state after getAccountAndTouch call
                     expect(parentState.basic(address: backend.sender).balance).to(equal(U256(from: 3003)))
-                    // Already cached in parent state
-                    expect(childState.knownAccount(backend.sender)?.basic.balance).to(equal(U256(from: 3003)))
+                    expect(parentState.knownAccount(backend.sender)).to(beNil())
+                    expect(childState.knownAccount(backend.sender)).to(beNil())
                     expect(childState.basic(address: backend.sender).balance).to(equal(U256(from: 3003)))
 
                     expect(parentState.knownAccount(backend.address1)).to(beNil())
@@ -368,7 +604,7 @@ final class MemoryStateSpec: QuickSpec {
 
                     expect(childState.basic(address: backend.address1).balance).to(equal(U256.ZERO))
                     expect(parentState.knownAccount(backend.address1)).to(beNil())
-                    expect(childState.knownAccount(backend.address1)?.basic.balance).to(equal(U256.ZERO))
+                    expect(childState.knownAccount(backend.address1)).to(beNil())
                 }
 
                 it("Get basic for substate") {
@@ -406,8 +642,7 @@ final class MemoryStateSpec: QuickSpec {
                     expect(state.knownStorage(address: backend.address1, key: key1)).to(beNil())
 
                     expect(state.storage(address: backend.sender, index: backend.storageKey1)).to(equal(expectedVal))
-                    // Cashed value should be available in knownStorage after access
-                    expect(state.knownStorage(address: backend.sender, key: backend.storageKey1)).to(equal(expectedVal))
+                    expect(state.knownStorage(address: backend.sender, key: backend.storageKey1)).to(beNil())
 
                     // Set value and then reset
                     state.setStorage(address: backend.address1, key: key1, value: val1)
@@ -435,8 +670,8 @@ final class MemoryStateSpec: QuickSpec {
                     expect(childState.knownStorage(address: backend.sender, key: backend.storageKey1)).to(beNil())
 
                     expect(parentState.storage(address: backend.sender, index: backend.storageKey1)).to(equal(expectedVal))
-                    // Cashed value in parent state
-                    expect(childState.knownStorage(address: backend.sender, key: backend.storageKey1)).to(equal(expectedVal))
+                    expect(parentState.knownStorage(address: backend.sender, key: backend.storageKey1)).to(beNil())
+                    expect(childState.knownStorage(address: backend.sender, key: backend.storageKey1)).to(beNil())
 
                     // Set value and then reset
                     parentState.setStorage(address: backend.sender, key: key1, value: val1)
