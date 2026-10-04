@@ -17,7 +17,7 @@ enum MemoryInstructions {
         // Stack size was verified above; these unwraps cannot fail.
         let rawIndex = m.stackPop()!
 
-        guard let index = m.getIntOrFail(rawIndex) else {
+        guard let index = m.getMemoryIntOrFail(rawIndex) else {
             return
         }
 
@@ -43,7 +43,7 @@ enum MemoryInstructions {
         let rawIndex = m.stackPop()!
         let value = m.stackPop()!
 
-        guard let index = m.getIntOrFail(rawIndex) else {
+        guard let index = m.getMemoryIntOrFail(rawIndex) else {
             return
         }
 
@@ -72,7 +72,7 @@ enum MemoryInstructions {
         let rawIndex = m.stackPop()!
         let value = m.stackPop()!
 
-        guard let index = m.getIntOrFail(rawIndex) else {
+        guard let index = m.getMemoryIntOrFail(rawIndex) else {
             return
         }
 

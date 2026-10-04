@@ -55,7 +55,7 @@ final class InstructionJumpiSpec: QuickSpec {
 
                 m.evalLoop()
 
-                expect(m.machineStatus).to(equal(.Exit(.Error(.IntOverflow))))
+                expect(m.machineStatus).to(equal(.Exit(.Error(.InvalidJump))))
                 expect(m.pc).to(equal(11))
                 expect(m.stack.length).to(equal(0))
                 expect(m.gas.remaining).to(equal(4))

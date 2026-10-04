@@ -123,7 +123,7 @@ final class InstructionCallDataCopySpec: QuickSpec {
                 _ = m1.stack.push(value: U256(from: [1, 1, 0, 0]))
                 m1.evalLoop()
 
-                expect(m1.machineStatus).to(equal(.Exit(.Error(.IntOverflow))))
+                expect(m1.machineStatus).to(equal(.Exit(.Error(.OutOfGas))))
                 expect(m1.gas.remaining).to(equal(94))
                 expect(m1.gas.memoryGas.numWords).to(equal(0))
                 expect(m1.gas.memoryGas.gasCost).to(equal(0))
@@ -145,17 +145,17 @@ final class InstructionCallDataCopySpec: QuickSpec {
                 _ = m3.stack.push(value: U256(from: 32))
                 m3.evalLoop()
 
-                expect(m3.machineStatus).to(equal(.Exit(.Error(.IntOverflow))))
+                expect(m3.machineStatus).to(equal(.Exit(.Error(.OutOfGas))))
                 expect(m3.gas.remaining).to(equal(100))
                 expect(m3.gas.memoryGas.numWords).to(equal(0))
                 expect(m3.gas.memoryGas.gasCost).to(equal(0))
             }
 
-            it("check size==0 with oversized offsets does not raise IntOverflow") {
+            it("check size==0 with oversized offsets does not raise OutOfGas") {
                 // Lock-in regression: with size == 0 the fast path must consume the stack
                 // and exit successfully WITHOUT validating memoryOffset/dataOffset. Per
                 // Yellow Paper §H.2: when l == 0 no memory access happens, so offsets are
-                // unobservable and must not produce IntOverflow even when > Int.max.
+                // unobservable and must not produce OutOfGas even when > Int.max.
                 let callData: [UInt8] = [0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07]
                 let m = TestMachine.machine(data: callData, opcode: Opcode.CALLDATACOPY, gasLimit: 100)
                 _ = m.stack.push(value: U256(from: 0)) // size = 0

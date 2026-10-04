@@ -48,7 +48,7 @@ final class MLoadSpec: QuickSpec {
                 _ = m.stack.push(value: U256(from: [1, 1, 0, 0]))
                 m.evalLoop()
 
-                expect(m.machineStatus).to(equal(.Exit(.Error(.IntOverflow))))
+                expect(m.machineStatus).to(equal(.Exit(.Error(.OutOfGas))))
                 expect(m.stack.length).to(equal(0))
                 expect(m.gas.remaining).to(equal(97))
                 expect(m.gas.memoryGas.numWords).to(equal(0))

@@ -26,7 +26,7 @@ final class InstructionKeccakSpec: QuickSpec {
                 _ = m1.stack.push(value: U256(from: 0)) // Offset
                 m1.evalLoop()
 
-                expect(m1.machineStatus).to(equal(.Exit(.Error(.IntOverflow))))
+                expect(m1.machineStatus).to(equal(.Exit(.Error(.OutOfGas))))
                 expect(m1.gas.remaining).to(equal(1000)) // No gas spent before check
             }
 
@@ -48,18 +48,18 @@ final class InstructionKeccakSpec: QuickSpec {
                 expect(m.stack.length).to(equal(0))
             }
 
-            it("check IntOverflow on memory offset with non-zero size") {
-                // Covers the `getIntOrFail(rawMemoryOffset)` branch in `keccak256`.
+            it("check OutOfGas on memory offset with non-zero size") {
+                // Covers the `getMemoryIntOrFail(rawMemoryOffset)` branch in `keccak256`.
                 // The branch is reachable only when size > 0 — for size == 0 the KECCAK_EMPTY
                 // short-circuit returns before memoryOffset is validated.
-                // size = 32 → keccak256Cost = 30 + 6*1 = 36. memoryOffset > Int.max → IntOverflow.
+                // size = 32 → keccak256Cost = 30 + 6*1 = 36. memoryOffset > Int.max → OutOfGas.
                 // Memory expansion is NOT attempted (offset check fails before resize).
                 let m = TestMachine.machine(data: [], opcode: Opcode.SHA3, gasLimit: 1000)
                 _ = m.stack.push(value: U256(from: 32)) // Size (non-zero, bypasses KECCAK_EMPTY)
                 _ = m.stack.push(value: U256(from: [1, 1, 0, 0])) // Huge memory offset (> Int.max)
                 m.evalLoop()
 
-                expect(m.machineStatus).to(equal(.Exit(.Error(.IntOverflow))))
+                expect(m.machineStatus).to(equal(.Exit(.Error(.OutOfGas))))
                 expect(m.gas.remaining).to(equal(964)) // 1000 - 36 (base 30 + 1 word * 6)
                 expect(m.gas.memoryGas.numWords).to(equal(0))
                 expect(m.gas.memoryGas.gasCost).to(equal(0))

@@ -149,9 +149,6 @@ public final class Machine {
         /// Jump destination is invalid.
         case InvalidJump
 
-        /// Int calculation overflow
-        case IntOverflow
-
         /// An opcode accesses memory region, but the region is invalid.
         case InvalidRange
 
@@ -428,11 +425,16 @@ public final class Machine {
     }
 
     /// Provide one step for `Machine` execution.
+    /// Starts execution automatically when the machine is `.NotStarted`.
     /// It will change Machine state.
     /// Especially:
     /// - `PC` - program counter for next execution. It can just incremented or set to jump index. PC range: `0..<self.code.count`. When `step` is completed PC incremented (or changed with jump destitations) for the next step opcode processing.
     /// - `machineStatus` - during evaluation can be changed, for example contain result of `ExitReason`
     func step() {
+        if self.machineStatus == .NotStarted {
+            self.machineStatus = .Continue
+        }
+
         // Ensure that `PC` in code range, otherwise indicate `sTOP` execution.
         if self.pc >= self.code.count {
             self.machineStatus = .Exit(.Success(.Stop))
@@ -638,14 +640,10 @@ public final class Machine {
         return true
     }
 
-    /// Get `Int` from `U256`. If fails return `nil` and set `Machine` status error to `IntOverflow`.
-    ///
-    /// - Parameters:
-    ///   - value: `U256` for converting
-    /// - Returns: optional `UInt` value
-    func getIntOrFail(_ value: U256) -> Int? {
+    /// Converts a memory offset or length to `Int`, failing with `OutOfGas` if it cannot fit.
+    func getMemoryIntOrFail(_ value: U256) -> Int? {
         guard let intValue = value.getInt else {
-            self.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.IntOverflow))
+            self.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.OutOfGas))
             return nil
         }
         return intValue

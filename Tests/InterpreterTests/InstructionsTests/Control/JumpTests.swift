@@ -44,7 +44,7 @@ final class InstructionJumpSpec: QuickSpec {
 
                 m.evalLoop()
 
-                expect(m.machineStatus).to(equal(.Exit(.Error(.IntOverflow))))
+                expect(m.machineStatus).to(equal(.Exit(.Error(.InvalidJump))))
                 expect(m.pc).to(equal(9))
                 expect(m.stack.length).to(equal(0))
                 expect(m.gas.remaining).to(equal(9))

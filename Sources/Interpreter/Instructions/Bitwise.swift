@@ -242,8 +242,13 @@ enum BitwiseInstructions {
 
     /// Pushes `x << shift` onto the stack; pushes `0` if `x == 0` or `shift >= 256`.
     ///
-    /// Requires 2 stack items; fails with `StackUnderflow` or `OutOfGas` (`GasConstant.VERYLOW`).
+    /// Requires Constantinople or later and 2 stack items; fails with `StackUnderflow` or `OutOfGas` (`GasConstant.VERYLOW`).
     static func shl(machine m: Machine) {
+        guard m.hardFork.isConstantinople() else {
+            m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.HardForkNotActive))
+            return
+        }
+
         if !m.verifyStack(pop: 2) {
             return
         }
@@ -267,8 +272,13 @@ enum BitwiseInstructions {
 
     /// Pushes `x >> shift` onto the stack; pushes `0` if `x == 0` or `shift >= 256`.
     ///
-    /// Requires 2 stack items; fails with `StackUnderflow` or `OutOfGas` (`GasConstant.VERYLOW`).
+    /// Requires Constantinople or later and 2 stack items; fails with `StackUnderflow` or `OutOfGas` (`GasConstant.VERYLOW`).
     static func shr(machine m: Machine) {
+        guard m.hardFork.isConstantinople() else {
+            m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.HardForkNotActive))
+            return
+        }
+
         if !m.verifyStack(pop: 2) {
             return
         }
@@ -291,8 +301,13 @@ enum BitwiseInstructions {
     }
 
     /// Pushes the arithmetic right shift of a signed 256-bit value.
-    /// Requires 2 stack items; fails with `StackUnderflow` or `OutOfGas` (`GasConstant.VERYLOW`).
+    /// Requires Constantinople or later and 2 stack items; fails with `StackUnderflow` or `OutOfGas` (`GasConstant.VERYLOW`).
     static func sar(machine m: Machine) {
+        guard m.hardFork.isConstantinople() else {
+            m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.HardForkNotActive))
+            return
+        }
+
         if !m.verifyStack(pop: 2) {
             return
         }

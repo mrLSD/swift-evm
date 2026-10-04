@@ -14,6 +14,37 @@ final class InstructionSarSpec: QuickSpec {
 
     override class func spec() {
         describe("Instruction SAR") {
+            it("activates at Constantinople across all supported forks") {
+                for fork in HardFork.allCases {
+                    let m = TestMachine.machine(opcodes: [.SAR], gasLimit: 10, memoryLimit: 32, hardFork: fork)
+                    m.stackPush(value: U256.MAX)
+                    m.stackPush(value: U256(from: 1))
+
+                    m.evalLoop()
+
+                    if fork.rawValue < HardFork.Constantinople.rawValue {
+                        expect(m.machineStatus).to(equal(.Exit(.Error(.HardForkNotActive))), description: "fork=\(fork)")
+                        expect(m.gas.remaining).to(equal(10))
+                        expect(m.stack.length).to(equal(2))
+                    } else {
+                        expect(m.machineStatus).to(equal(.Exit(.Success(.Stop))), description: "fork=\(fork)")
+                        expect(m.gas.remaining).to(equal(7))
+                        expect(m.stack.length).to(equal(1))
+                        expect(m.stackPop()).to(equal(U256.MAX))
+                    }
+                }
+            }
+
+            it("checks activation before stack and gas requirements") {
+                let m = TestMachine.machine(opcodes: [.SAR], gasLimit: 0, memoryLimit: 32, hardFork: .Byzantium)
+
+                m.evalLoop()
+
+                expect(m.machineStatus).to(equal(.Exit(.Error(.HardForkNotActive))))
+                expect(m.gas.remaining).to(equal(0))
+                expect(m.stack.length).to(equal(0))
+            }
+
             it("a >>> b") {
                 let m = Self.machine
 
