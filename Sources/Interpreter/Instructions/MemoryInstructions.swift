@@ -29,7 +29,7 @@ enum MemoryInstructions {
 
     /// Stores a 32-byte word to memory at the byte offset popped from the stack.
     ///
-    /// Requires 2 stack items; consumes GasConstant.VERYLOW; resizes memory to cover [offset, offset + 32) and charges the corresponding memory expansion gas; exits with the underlying memory error on failure.
+    /// Requires 2 stack items; consumes `GasConstant.VERYLOW`; resizes memory to cover [`offset`, `offset + 32`) and charges the corresponding memory expansion gas.
     static func mstore(machine m: Machine) {
         if !m.verifyStack(pop: 2) {
             return
@@ -51,14 +51,13 @@ enum MemoryInstructions {
             return
         }
 
-        if case .failure(let err) = m.memory.set(offset: index, word: value) {
-            m.machineStatus = Machine.MachineStatus.Exit(err)
-        }
+        // The range was expanded above, so the write cannot fail.
+        m.memory.writeWord(offset: index, value)
     }
 
     /// Stores the low byte of the value popped from the stack to memory at the byte offset popped from the stack.
     ///
-    /// Requires 2 stack items; consumes `GasConstant.VERYLOW`; resizes memory to cover [`offset`, `offset + 1`) and charges the corresponding memory expansion gas; exits with the underlying memory error on failure.
+    /// Requires 2 stack items; consumes `GasConstant.VERYLOW`; resizes memory to cover [`offset`, `offset + 1`) and charges the corresponding memory expansion gas.
     static func mstore8(machine m: Machine) {
         if !m.verifyStack(pop: 2) {
             return
@@ -80,10 +79,8 @@ enum MemoryInstructions {
             return
         }
 
-        let byteValue = UInt8(value.BYTES[0] & 0xFF)
-        if case .failure(let err) = m.memory.set(offset: index, value: [byteValue], size: 1) {
-            m.machineStatus = Machine.MachineStatus.Exit(err)
-        }
+        // Masking leaves a single byte, so the conversion cannot fail; the range was expanded above.
+        m.memory.writeByte(offset: index, UInt8((value & U256(from: 0xFF)).getInt!))
     }
 
     /// Pushes the current effective memory size (in bytes) onto the stack.

@@ -6,13 +6,16 @@ import Quick
 #if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(visionOS) || os(Linux)
 final class FailingAllocationMemory: Memory {
     var failAllocations = false
+    var allocationSizes: [Int] = []
 
     override func allocateBuffer(byteCount: Int) -> UnsafeMutableRawPointer? {
-        failAllocations ? nil : super.allocateBuffer(byteCount: byteCount)
+        allocationSizes.append(byteCount)
+        return failAllocations ? nil : super.allocateBuffer(byteCount: byteCount)
     }
 
     override func reallocateBuffer(_ buffer: UnsafeMutableRawPointer, byteCount: Int) -> UnsafeMutableRawPointer? {
-        failAllocations ? nil : super.reallocateBuffer(buffer, byteCount: byteCount)
+        allocationSizes.append(byteCount)
+        return failAllocations ? nil : super.reallocateBuffer(buffer, byteCount: byteCount)
     }
 }
 #endif
@@ -20,11 +23,132 @@ final class FailingAllocationMemory: Memory {
 final class InterpreterMemorySpec: QuickSpec {
     override class func spec() {
         describe("Interpreter Memory") {
+            context("rounded capacity limits") {
+                it("accepts only whole-word capacities within the limit") {
+                    for limit in [0, 1, 31, 32, 33, 63, 64, 65] {
+                        for end in [0, 1, 31, 32, 33, 63, 64, 65, 96] {
+                            let memory = Memory(limit: limit)
+                            let capacity = (end + 31) / 32 * 32
+                            let fits = capacity <= limit
+                            expect(memory.resize(end: end)).to(equal(fits), description: "limit=\(limit), end=\(end)")
+                            expect(memory.effectiveLength).to(equal(fits ? capacity : 0))
+                        }
+                    }
+                }
+
+                it("preserves existing data when the next word exceeds the limit") {
+                    let memory = Memory(limit: 33)
+                    expect(memory.set(offset: 0, value: [0xAB], size: 32)).to(beSuccess())
+                    expect(memory.resize(end: 33)).to(beFalse())
+                    expect(memory.resize(end: 32)).to(beTrue())
+                    expect(memory.resize(end: 0)).to(beTrue())
+                    expect(memory.effectiveLength).to(equal(32))
+                    expect(memory.get(offset: 0, size: 32)).to(equal([0xAB] + [UInt8](repeating: 0, count: 31)))
+                }
+
+                it("reports limit errors consistently from checked writes and copies") {
+                    let memory = Memory(limit: 33)
+                    expect(memory.set(offset: 0, value: [0xAB], size: 32)).to(beSuccess())
+                    expect(memory.set(offset: 1, word: .MAX)).to(beFailure(equal(.Error(.MemoryOperation(.SetLimitExceeded)))))
+                    expect(memory.set(offset: 32, value: [0xCD], size: 1)).to(beFailure(equal(.Error(.MemoryOperation(.SetLimitExceeded)))))
+                    expect(memory.copy(srcOffset: 0, dstOffset: 32, size: 1)).to(beFailure(equal(.Error(.MemoryOperation(.CopyLimitExceeded)))))
+                    expect(memory.copyData(memoryOffset: 32, dataOffset: 0, size: 1, data: [0xCD])).to(beFailure(equal(.Error(.MemoryOperation(.CopyDataLimitExceeded)))))
+                    expect(memory.effectiveLength).to(equal(32))
+                    expect(memory.get(offset: 0, size: 32)).to(equal([0xAB] + [UInt8](repeating: 0, count: 31)))
+                    expect(memory.set(offset: 1, value: [], size: 31)).to(beSuccess())
+                    expect(memory.get(offset: 0, size: 32)).to(equal([0xAB] + [UInt8](repeating: 0, count: 31)))
+                }
+
+                #if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(visionOS) || os(Linux)
+                it("rejects limits and rounding overflow before calling the allocator") {
+                    let bounded = FailingAllocationMemory(limit: 33)
+                    expect(bounded.resize(end: 33)).to(beFalse())
+                    expect(bounded.resize(end: 64)).to(beFalse())
+                    expect(bounded.allocationSizes).to(beEmpty())
+                    expect(bounded.resize(end: 32)).to(beTrue())
+                    expect(bounded.resize(end: 33)).to(beFalse())
+                    expect(bounded.allocationSizes).to(equal([32]))
+
+                    let unlimited = FailingAllocationMemory()
+                    for end in [Int.max - 30, Int.max] {
+                        expect(unlimited.resize(end: end)).to(beFalse())
+                    }
+                    expect(unlimited.allocationSizes).to(beEmpty())
+                }
+                #endif
+            }
+
+            context("access to expanded ranges") {
+                it("reads unaligned ranges without changing memory and writes only the requested byte") {
+                    let memory = Memory(limit: 64)
+                    expect(memory.set(offset: 0, value: Array(0 ..< 64), size: 64)).to(beSuccess())
+                    for offset in [0, 1, 7, 31, 32, 63] {
+                        let bytes = memory.withUnsafeBytes(offset: offset, size: 64 - offset) { Array($0) }
+                        expect(bytes).to(equal(Array(UInt8(offset) ..< 64)))
+                    }
+                    var expected = Array(UInt8(0) ..< 64)
+                    for offset in [0, 31, 32, 63] {
+                        memory.writeByte(offset: offset, 0xAB)
+                        expected[offset] = 0xAB
+                        expect(memory.get(offset: 0, size: 64)).to(equal(expected))
+                    }
+                    expect(memory.effectiveLength).to(equal(64))
+                }
+
+                it("copies input bytes and zero-fills missing data without touching neighboring bytes") {
+                    let cases: [(data: [UInt8], offset: Int, expected: [UInt8])] = [
+                        ([1, 2, 3, 4, 5], 0, [1, 2, 3, 4, 5]),
+                        ([1, 2, 3], 1, [2, 3, 0, 0, 0]),
+                        ([1, 2, 3], 3, [0, 0, 0, 0, 0]),
+                        ([1, 2, 3], Int.max, [0, 0, 0, 0, 0]),
+                        ([], 0, [0, 0, 0, 0, 0]),
+                    ]
+                    for testCase in cases {
+                        let memory = Memory(limit: 32)
+                        expect(memory.set(offset: 0, value: [UInt8](repeating: 0xEE, count: 32), size: 32)).to(beSuccess())
+                        memory.writeData(offset: 1, size: 5, from: testCase.data, dataOffset: testCase.offset)
+                        expect(memory.get(offset: 0, size: 32)).to(equal([0xEE] + testCase.expected + [UInt8](repeating: 0xEE, count: 26)))
+                    }
+                }
+
+                it("rejects invalid read and write ranges with the specific contract message") {
+                    for initialized in [false, true] {
+                        let memory = Memory(limit: 64)
+                        if initialized { expect(memory.resize(end: 64)).to(beTrue()) }
+                        for (offset, size) in [(-1, 1), (0, 0), (0, -1), (64, 1), (63, 2), (Int.max, 1)] {
+                            expect(captureStandardError {
+                                expect { memory.withUnsafeBytes(offset: offset, size: size) { _ in () } }.to(throwAssertion())
+                            }).to(contain("Byte read requires an allocated range."))
+                            expect(captureStandardError {
+                                expect { memory.writeData(offset: offset, size: size, from: [1], dataOffset: 0) }.to(throwAssertion())
+                            }).to(contain("Data write requires an allocated range."))
+                        }
+
+                        for offset in [-1, 33, Int.max] {
+                            expect(captureStandardError {
+                                expect { memory.writeWord(offset: offset, .MAX) }.to(throwAssertion())
+                            }).to(contain("Word write requires 32 allocated bytes."))
+                        }
+
+                        for offset in [-1, 64, Int.max] {
+                            expect(captureStandardError {
+                                expect { memory.writeByte(offset: offset, 1) }.to(throwAssertion())
+                            }).to(contain("Byte write requires an allocated byte."))
+                        }
+                    }
+                    let memory = Memory(limit: 32)
+                    expect(memory.resize(end: 32)).to(beTrue())
+                    expect(captureStandardError {
+                        expect { memory.writeData(offset: 0, size: 1, from: [1], dataOffset: -1) }.to(throwAssertion())
+                    }).to(contain("Data offsets must be nonnegative."))
+                }
+            }
+
             context("word access") {
                 it("stores and loads unaligned words without touching neighboring bytes") {
                     let word = U256(from: [0x18191A1B1C1D1E1F, 0x1011121314151617, 0x08090A0B0C0D0E0F, 0x0001020304050607])
                     for offset in [0, 1, 7, 8, 31, 32, 33] {
-                        let memory = Memory(limit: offset + 33)
+                        let memory = Memory(limit: (offset + 64) / 32 * 32)
                         expect(memory.set(offset: 0, value: [UInt8](repeating: 0xEE, count: offset + 33), size: offset + 33)).to(beSuccess())
                         expect(memory.set(offset: offset, word: word)).to(beSuccess())
                         expect(memory.get(offset: 0, size: offset + 33)).to(equal([UInt8](repeating: 0xEE, count: offset) + Array(0 ..< 32) + [0xEE]))
@@ -423,8 +547,15 @@ final class InterpreterMemorySpec: QuickSpec {
                     expect(Memory.ceil32(65)).to(equal(96))
                 }
 
-                it("overflow operation") {
-                    expect(Memory.ceil32(Int.max)).to(equal(Int.max - 31))
+                it("rejects unrepresentable rounded capacities") {
+                    expect(Memory.ceil32(Int.max - 32)).to(equal(Int.max - 31))
+                    expect(Memory.ceil32(Int.max - 31)).to(equal(Int.max - 31))
+                    for value in (Int.max - 30) ... Int.max {
+                        expect(Memory.ceil32(value)).to(beNil(), description: "value=\(value)")
+                    }
+                    expect(captureStandardError {
+                        expect { _ = Memory.ceil32(-1) }.to(throwAssertion())
+                    }).to(contain("Memory size must be nonnegative."))
                 }
             }
 
@@ -443,8 +574,14 @@ final class InterpreterMemorySpec: QuickSpec {
                     expect(Memory.numWords(65)).to(equal(3))
                 }
 
-                it("overflow operation") {
-                    expect(Memory.numWords(Int.max)).to(equal(Int.max / 32))
+                it("counts the final partial word without overflow") {
+                    expect(Memory.numWords(Int.max - 31)).to(equal(Int.max / 32))
+                    for value in (Int.max - 30) ... Int.max {
+                        expect(Memory.numWords(value)).to(equal(Int.max / 32 + 1), description: "value=\(value)")
+                    }
+                    expect(captureStandardError {
+                        expect { _ = Memory.numWords(-1) }.to(throwAssertion())
+                    }).to(contain("Memory size must be nonnegative."))
                 }
             }
         }

@@ -94,15 +94,16 @@ final class InstructionCodeCopySpec: QuickSpec {
                 expect(m.gas.memoryGas.gasCost).to(equal(12))
             }
 
-            it("MemoryOperation error - CopyDataLimitExceeded") {
+            it("fails with OutOfGas before consuming operands or allocating beyond the limit") {
                 let m = TestMachine.machine(opcodes: [Opcode.JUMPDEST, Opcode.JUMPDEST, Opcode.JUMPDEST, Opcode.JUMPDEST, Opcode.JUMPDEST, Opcode.JUMPDEST, Opcode.CODECOPY], gasLimit: 100, memoryLimit: 4)
                 _ = m.stack.push(value: U256(from: 3))
                 _ = m.stack.push(value: U256(from: 2))
                 _ = m.stack.push(value: U256(from: 32))
                 m.evalLoop()
 
-                expect(m.machineStatus).to(equal(.Exit(.Error(.MemoryOperation(.CopyDataLimitExceeded)))))
-                expect(m.stack.length).to(equal(0))
+                expect(m.machineStatus).to(equal(.Exit(.Error(.OutOfGas))))
+                expect(m.stack.length).to(equal(3))
+                expect(m.memory.effectiveLength).to(equal(0))
                 expect(m.gas.remaining).to(equal(82))
                 expect(m.gas.memoryGas.numWords).to(equal(2))
                 expect(m.gas.memoryGas.gasCost).to(equal(6))

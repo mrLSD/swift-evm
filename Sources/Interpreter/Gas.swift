@@ -127,6 +127,7 @@ struct MemoryGas: Equatable {
         // As we checked `numWords`, subtraction can't overflow
         let cost = newGasCost - self.gasCost
         self.gasCost = newGasCost
+
         return .success(.Resized(cost))
     }
 }
@@ -181,42 +182,56 @@ enum GasCost {
         return dataOverflow || costOverflow ? nil : cost
     }
 
-    /// Calculates the memory gas cost for a given number of words.
-    /// Formula: `3 * N + (N * N) / 512`
+    /// Calculates the total memory cost: `3 * N + floor(N * N / 512)`.
     ///
-    /// - Parameter numWords: The number of 32-byte words (N).
-    /// - Returns: A tuple containing:
-    ///   - `cost`: The computed gas cost.
-    ///   - `overflow`: True if the calculation exceeds UInt64 capacity.
+    /// This is the cumulative cost for `N` words, not the expansion cost.
+    /// The caller subtracts the cost of the previously paid memory size.
+    ///
+    /// The square is evaluated at full width because it may exceed UInt64
+    /// even when the quadratic term and the total cost still fit.
+    /// For example, when `N == 2^32`, the square is `2^64`, but dividing
+    /// it by 512 gives `2^55`.
+    ///
+    /// This function neither saturates the result nor checks the available
+    /// gas budget. The caller must reject overflow and charge the expansion
+    /// cost before allocating memory.
+    ///
+    /// - Parameter numWords: The nonnegative number of 32-byte words.
+    /// - Returns: The exact cost and `false` if the total fits in UInt64;
+    ///   otherwise, zero and `true`. Zero on overflow is not a valid gas cost.
     static func memoryGas(numWords: Int) -> (cost: UInt64, overflow: Bool) {
         let wordCount = UInt64(numWords)
         let quadraticDivisor: UInt64 = 512
+        let quadraticShift = quadraticDivisor.trailingZeroBitCount
 
-        // 1. Calculate the Square (N * N)
-        // This is the critical check. If N * N fits into UInt64, then N is guaranteed to be < 2^32.
-        // If this overflows, the calculation is impossible within 64-bit bounds.
-        let (square, squareOverflow) = wordCount.multipliedReportingOverflow(by: wordCount)
-        if squareOverflow {
+        // Preserve the entire square as two 64-bit words:
+        // N^2 = high * 2^64 + low.
+        let (high, low) = wordCount.multipliedFullWidth(by: wordCount)
+
+        // N is not restricted to values whose square fits in UInt64,
+        // so calculate the linear term with an explicit overflow check.
+        let (linearCost, linearOverflow) = GasConstant.MEMORY.multipliedReportingOverflow(by: wordCount)
+
+        // Since 512 == 2^9:
+        // floor(N^2 / 512) = high * 2^55 + floor(low / 2^9).
+        //
+        // This quotient fits in UInt64 exactly when high < 512:
+        // high >= 512 makes the first term at least 2^64.
+        guard !linearOverflow, high < quadraticDivisor else {
             return (0, true)
         }
 
-        // 2. Calculate Linear Cost (3 * N)
-        // We do not need an overflow check here.
-        // Reasoning: Since step 1 passed, we know N < 2^32.
-        // Therefore, 3 * N is roughly 3 * 2^32, which is drastically smaller than UInt64.max (2^64).
-        let linearCost = GasConstant.MEMORY * wordCount
+        // The validated high word contributes bits 55...63.
+        // Shifting low right by 9 contributes bits 0...54 and discards
+        // the remainder, implementing floor division.
+        // These bit ranges do not overlap, so OR is equivalent to addition.
+        let quadraticCost = (high << (UInt64.bitWidth - quadraticShift)) | (low >> quadraticShift)
 
-        // 3. Calculate Quadratic Cost Part (N^2 / 512)
-        let quadraticCost = square / quadraticDivisor
-
-        // 4. Final Summation
-        // We do not need an overflow check here.
-        // Reasoning: The maximum possible value of `quadraticCost` is (UInt64.max / 512).
-        // The `linearCost` (approx 1.2 * 10^10) is negligible compared to the remaining space in UInt64.
-        // The sum is mathematically guaranteed to fit.
-        let totalGas = linearCost + quadraticCost
-
-        return (totalGas, false)
+        // Representable terms do not guarantee a representable sum.
+        // For example, N == 97_184_015_232 passes the checks above,
+        // but its total cost exceeds UInt64.max.
+        let (totalGas, overflow) = linearCost.addingReportingOverflow(quadraticCost)
+        return (overflow ? 0 : totalGas, overflow)
     }
 
     /// Calculates the gas cost for a "very low" and copy operation on a memory segment of a given size.
@@ -256,43 +271,23 @@ enum GasCost {
     /// - Returns: The calculated gas cost as UInt64
     ///
     /// - Note: EIP-160 (Spurious Dragon hard fork) increased the per-byte cost from 10 to 50 gas
-    /// - Note: Overflow is impossible as the maximum value is `gasByte * (256/8 + 1)`
+    /// - Note: Overflow is impossible as the maximum value is `EXP + gasByte * 32`
     static func expCost(hardFork: HardFork, power: U256) -> UInt64 {
         if power.isZero {
             return GasConstant.EXP
-        } else {
-            // EIP-160: EXP cost increase
-            let gasByte = U256(from: hardFork.isSpuriousDragon() ? 50 : 10)
-            // NOTE: overflow just impossible as max value: `gasByte * (256/8 + 1)`
-            let logMul = gasByte * U256(from: Self.log2floor(power) / 8 + 1)
-            let gas = U256(from: GasConstant.EXP) + logMul
-            return gas.BYTES[0]
         }
+        // EIP-160: EXP cost increase
+        let gasByte: UInt64 = hardFork.isSpuriousDragon() ? 50 : 10
+        // `log2floor(power) / 8 + 1` is the byte length of the exponent.
+        return GasConstant.EXP + gasByte * (Self.log2floor(power) / 8 + 1)
     }
 
     /// Calculates the floor of the base-2 logarithm of a 256-bit unsigned integer (For EXP opcode).
     ///
-    /// This function computes log₂(val) rounded down to the nearest integer by finding
-    /// the position of the most significant bit. It iterates through the bytes of the
-    /// U256 value from most significant to least significant, counting leading zero bits
-    /// to determine the highest set bit position.
-    ///
     /// - Parameter val: The 256-bit unsigned integer to calculate the log₂ floor for
-    /// - Returns: The floor of log₂(val) as a UInt64. Returns 256 if val is 0.
-    ///
-    /// - Note: The result is the zero-based index of the most significant set bit,
-    ///   effectively computing floor(log₂(val)) for positive values.
+    /// - Returns: The zero-based index of the most significant set bit, or 0 for zero, which `expCost` prices separately.
     static func log2floor(_ val: U256) -> UInt64 {
-        var l: UInt64 = 256
-        for i in (0 ..< 4).reversed() {
-            if val.BYTES[i] == 0 {
-                l -= 64
-            } else {
-                l -= UInt64(val.BYTES[i].leadingZeroBitCount)
-                return l &- 1
-            }
-        }
-        return l
+        val.isZero ? 0 : UInt64(255 - val.leadingZeroBitCount)
     }
 
     /// Calculates the gas cost for account access based on whether the account is cold or warm.

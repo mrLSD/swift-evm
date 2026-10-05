@@ -6,6 +6,56 @@ import Quick
 final class InstructionKeccakSpec: QuickSpec {
     override class func spec() {
         describe("Instruction KECCAK (SHA3)") {
+            context("memory ranges") {
+                // CryptoSwift 1.9.0 reference vectors for byte[i] = (37*i + 11) mod 256.
+                let vectors: [(length: Int, digest: String)] = [
+                    (0, "c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470"),
+                    (1, "60811857dd566889ff6255277d82526f2d9b3bbcb96076be22a5860765ac3d06"),
+                    (7, "41af5ee4702c95c351bc338fbe25ee2190be60eba2087442a561b5c9a685f37b"),
+                    (8, "f5eb524d25780543da47ded5467544ab9fb6d4a8bd9a6c9647db2e84ca2e0895"),
+                    (31, "d061aba7d9d87cdc0b8a8e859ac74cdda6b0ea667ef7ead430c3d30ce38a4598"),
+                    (32, "d064c972ea7cbd9f1237bbd922fd5f08ca57895c13bc9ea2b91913f7099809a1"),
+                    (64, "52c1f4616862f9d5011ed6a2a77d89a2102e51ee7db2db045bb5fb267fba98d1"),
+                    (135, "9b6deb2387c86783862216d0205051ba7d41fa4fa70a30e2abfe18ca94d22b22"),
+                    (136, "b8717c6e7605ca3b5a0a94a147127679778a23a4324e53b910263673d0bfb55c"),
+                    (137, "e2d9f409a6d575e1457f9d3f7436081485d5794bf84db179566eea07a8266e8d"),
+                    (271, "082c1890ab04d225712c1871454aee54123aade62ca5937e5b609921ec21930b"),
+                    (272, "79cacfd52db427ce7b9a771984a13387a6e31075bcc4716a5deddff6875c4e69"),
+                    (273, "a0a3ace708ff419126bd75b3267766ba7c025b477c1216f30ad7a6d192997220"),
+                    (511, "bc37240c723d13f1753b1a512136bb35c5546223ea5b3c16b9f310bcbb1c8c95"),
+                    (512, "0ef15f90caea6a8e5264a17587fbe882a09c1333da268aa75008fa192d66ef50"),
+                    (513, "8e23e1d706ca04ae5d70105ce5f1012d570cbd1658839d743b4a9eb03408b4a7"),
+                    (1023, "ac72b7c9aafc660a583e535f1021c1716bd84af6f92bd947c884050dc82db009"),
+                    (1024, "edcf460f06a93bdaa7f1808897880fd4f81f7e76036adbe8119514d8f9f6d786"),
+                    (1025, "8cebb3845044cbc8a7ba97d986c66a495695f6dadf04e3ba78549128c11b9742"),
+                    (4095, "701534bd3988a12c0705ed2100877597b5c77b5dacbe5ace2bd4241f6329506a"),
+                    (4096, "9287eeba4e94e058f3f2b522de7d535b8f019a1a3fa27f11f693aff30f954b32"),
+                    (4097, "dc1f6bee42ee7c4964e8782ff18c19af680be52068382fc0e0f6556487da84e2"),
+                    (10000, "f4ec4a4dcb325cc2a10609dac1c3e3e3717741fce5d400d1ca3dc65ae9bd4d5c"),
+                ]
+
+                it("hashes the requested memory range through SHA3 and charges exact gas") {
+                    for vector in vectors {
+                        let payload = (0 ..< vector.length).map { UInt8(truncatingIfNeeded: $0 * 37 + 11) }
+                        let offset = 3
+                        let bytes = [UInt8](repeating: 0xEE, count: offset) + payload + [0xEE]
+                        let m = TestMachine.machine(opcode: .SHA3, gasLimit: 100_000)
+                        expect(m.memory.set(offset: 0, value: bytes, size: bytes.count)).to(beSuccess())
+                        m.stackPush(value: U256(from: UInt64(vector.length)))
+                        m.stackPush(value: U256(from: UInt64(offset)))
+                        m.evalLoop()
+                        let expected = try! U256.fromString(hex: vector.digest).get()
+                        let words = UInt64((vector.length + 31) / 32)
+                        let memoryWords = vector.length == 0 ? 0 : UInt64((offset + vector.length + 31) / 32)
+                        let cost = 30 + 6 * words + 3 * memoryWords + memoryWords * memoryWords / 512
+                        expect(m.machineStatus).to(equal(.Exit(.Success(.Stop))))
+                        expect(m.stack.data).to(equal([expected]), description: "length=\(vector.length)")
+                        expect(m.gas.remaining).to(equal(100_000 - cost))
+                        expect(m.memory.get(offset: 0, size: bytes.count)).to(equal(bytes))
+                    }
+                }
+            }
+
             it("check stack underflow errors is as expected") {
                 // Case 0: Empty stack
                 let m = TestMachine.machine(data: [], opcode: Opcode.SHA3, gasLimit: 100)

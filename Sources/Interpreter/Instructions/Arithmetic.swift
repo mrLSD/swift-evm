@@ -14,7 +14,7 @@ import PrimitiveTypes
 enum ArithmeticInstructions {
     /// Executes the EVM `ADD` opcode (`0x01`).
     /// Pops two `U256` values, charges `VERYLOW` gas, and pushes the sum.
-    /// Returns early if the stack underflows or gas charging fails, leaving the machine unchanged.
+    /// Sets an error exit if the stack underflows or gas charging fails.
     static func add(machine m: Machine) {
         if !m.verifyStack(pop: 2) {
             return
@@ -34,7 +34,7 @@ enum ArithmeticInstructions {
 
     /// Executes the EVM `SUB` opcode (`0x03`).
     /// Pops two `U256` values, charges `VERYLOW` gas, and pushes the subtraction result.
-    /// Returns early if the stack underflows or gas charging fails, leaving the machine unchanged.
+    /// Sets an error exit if the stack underflows or gas charging fails.
     static func sub(machine m: Machine) {
         if !m.verifyStack(pop: 2) {
             return
@@ -54,7 +54,7 @@ enum ArithmeticInstructions {
 
     /// Executes the EVM `MUL` opcode (`0x02`).
     /// Pops two `U256` values, charges `LOW` gas, and pushes the product.
-    /// Returns early if the stack underflows or gas charging fails, leaving the machine unchanged.
+    /// Sets an error exit if the stack underflows or gas charging fails.
     static func mul(machine m: Machine) {
         if !m.verifyStack(pop: 2) {
             return
@@ -74,7 +74,7 @@ enum ArithmeticInstructions {
 
     /// Executes the EVM `DIV` opcode (`0x04`).
     /// Pops two `U256` values, charges `LOW` gas, and pushes the quotient (or `0` if divisor is zero).
-    /// Returns early if the stack underflows or gas charging fails, leaving the machine unchanged.
+    /// Sets an error exit if the stack underflows or gas charging fails.
     static func div(machine m: Machine) {
         if !m.verifyStack(pop: 2) {
             return
@@ -94,7 +94,7 @@ enum ArithmeticInstructions {
 
     /// Executes the EVM `MOD` opcode (`0x06`).
     /// Pops two `U256` values, charges `LOW` gas, and pushes the remainder (or `0` if divisor is zero).
-    /// Returns early if the stack underflows or gas charging fails, leaving the machine unchanged.
+    /// Sets an error exit if the stack underflows or gas charging fails.
     static func rem(machine m: Machine) {
         if !m.verifyStack(pop: 2) {
             return
@@ -114,7 +114,7 @@ enum ArithmeticInstructions {
 
     /// Executes the EVM `SDIV` opcode (`0x05`).
     /// Pops two `U256` values, charges `LOW` gas, and pushes the signed quotient (or `0` if divisor is zero).
-    /// Returns early if the stack underflows or gas charging fails, leaving the machine unchanged.
+    /// Sets an error exit if the stack underflows or gas charging fails.
     static func sdiv(machine m: Machine) {
         if !m.verifyStack(pop: 2) {
             return
@@ -136,7 +136,7 @@ enum ArithmeticInstructions {
 
     /// Executes the EVM `SMOD` opcode (`0x07`).
     /// Pops two `U256` values, charges `LOW` gas, and pushes the signed remainder (or `0` if divisor is zero).
-    /// Returns early if the stack underflows or gas charging fails, leaving the machine unchanged.
+    /// Sets an error exit if the stack underflows or gas charging fails.
     static func smod(machine m: Machine) {
         if !m.verifyStack(pop: 2) {
             return
@@ -189,7 +189,7 @@ enum ArithmeticInstructions {
 
     /// Executes the EVM `MULMOD` opcode (`0x09`).
     /// Pops three `U256` values, charges `MID` gas, and pushes `(a * b) % m` (or `0` if modulus is zero).
-    /// Returns early if the stack underflows or gas charging fails, leaving the machine unchanged.
+    /// Sets an error exit if the stack underflows or gas charging fails.
     static func mulMod(machine m: Machine) {
         if !m.verifyStack(pop: 3) {
             return
@@ -211,7 +211,7 @@ enum ArithmeticInstructions {
 
     /// Executes the EVM `EXP` opcode (`0x0a`).
     /// Pops two `U256` values, charges dynamic gas via `GasCost.expCost` (based on the exponent), and pushes the result.
-    /// Returns early if the stack underflows or gas charging fails, leaving the machine unchanged.
+    /// Sets an error exit if the stack underflows or gas charging fails.
     static func exp(machine m: Machine) {
         if !m.verifyStack(pop: 2) {
             return
@@ -273,10 +273,11 @@ enum ArithmeticInstructions {
 
         var newValue = op2
         if op1 < U256(from: 32) {
-            let bitIndex = Int(8 * op1.BYTES[0] + 7)
-            let bit = op2.BYTES[bitIndex / 64] & (1 << (bitIndex % 64)) != 0
+            // `op1 < 32` was checked above, so the conversion cannot fail.
+            let bitIndex = 8 * op1.getInt! + 7
+            let signBit = !((op2 >> bitIndex) & U256(from: 1)).isZero
             let mask = (U256(from: 1) << bitIndex) - U256(from: 1)
-            newValue = bit ? op2 | ~mask : op2 & mask
+            newValue = signBit ? op2 | ~mask : op2 & mask
         }
 
         m.stackPush(value: newValue)

@@ -113,8 +113,8 @@ public class Trace {
         /// Current `Opcode`
         private(set) var opcode: Opcode
         private(set) var depth: Int
-        /// Current `Memory`
-        private(set) var memory: Memory?
+        /// Snapshot of the effective memory, since the machine keeps mutating its own `Memory`
+        private(set) var memory: [UInt8]?
         /// Current  `Stack`
         private(set) var stack: Stack?
         /// Current `Gas`
@@ -130,8 +130,9 @@ public class Trace {
         /// Sub call traces for tree representation. It should be enabled with `Config.callTrace`
         private(set) var subCallTrace: [TraceData]?
 
-        init(_ machine: borrowing Machine, _ opcode: Opcode, _ cfg: Config) {
-            self.pc = machine.pc
+        /// `pc` is passed explicitly because the machine has already advanced it after evaluation.
+        init(_ machine: borrowing Machine, _ opcode: Opcode, _ cfg: Config, pc: Int) {
+            self.pc = pc
             self.gas = machine.gas
             self.tracedGas = nil
             self.opcode = opcode
@@ -141,12 +142,17 @@ public class Trace {
             } else {
                 self.stack = machine.stack
             }
+            #if TRACE_STACK_INOUT
+            self.stackIn = cfg.stackInOut ? machine.stack.traceStackIn : nil
+            self.stackOut = cfg.stackInOut ? machine.stack.traceStackOut : nil
+            #else
             self.stackIn = nil
             self.stackOut = nil
+            #endif
             if cfg.hideMemory {
                 self.memory = nil
             } else {
-                self.memory = machine.memory
+                self.memory = machine.memory.get(offset: 0, size: machine.memory.effectiveLength)
             }
             self.storage = nil
             self.subCallTrace = nil
@@ -196,13 +202,14 @@ public class Trace {
 
     /// Trace step before Machine opcode evaluation
     func beforeEval(_ machine: borrowing Machine, _ op: Opcode) {
-        self.beforeEval = TraceData(machine, op, self.config)
+        self.beforeEval = TraceData(machine, op, self.config, pc: machine.pc)
+        self.afterEval = nil
     }
 
-    /// Trace step after Machine opcode evaluation.
+    /// Trace step after Machine opcode evaluation; keeps the `pc` of the evaluated opcode.
     func afterEval(_ machine: borrowing Machine) -> Self {
         guard let beforeEval else { return self }
-        self.afterEval = TraceData(machine, beforeEval.opcode, self.config)
+        self.afterEval = TraceData(machine, beforeEval.opcode, self.config, pc: beforeEval.pc)
         return self
     }
 
@@ -230,7 +237,8 @@ public class Trace {
                     let s = stackValues.data.map { value -> String in
                         // Check if it's possible to print number as UInt for short output
                         if value < U256(from: UInt64(UInt.max)) {
-                            hexEncodeNoPad(UInt64(value.getUInt ?? 0), uppercase: false)
+                            // The bound above guarantees that the conversion succeeds.
+                            hexEncodeNoPad(UInt64(value.getUInt!), uppercase: false)
                         } else {
                             "0x\(value)"
                         }

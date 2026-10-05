@@ -86,6 +86,15 @@ public extension U256 {
         getInt ?? Int.max
     }
 
+    /// Number of leading zero bits; `256` for zero.
+    @inlinable @inline(__always)
+    var leadingZeroBitCount: Int {
+        if h1 != 0 { return h1.leadingZeroBitCount }
+        if h0 != 0 { return 64 + h0.leadingZeroBitCount }
+        if l1 != 0 { return 128 + l1.leadingZeroBitCount }
+        return 192 + l0.leadingZeroBitCount
+    }
+
     /// Big-endian byte representation (32 bytes, MSB first).
     var toBigEndian: [UInt8] {
         var out = [UInt8]()

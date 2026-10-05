@@ -485,7 +485,10 @@ final class InstructionLogSpec: QuickSpec {
                     expect(m.trace.data.first?.tracedGas?.used).to(equal(UInt64(386 + 375 * n)))
                     expect(m.trace.data.first?.tracedGas?.remaining).to(equal(UInt64(2614 - 375 * n)))
                     #if TRACE_STACK_INOUT
-                    expect(m.stack.traceStackOut).to(equal([U256.ZERO, U256(from: 1)] + Array(Self.topicWords.prefix(n))))
+                    expect(m.trace.data.first?.stackIn).to(equal([]))
+                    expect(m.trace.data.first?.stackOut).to(equal([U256.ZERO, U256(from: 1)] + Array(Self.topicWords.prefix(n))))
+                    expect(m.stack.traceStackOut).to(beEmpty())
+                    expect(m.stack.traceStackIn).to(beEmpty())
                     #endif
                 }
             }

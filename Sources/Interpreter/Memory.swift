@@ -6,14 +6,19 @@ import Darwin
 import Glibc
 #endif
 
-/// Machine Memory with  specific limit.
+/// Machine memory bounded by `limit`: growth beyond it fails before any allocation.
 /// Interpreter offsets and sizes are nonnegative. A positive effective length owns a buffer.
+/// Opcodes expand and charge a range first and then use the `getWord`/`withUnsafeBytes`/`write*` accessors;
+/// the `set`/`copy*` methods validate the limit and grow the buffer on their own.
 public class Memory {
     /// Memory data
     private var buffer: UnsafeMutableRawPointer?
 
     /// Memory limit
     private(set) var limit: Int = 0
+
+    /// Largest whole-word capacity that fits within the limit.
+    private var capacityLimit: Int { self.limit & ~31 }
 
     /// Memory effective length, that changed after resize operations.
     private(set) var effectiveLength: Int = 0
@@ -59,19 +64,12 @@ public class Memory {
         #endif
     }
 
-    /// Resizes the internal buffer to accommodate a range defined by a starting offset and a length.
-    ///
-    /// This method first checks if the provided `len` is non-zero. It then adds the `offset` and `len`
-    /// while detecting potential arithmetic overflow. If an overflow occurs or if `len` is zero,
-    /// the method returns `false`. Otherwise, it delegates the resizing operation to `resize(end:)`
-    /// with the computed end offset.
+    /// Expands a nonempty range to a whole-word capacity within the memory limit.
     ///
     /// - Parameters:
-    ///   - offset: The starting offset for the buffer.
-    ///   - len: The length of the data to accommodate.
-    /// - Returns: `true` if the buffer was successfully resized (or already has sufficient capacity),
-    ///            `false` if the length is zero, an overflow occurred, or if resizing fails.
-    /// - Note: This function is marked with `@inline(__always)` to encourage aggressive inlining in performance-critical contexts.
+    ///   - offset: Nonnegative starting byte offset.
+    ///   - size: Nonnegative number of bytes in the range.
+    /// - Returns: `false` for an empty range, overflow, a limit violation, or allocation failure.
     @inline(__always)
     final func resize(offset: Int, size: Int) -> Bool {
         if size == 0 {
@@ -94,15 +92,19 @@ public class Memory {
     /// the newly allocated memory is zero-initialized.
     ///
     /// - Parameter end: The minimum offset (or capacity) that the buffer must support.
-    /// - Returns: `true` if the buffer is already large enough or if resizing succeeds; otherwise, `false` when memory allocation fails.
+    /// - Returns: `true` if the buffer is already large enough or resizing succeeds; otherwise, `false` when
+    ///            the rounded capacity overflows, exceeds `limit`, or allocation fails.
     /// - Note: This function is marked with `@inline(__always)` to suggest aggressive inlining for performance-critical contexts.
     @inline(__always)
     final func resize(end: Int) -> Bool {
         guard end > self.effectiveLength else {
             return true
         }
+        // The limit bounds the allocation itself, for reads as well as writes.
+        guard let newSize = Memory.ceil32(end), newSize <= self.limit else {
+            return false
+        }
 
-        let newSize = Memory.ceil32(end)
         #if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(visionOS) || os(Linux)
         if let oldBuffer = self.buffer {
             guard let newBuffer = reallocateBuffer(oldBuffer, byteCount: newSize) else { return false }
@@ -173,70 +175,79 @@ public class Memory {
         return U256(bigEndian: UnsafeRawBufferPointer(start: self.buffer!.advanced(by: offset), count: 32))
     }
 
+    /// Exposes a nonempty range already expanded and charged by the interpreter without copying it.
+    func withUnsafeBytes<R>(offset: Int, size: Int, _ body: (UnsafeRawBufferPointer) -> R) -> R {
+        precondition(offset >= 0 && size > 0 && size <= self.effectiveLength - offset, "Byte read requires an allocated range.")
+        // The validated positive range guarantees a buffer.
+        return body(UnsafeRawBufferPointer(start: self.buffer!.advanced(by: offset), count: size))
+    }
+
+    /// Writes a word into a range already expanded and charged by the interpreter.
+    func writeWord(offset: Int, _ value: U256) {
+        precondition(offset >= 0 && offset <= self.effectiveLength - 32, "Word write requires 32 allocated bytes.")
+        // The validated positive range guarantees a buffer.
+        value.writeBigEndian(to: UnsafeMutableRawBufferPointer(start: self.buffer!.advanced(by: offset), count: 32))
+    }
+
+    /// Writes one byte into a range already expanded and charged by the interpreter.
+    func writeByte(offset: Int, _ value: UInt8) {
+        precondition(offset >= 0 && offset < self.effectiveLength, "Byte write requires an allocated byte.")
+        // The validated positive range guarantees a buffer.
+        self.buffer!.storeBytes(of: value, toByteOffset: offset, as: UInt8.self)
+    }
+
+    /// Copies `size` bytes of `data` from `dataOffset` into a range already expanded and charged by the
+    /// interpreter, zero-filling whatever lies past the end of `data`.
+    func writeData(offset: Int, size: Int, from data: [UInt8], dataOffset: Int) {
+        precondition(offset >= 0 && size > 0 && size <= self.effectiveLength - offset, "Data write requires an allocated range.")
+        precondition(dataOffset >= 0, "Data offsets must be nonnegative.")
+        // The validated positive range guarantees a buffer.
+        let dstPtr = self.buffer!.advanced(by: offset)
+
+        let copyLength = dataOffset < data.count ? min(size, data.count - dataOffset) : 0
+        if copyLength > 0 {
+            // A positive copy length guarantees nonempty source data and a base address.
+            data.withUnsafeBytes { Self.memCpy(dstPtr: dstPtr, srcPtr: $0.baseAddress!.advanced(by: dataOffset), count: copyLength) }
+        }
+        if size > copyLength {
+            Self.memSet(dstPtr: dstPtr.advanced(by: copyLength), value: 0, count: size - copyLength)
+        }
+    }
+
     /// Stores a word with the same limit and allocation errors as byte-array writes.
     func set(offset: Int, word: U256) -> Result<Void, Machine.ExitReason> {
         precondition(offset >= 0, "Memory offsets must be nonnegative.")
-        if self.limit - offset < 32 {
+        if self.capacityLimit - offset < 32 {
             return .failure(.Error(.MemoryOperation(.SetLimitExceeded)))
         }
         guard self.resize(end: offset + 32) else { return .failure(.Fatal(.ReadMemory)) }
-
-        // Successful resize to a positive length guarantees a buffer.
-        word.writeBigEndian(to: UnsafeMutableRawBufferPointer(start: self.buffer!.advanced(by: offset), count: 32))
+        self.writeWord(offset: offset, word)
 
         return .success(())
     }
 
-    /// Sets a segment of the Memory with the provided byte values.
-    ///
-    /// This method writes a sequence of bytes into the Memory starting at the specified `offset`.
-    /// The number of bytes to write is determined by the `size` parameter if provided; otherwise, it defaults to
-    /// the length of the `value` array. If the provided `size` is greater than the length of `value`, the extra
-    /// bytes are zero-filled.
-    ///
-    /// Before writing, the method verifies that the target range (from `offset` to `offset + targetSize`)
-    /// does not exceed the Memory’s upper bound (`limit`). It then attempts to resize the Memory to accommodate
-    /// the new data. If resizing fails or if the target range would exceed the allowed limit, the operation is aborted
-    /// and the method returns `false`.
+    /// Writes a byte range, growing memory within the limit and zero-filling any missing source bytes.
     ///
     /// - Parameters:
-    ///   - offset: The starting offset in the Memory where the data should be written.
-    ///   - value: An array of `UInt8` bytes that will be copied into the Memory.
-    ///   - size: Number specifying how many bytes to write.
-    /// - Returns: A `Result` containing the `Void` value if successful, or an `Machine.ExitReason` if an error occurs.
-    /// - Note: If `size` is provided and is greater than the number of bytes in `value`, the extra bytes are filled with zeros.
-    ///         This function is marked with `@inline(__always)` to promote aggressive inlining for performance-critical code paths.
-    ///         It uses low-level memory operations (`memcpy` and `memset`), thereby bypassing some of Swift’s safety checks.
+    ///   - offset: Nonnegative destination byte offset.
+    ///   - value: Source bytes, truncated or zero-padded to `size`.
+    ///   - size: Nonnegative number of bytes to write; zero leaves memory unchanged.
+    /// - Returns: A limit error if the rounded capacity exceeds `limit`, or `.Fatal(.ReadMemory)` if allocation fails.
     @inline(__always)
     func set(offset: Int, value: [UInt8], size: Int) -> Result<Void, Machine.ExitReason> {
         if size == 0 {
             return .success(())
         }
 
-        if size > self.limit - offset {
+        if size > self.capacityLimit - offset {
             return .failure(.Error(.MemoryOperation(.SetLimitExceeded)))
         }
         // NOTE: after the above check, we can be sure that offset + size won't overflow
         let requiredLength = offset + size
 
         guard self.resize(end: requiredLength) else { return .failure(.Fatal(.ReadMemory)) }
-        // Successful resize to a positive length guarantees an allocated buffer.
-        let buf = self.buffer!
-
-        return value.withUnsafeBytes { src in
-            // Get correct range for copy
-            let copyCount = min(size, value.count)
-            let dstPtr = buf.advanced(by: offset)
-            let srcPtr = src.baseAddress!
-
-            Self.memCpy(dstPtr: dstPtr, srcPtr: srcPtr, count: copyCount)
-
-            if size > value.count {
-                Self.memSet(dstPtr: buf.advanced(by: offset + value.count), value: 0, count: size - value.count)
-            }
-
-            return .success(())
-        }
+        self.writeData(offset: offset, size: size, from: value, dataOffset: 0)
+        return .success(())
     }
 
     /// Copies a block of bytes within the Memory from one offset to another.
@@ -267,7 +278,7 @@ public class Memory {
         }
 
         let maxOffset = max(srcOffset, dstOffset)
-        if size > self.limit - maxOffset {
+        if size > self.capacityLimit - maxOffset {
             return .failure(.Error(.MemoryOperation(.CopyLimitExceeded)))
         }
         // NOTE: after the above check, we can be sure that offset + size won't overflow
@@ -294,25 +305,15 @@ public class Memory {
         return .success(())
     }
 
-    /// Copies a block of data from the provided byte array into the Memory buffer.
-    ///
-    /// This function performs an unsafe, high-performance copy of `len` bytes from the source `data` array,
-    /// starting at the specified `dataOffset`, into the Memory buffer at the given `memoryOffset`.
-    /// If the available data (from `dataOffset` to the end of the array) is less than `len` bytes,
-    /// the remainder of the Memory region is zero-filled.
+    /// Copies a source range into memory, zero-filling bytes beyond the end of `data`.
     ///
     /// - Parameters:
-    ///   - memoryOffset: The offset in the Memory buffer where data will be written.
-    ///   - dataOffset: The starting offset in the source `data` array from which to copy bytes.
-    ///   - size: The number of bytes to copy. If the source data has fewer than `len` bytes after `dataOffset`,
-    ///          the missing bytes will be filled with zeros.
-    ///   - data: The source array of bytes from which the data is copied.
-    ///
-    /// - Returns: A `Result` indicating success, or a `Machine.ExitReason` if an error occurs (e.g., if the
-    ///            `dataOffset` is out of bounds, memory limit is exceeded, or memory allocation/resizing fails).
-    ///
-    /// - Note: This function uses unsafe memory operations (`withUnsafeBytes`, `memcpy`, and `memset`) to achieve
-    ///         maximum performance.
+    ///   - memoryOffset: Nonnegative destination byte offset.
+    ///   - dataOffset: Source byte offset; offsets beyond the source produce zeros.
+    ///   - size: Nonnegative number of bytes to copy; zero leaves memory unchanged.
+    ///   - data: Source bytes.
+    /// - Returns: A specific memory error for a negative source offset or a limit violation,
+    ///            or `.Fatal(.ReadMemory)` if allocation fails.
     @inline(__always)
     func copyData(memoryOffset: Int, dataOffset: Int, size: Int, data: [UInt8]) -> Result<Void, Machine.ExitReason> {
         // Check is no data to copy.
@@ -320,79 +321,36 @@ public class Memory {
             return .success(())
         }
 
-        // Ensure the dataOffset is within bounds (allow dataOffset == data.count when size == 0 is already handled above).
         guard dataOffset >= 0 else {
             return .failure(.Error(.MemoryOperation(.CopyDataOffsetOutOfBounds)))
         }
 
-        // NOTE: limit can't be huge as physical memory is limited
-        // Yellow Paper: For CallData/CodeCopy, access beyond bounds is NOT an error. It implies zero-fill.
-        // We only verify that memoryOffset doesn't exceed implementation limits.
-        if size > self.limit - memoryOffset {
+        if size > self.capacityLimit - memoryOffset {
             return .failure(.Error(.MemoryOperation(.CopyDataLimitExceeded)))
         }
         // NOTE: after the above check, we can be sure that offset + size won't overflow
         let requiredLength = memoryOffset + size
 
-        // Calculate actual bytes to copy from data.
-        // If dataOffset is beyond data bounds, copyLength becomes 0.
-        let copyLength: Int
-        if dataOffset >= data.count {
-            copyLength = 0
-        } else {
-            // dataOffset is within valid bounds [0, count-1]
-            let available = data.count - dataOffset
-            copyLength = min(size, available)
-        }
-
         // Ensure the internal buffer is resized to accommodate the required length.
         guard self.resize(end: requiredLength) else { return .failure(.Fatal(.ReadMemory)) }
-        // Successful resize to a positive length guarantees an allocated buffer.
-        let buf = self.buffer!
+        self.writeData(offset: memoryOffset, size: size, from: data, dataOffset: dataOffset)
 
-        return data.withUnsafeBytes { rawBuffer in
-            let dstPtr = buf.advanced(by: memoryOffset)
-
-            // Only perform memcpy if we have data to copy AND the offset is valid
-            if copyLength > 0 {
-                // SAFETY: We checked `dataOffset < data.count` implicitly above via copyLength calculation
-                let srcPtr = rawBuffer.baseAddress!.advanced(by: dataOffset)
-                Self.memCpy(dstPtr: dstPtr, srcPtr: srcPtr, count: copyLength)
-            }
-
-            // If the requested length exceeds the available data, zero-fill the remainder.
-            if size > copyLength {
-                Self.memSet(dstPtr: dstPtr.advanced(by: copyLength), value: 0, count: size - copyLength)
-            }
-            return .success(())
-        }
+        return .success(())
     }
 
-    /// Converts a unsigned integer to the next closest multiple of 32.
-    ///
-    /// - Parameters:
-    ///   - value: The value whose ceil32 is to be calculated.
-    ///
-    /// - Returns:
-    ///   The same value if it's a perfect multiple of 32 else it returns the smallest multiple of 32 that is greater than `value`.
+    /// Rounds a nonnegative byte count up to a multiple of 32, or returns `nil` if it exceeds `Int.max`.
     @inline(__always)
-    public static func ceil32(_ value: Int) -> Int {
+    public static func ceil32(_ value: Int) -> Int? {
+        precondition(value >= 0, "Memory size must be nonnegative.")
         let val = value.addingReportingOverflow(31)
-        return (val.overflow ? Int.max : val.partialValue) & ~31
+        return val.overflow ? nil : val.partialValue & ~31
     }
 
-    /// Computes the number of 32-byte words required to represent the given value.
-    ///
-    /// This function adds 31 to the provided `value` using arithmetic with overflow reporting
-    /// and then divides the result by 32 (using a right shift by 5 bits). This effectively calculates
-    /// the ceiling of `value / 32`. In case of an arithmetic overflow, it returns `UInt.max`.
-    ///
-    /// - Parameter value: The unsigned integer value to be converted into a count of 32-byte words.
-    /// - Returns: The number of 32-byte words needed to represent `value`.
+    /// Computes the exact number of 32-byte words needed for a nonnegative byte count without rounding overflow.
     @inline(__always)
     public static func numWords(_ value: Int) -> Int {
-        let val = value.addingReportingOverflow(31)
-        return (val.overflow ? Int.max : val.partialValue) >> 5
+        precondition(value >= 0, "Memory size must be nonnegative.")
+        return (value >> 5) + (value & 31 == 0 ? 0 : 1)
     }
 
     /// Copies `count` bytes from `srcPtr` to `dstPtr`.

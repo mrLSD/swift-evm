@@ -12,6 +12,22 @@ on:
 jobs:
   build:
     runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - configuration: cryptoswift-disabled
+          swift_flags: "--disable-default-traits"
+        - configuration: cryptoswift-basic
+          swift_flags: "--traits Tracing"
+        - configuration: cryptoswift-full
+          swift_flags: "--traits TraceCallTrace,TraceGasCalculation,TraceStackInOut,TraceHideUnchanged,TraceHideMemory,TraceHideStack,TraceHideStorage,TraceStorageHexValue,TraceOpcodeHexValue"
+        - configuration: tiny-keccak-disabled
+          swift_flags: "--traits TinyKeccak"
+        - configuration: tiny-keccak-basic
+          swift_flags: "--traits TinyKeccak,Tracing"
+        - configuration: tiny-keccak-full
+          swift_flags: "--traits TinyKeccak,TraceCallTrace,TraceGasCalculation,TraceStackInOut,TraceHideUnchanged,TraceHideMemory,TraceHideStack,TraceHideStorage,TraceStorageHexValue,TraceOpcodeHexValue"
     steps:
     - uses: actions/checkout@v4
 
@@ -23,7 +39,7 @@ jobs:
         swift --version
 
     - name: Build
-      run: swift build
+      run: swift build ${{ matrix.swift_flags }}
 
     - name: Install SwiftLint
       run: brew install swiftlint
@@ -32,7 +48,7 @@ jobs:
       run: swiftlint
 
     - name: Run tests
-      run: swift test --verbose --enable-code-coverage
+      run: swift test --verbose --enable-code-coverage ${{ matrix.swift_flags }}
 
     - name: Generate Coverage Report
       run: |
@@ -55,5 +71,5 @@ jobs:
       with:
         files: coverage/lcov.info
         flags: swift
-        name: codecov-umbrella
+        name: codecov-${{ matrix.configuration }}
         fail_ci_if_error: true
