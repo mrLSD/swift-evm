@@ -460,28 +460,79 @@ final class InterpreterMachineTestsSpec: QuickSpec {
             }
 
             #if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(visionOS) || os(Linux)
-            it("stops MSTORE with OutOfGas on allocation failure after charging memory gas") {
-                for initialized in [false, true] {
-                    let memory = FailingAllocationMemory()
-                    if initialized {
-                        expect(memory.set(offset: 0, value: [0xAB], size: 1)).to(beSuccess())
+            it("stops memory reads and writes with a fatal error on allocation failure") {
+                for opcode in [Opcode.MLOAD, .MSTORE] {
+                    for initialized in [false, true] {
+                        let memory = FailingAllocationMemory()
+                        if initialized {
+                            expect(memory.set(offset: 0, value: [0xAB], size: 1)).to(beSuccess())
+                        }
+                        memory.failAllocations = true
+                        let m = Machine(
+                            data: [], code: [opcode.rawValue], gasLimit: 100,
+                            context: TestMachine.defaultContext(), state: ExecutionState(), handler: TestHandler(), memory: memory
+                        )
+                        if opcode == .MSTORE { m.stackPush(value: U256(from: 0xCD)) }
+                        m.stackPush(value: U256(from: 32))
+                        m.evalLoop()
+
+                        expect(m.machineStatus).to(equal(.Exit(.Fatal(.ReadMemory))))
+                        expect(m.gas.remaining).to(equal(91))
+                        expect(m.gas.memoryGas.numWords).to(equal(2))
+                        expect(m.memory.effectiveLength).to(equal(initialized ? 32 : 0))
+                        expect(m.memory.get(offset: 0, size: 1)).to(equal([initialized ? 0xAB : 0]))
+                        expect(m.stack.length).to(equal(0))
+                        expect(memory.allocationSizes).to(equal(initialized ? [32, 64] : [64]))
+
+                        // Releasing host pressure must not resume a frame that already failed fatally.
+                        memory.failAllocations = false
+                        let pc = m.pc
+                        m.step()
+                        m.evalLoop()
+                        expect(m.machineStatus).to(equal(.Exit(.Fatal(.ReadMemory))))
+                        expect(m.pc).to(equal(pc))
+                        expect(m.gas.remaining).to(equal(91))
+                        expect(memory.allocationSizes).to(equal(initialized ? [32, 64] : [64]))
                     }
+                }
+            }
+
+            it("rejects memory limits and gas failures before attempting allocation") {
+                let cases: [(limit: Int, gas: UInt64, offset: Int, size: Int)] = [
+                    (0, 100, 0, 1),
+                    (33, 100, 32, 1),
+                    (Int.max, 5, 32, 32),
+                    (Int.max, UInt64.max, Int.max, 1),
+                    (Int.max, UInt64.max, Int.max - 1, 1),
+                ]
+                for testCase in cases {
+                    let memory = FailingAllocationMemory(limit: testCase.limit)
                     memory.failAllocations = true
                     let m = Machine(
-                        data: [], code: [Opcode.MSTORE.rawValue], gasLimit: 100,
+                        data: [], code: [], gasLimit: testCase.gas,
                         context: TestMachine.defaultContext(), state: ExecutionState(), handler: TestHandler(), memory: memory
                     )
-                    m.stackPush(value: U256(from: 0xCD))
-                    m.stackPush(value: U256(from: 32))
-                    m.evalLoop()
-
+                    expect(m.resizeMemoryAndRecordGas(offset: testCase.offset, size: testCase.size)).to(beFalse())
                     expect(m.machineStatus).to(equal(.Exit(.Error(.OutOfGas))))
-                    expect(m.gas.remaining).to(equal(91))
-                    expect(m.gas.memoryGas.numWords).to(equal(2))
-                    expect(m.memory.effectiveLength).to(equal(initialized ? 32 : 0))
-                    expect(m.memory.get(offset: 0, size: 1)).to(equal([initialized ? 0xAB : 0]))
-                    expect(m.stack.length).to(equal(0))
+                    expect(memory.allocationSizes).to(beEmpty())
+                    expect(memory.effectiveLength).to(equal(0))
                 }
+            }
+
+            it("does not allocate for empty or already paid memory ranges") {
+                let memory = FailingAllocationMemory()
+                let m = Machine(
+                    data: [], code: [], gasLimit: 100,
+                    context: TestMachine.defaultContext(), state: ExecutionState(), handler: TestHandler(), memory: memory
+                )
+                expect(m.resizeMemoryAndRecordGas(offset: 0, size: 32)).to(beTrue())
+                memory.failAllocations = true
+                expect(m.resizeMemoryAndRecordGas(offset: Int.max, size: 0)).to(beTrue())
+                expect(m.resizeMemoryAndRecordGas(offset: 0, size: 32)).to(beTrue())
+                expect(m.machineStatus).to(equal(.NotStarted))
+                expect(m.gas.remaining).to(equal(97))
+                expect(memory.effectiveLength).to(equal(32))
+                expect(memory.allocationSizes).to(equal([32]))
             }
             #endif
 

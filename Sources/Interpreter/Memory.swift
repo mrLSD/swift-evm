@@ -18,7 +18,7 @@ public class Memory {
     private(set) var limit: Int = 0
 
     /// Largest whole-word capacity that fits within the limit.
-    private var capacityLimit: Int { self.limit & ~31 }
+    var capacityLimit: Int { self.limit & ~31 }
 
     /// Memory effective length, that changed after resize operations.
     private(set) var effectiveLength: Int = 0

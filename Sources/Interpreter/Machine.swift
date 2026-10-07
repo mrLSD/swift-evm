@@ -116,6 +116,7 @@ public final class Machine {
     /// even to produce a standard EVM error. They are treated separately from `ExitError`.
     @frozen
     public enum ExitFatal: Equatable, Error {
+        /// Host memory allocation failed; callers must abort the enclosing execution.
         case ReadMemory
     }
 
@@ -616,6 +617,7 @@ public final class Machine {
     /// This function calculates the gas cost associated with resizing the memory using the provided
     /// offset and size. If the gas cost calculation is successful, it records the cost; otherwise,
     /// it updates the machine status with the corresponding error and returns false.
+    /// Gas and size limits produce `OutOfGas`; a host allocation failure produces `.Fatal(.ReadMemory)`.
     ///
     /// - Parameters:
     ///   - offset: The starting offset from which the memory should be resized.
@@ -635,9 +637,13 @@ public final class Machine {
                 guard self.gasRecordCost(cost: resizeMemoryCost) else {
                     return false
                 }
-                // Growth beyond the memory limit or a failed allocation ends execution even after the gas checks.
-                guard self.memory.resize(offset: offset, size: size) else {
+                // MemoryGas.resize validated the sum. A whole-word limit also bounds rounding in Memory.resize.
+                guard offset + size <= self.memory.capacityLimit else {
                     self.machineStatus = .Exit(.Error(.OutOfGas))
+                    return false
+                }
+                guard self.memory.resize(offset: offset, size: size) else {
+                    self.machineStatus = .Exit(.Fatal(.ReadMemory))
                     return false
                 }
             }

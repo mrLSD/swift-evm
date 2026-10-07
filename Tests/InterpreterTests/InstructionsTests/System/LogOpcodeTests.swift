@@ -315,7 +315,7 @@ final class InstructionLogSpec: QuickSpec {
             #endif
 
             #if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(visionOS) || os(Linux)
-            it("does not emit on allocation or reallocation failure") {
+            it("reports a fatal error without emitting on allocation or reallocation failure") {
                 for initialized in [false, true] {
                     let memory = FailingAllocationMemory()
                     let handler = CustomHandler()
@@ -330,7 +330,7 @@ final class InstructionLogSpec: QuickSpec {
 
                     m.evalLoop()
 
-                    expect(m.machineStatus).to(equal(.Exit(.Error(.OutOfGas))))
+                    expect(m.machineStatus).to(equal(.Exit(.Fatal(.ReadMemory))))
                     expect(handler.logCalls).to(equal(0))
                     expect(handler.logs).to(beEmpty())
                     expect(m.stack.data).to(equal(original))
