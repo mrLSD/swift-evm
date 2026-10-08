@@ -392,22 +392,44 @@ final class InterpreterGasSpec: QuickSpec {
                     expect(res).to(equal(expected))
                 }
 
-                it("does not overflow at the maximum valid input (UInt32.max)") {
-                    let maxSafeWords = Int(UInt32.max) // 4,294,967,295
-
-                    let (res, overflow) = GasCost.memoryGas(numWords: maxSafeWords)
-
-                    expect(overflow).to(beFalse())
-                    expect(res).to(beGreaterThan(0))
+                it("preserves the full square until division and detects only final overflow") {
+                    // Expected values use Python integers: 3*n + n*n//512.
+                    let cases: [(words: UInt64, cost: UInt64, overflow: Bool)] = [
+                        (0, 0, false),
+                        (1, 3, false),
+                        (22, 66, false),
+                        (23, 70, false),
+                        (511, 2_043, false),
+                        (512, 2_048, false),
+                        (513, 2_053, false),
+                        (91_917, 16_777_186, false),
+                        (91_918, 16_777_548, false),
+                        (4_294_967_295, 36_028_809_887_088_637, false),
+                        (4_294_967_296, 36_028_809_903_865_856, false),
+                        (4_294_967_297, 36_028_809_920_643_075, false),
+                        (97_184_015_230, 18_446_744_073_241_248_723, false),
+                        (97_184_015_231, 18_446_744_073_620_873_785, false),
+                        (97_184_015_232, 0, true),
+                        (97_184_015_999, 0, true),
+                        (97_184_016_000, 0, true),
+                        (9_223_372_036_854_775_807, 0, true),
+                    ]
+                    for testCase in cases {
+                        guard let words = Int(exactly: testCase.words) else { continue }
+                        let actual = GasCost.memoryGas(numWords: words)
+                        expect(actual.cost).to(equal(testCase.cost), description: "words=\(testCase.words)")
+                        expect(actual.overflow).to(equal(testCase.overflow), description: "words=\(testCase.words)")
+                    }
                 }
 
-                it("overflows exactly when N^2 exceeds UInt64 (at 2^32)") {
-                    let firstUnsafeWords = Int(UInt32.max) + 1 // 4,294,967,296
-
-                    let (res, overflow) = GasCost.memoryGas(numWords: firstUnsafeWords)
-
-                    expect(overflow).to(beTrue())
-                    expect(res).to(equal(0))
+                it("rejects unaffordable expansion before allocation at the old square overflow boundary") {
+                    let m = TestMachine.machine(opcode: .MLOAD, gasLimit: 1 << 24)
+                    // A 32-byte read ending at 2^37 bytes requires 2^32 memory words.
+                    m.stackPush(value: U256(from: (UInt64(1) << 37) - 32))
+                    m.evalLoop()
+                    expect(m.machineStatus).to(equal(.Exit(.Error(.OutOfGas))))
+                    expect(m.memory.effectiveLength).to(equal(0))
+                    expect(m.gas.remaining).to(equal((UInt64(1) << 24) - GasConstant.VERYLOW))
                 }
 
                 it("overflows for Int.max") {

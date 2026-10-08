@@ -67,7 +67,7 @@ final class MStoreSpec: QuickSpec {
                 expect(m.gas.memoryGas.gasCost).to(equal(15))
             }
 
-            it("error MemoryOperation copyLimitExceeded") {
+            it("fails with OutOfGas before allocating beyond the memory limit") {
                 let m = TestMachine.machine(opcodes: [Opcode.MSTORE], gasLimit: 100, memoryLimit: 100)
 
                 _ = m.stack.push(value: U256(from: 1))
@@ -75,7 +75,8 @@ final class MStoreSpec: QuickSpec {
                 m.evalLoop()
 
                 expect(m.machineStatus)
-                    .to(equal(Machine.MachineStatus.Exit(.Error(.MemoryOperation(.SetLimitExceeded)))))
+                    .to(equal(.Exit(.Error(.OutOfGas))))
+                expect(m.memory.effectiveLength).to(equal(0))
 
                 expect(m.stack.length).to(equal(0))
                 expect(m.gas.remaining).to(equal(82))

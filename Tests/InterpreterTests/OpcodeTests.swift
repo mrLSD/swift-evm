@@ -39,6 +39,7 @@ final class InterpreterOpcodeSpec: QuickSpec {
                         .SHL: 0x1b,
                         .SHR: 0x1c,
                         .SAR: 0x1d,
+                        .CLZ: 0x1e,
 
                         // Sha3
                         .SHA3: 0x20,
@@ -249,6 +250,7 @@ final class InterpreterOpcodeSpec: QuickSpec {
                         .SHL: "SHL",
                         .SHR: "SHR",
                         .SAR: "SAR",
+                        .CLZ: "CLZ",
 
                         // Sha3
                         .SHA3: "SHA3",
@@ -448,7 +450,7 @@ extension Opcode: CaseIterable {
             .STOP, .ADD, .MUL, .SUB, .DIV, .SDIV, .MOD, .SMOD, .ADDMOD, .MULMOD, .EXP, .SIGNEXTEND,
 
             // Comparison and Bitwise Logic
-            .LT, .GT, .SLT, .SGT, .EQ, .ISZERO, .AND, .OR, .XOR, .NOT, .BYTE, .SHL, .SHR, .SAR,
+            .LT, .GT, .SLT, .SGT, .EQ, .ISZERO, .AND, .OR, .XOR, .NOT, .BYTE, .SHL, .SHR, .SAR, .CLZ,
 
             // Sha3
             .SHA3,

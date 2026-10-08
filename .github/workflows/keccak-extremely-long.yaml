@@ -1,0 +1,42 @@
+name: Keccak 1 GiB
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Keccak 1 GiB (${{ matrix.backend }})
+    runs-on: macos-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - backend: CryptoSwift
+          swift_flags: "--disable-default-traits"
+        - backend: TinyKeccak
+          swift_flags: "--traits TinyKeccak"
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Show Swift version
+      run: |
+        xcodebuild -version
+        swift --version
+
+    - name: Run release Keccak tests including the one-GiB vector
+      shell: bash
+      env:
+        EVM_KECCAK_EXTREMELY_LONG_KAT: "1"
+      run: |
+        set -euo pipefail
+        # The shared test bundle uses @testable imports, including in release builds.
+        swift build --build-tests -c release -Xswiftc -enable-testing ${{ matrix.swift_flags }}
+        BIN_PATH=$(swift build --show-bin-path -c release ${{ matrix.swift_flags }})
+        xcrun xctest -XCTest EVMCryptoTests.Keccak256Spec "$BIN_PATH/SwiftEVMPackageTests.xctest" \
+          2>&1 | tee "$RUNNER_TEMP/keccak-tests.log"
+        # Quick discovers examples at runtime; require proof that the opt-in test actually ran.
+        grep -E "Test Case .*matches ExtremelyLongMsgKAT_256 for one GiB.* passed" "$RUNNER_TEMP/keccak-tests.log"

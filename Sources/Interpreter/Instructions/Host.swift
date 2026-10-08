@@ -74,8 +74,7 @@ enum HostInstructions {
             return
         }
 
-        let newValue = H256(from: m.handler.origin()).BYTES
-        m.stackPush(value: U256.fromBigEndian(from: newValue))
+        m.stackPush(value: U256(from: H256(from: m.handler.origin())))
     }
 
     /// EIP-1344: ChainID opcode
@@ -107,7 +106,6 @@ enum HostInstructions {
             return
         }
 
-        let newValue = H256(from: m.handler.coinbase()).BYTES
-        m.stackPush(value: U256.fromBigEndian(from: newValue))
+        m.stackPush(value: U256(from: H256(from: m.handler.coinbase())))
     }
 }

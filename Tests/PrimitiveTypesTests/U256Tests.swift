@@ -5,6 +5,23 @@ import Quick
 final class U256Spec: QuickSpec {
     override class func spec() {
         describe("U256 type") {
+            context("leading zero bits") {
+                it("counts every bit position independently of the lower bits") {
+                    expect(U256.ZERO.leadingZeroBitCount).to(equal(256))
+                    expect(U256.MAX.leadingZeroBitCount).to(equal(0))
+                    for bit in 0 ..< 256 {
+                        var limbs = [UInt64](repeating: 0, count: 4)
+                        limbs[bit / 64] = UInt64(1) << (bit % 64)
+                        let single = U256(from: limbs)
+                        expect(single.leadingZeroBitCount).to(equal(255 - bit), description: "single bit=\(bit)")
+                        for limb in 0 ..< bit / 64 { limbs[limb] = .max }
+                        limbs[bit / 64] |= limbs[bit / 64] - 1
+                        let dense = U256(from: limbs)
+                        expect(dense.leadingZeroBitCount).to(equal(255 - bit), description: "dense bit=\(bit)")
+                    }
+                }
+            }
+
             context("word conversions") {
                 it("reads every big-endian length at unaligned offsets and preserves surrounding bytes") {
                     let bytes = (0 ..< 32).map { UInt8($0 * 7 + 1) }

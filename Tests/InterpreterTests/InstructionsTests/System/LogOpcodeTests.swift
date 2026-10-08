@@ -315,7 +315,7 @@ final class InstructionLogSpec: QuickSpec {
             #endif
 
             #if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(visionOS) || os(Linux)
-            it("does not emit on allocation or reallocation failure") {
+            it("reports a fatal error without emitting on allocation or reallocation failure") {
                 for initialized in [false, true] {
                     let memory = FailingAllocationMemory()
                     let handler = CustomHandler()
@@ -330,7 +330,7 @@ final class InstructionLogSpec: QuickSpec {
 
                     m.evalLoop()
 
-                    expect(m.machineStatus).to(equal(.Exit(.Error(.OutOfGas))))
+                    expect(m.machineStatus).to(equal(.Exit(.Fatal(.ReadMemory))))
                     expect(handler.logCalls).to(equal(0))
                     expect(handler.logs).to(beEmpty())
                     expect(m.stack.data).to(equal(original))
@@ -485,7 +485,10 @@ final class InstructionLogSpec: QuickSpec {
                     expect(m.trace.data.first?.tracedGas?.used).to(equal(UInt64(386 + 375 * n)))
                     expect(m.trace.data.first?.tracedGas?.remaining).to(equal(UInt64(2614 - 375 * n)))
                     #if TRACE_STACK_INOUT
-                    expect(m.stack.traceStackOut).to(equal([U256.ZERO, U256(from: 1)] + Array(Self.topicWords.prefix(n))))
+                    expect(m.trace.data.first?.stackIn).to(equal([]))
+                    expect(m.trace.data.first?.stackOut).to(equal([U256.ZERO, U256(from: 1)] + Array(Self.topicWords.prefix(n))))
+                    expect(m.stack.traceStackOut).to(beEmpty())
+                    expect(m.stack.traceStackIn).to(beEmpty())
                     #endif
                 }
             }

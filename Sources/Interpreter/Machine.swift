@@ -116,6 +116,7 @@ public final class Machine {
     /// even to produce a standard EVM error. They are treated separately from `ExitError`.
     @frozen
     public enum ExitFatal: Equatable, Error {
+        /// Host memory allocation failed; callers must abort the enclosing execution.
         case ReadMemory
     }
 
@@ -184,12 +185,13 @@ public final class Machine {
 
     /// Closure type of Evaluation function.
     /// This function returns `MachineStatus` as result of evaluation
-    typealias EvalFunction = (_ m: Machine) -> Void
+    typealias EvalFunction = @Sendable (_ m: Machine) -> Void
 
     /// Instructions evaluation table. Used to evaluate specific opcodes.
     /// It represent evaluation functions for each existed opcodes. Table initialized with 256 `nil` instructions and filled for each specific `EVM` opcode.
     /// For non-existed opcode the evaluation functions is `nil`.
-    private let instructionsEvalTable: [EvalFunction?] = {
+    /// The table is immutable and shared by every machine, so creating a machine does not rebuild it.
+    private static let instructionsEvalTable: [EvalFunction?] = {
         var table = [EvalFunction?](repeating: nil, count: 256)
         // Arithmetic
         table[Opcode.ADD.index] = ArithmeticInstructions.add
@@ -219,6 +221,7 @@ public final class Machine {
         table[Opcode.SHL.index] = BitwiseInstructions.shl
         table[Opcode.SHR.index] = BitwiseInstructions.shr
         table[Opcode.SAR.index] = BitwiseInstructions.sar
+        table[Opcode.CLZ.index] = BitwiseInstructions.clz
 
         // System
         table[Opcode.CODESIZE.index] = SystemInstructions.codeSize
@@ -425,14 +428,19 @@ public final class Machine {
     }
 
     /// Provide one step for `Machine` execution.
-    /// Starts execution automatically when the machine is `.NotStarted`.
+    /// Starts execution automatically when the machine is `.NotStarted` and does nothing once it has exited.
     /// It will change Machine state.
     /// Especially:
     /// - `PC` - program counter for next execution. It can just incremented or set to jump index. PC range: `0..<self.code.count`. When `step` is completed PC incremented (or changed with jump destitations) for the next step opcode processing.
     /// - `machineStatus` - during evaluation can be changed, for example contain result of `ExitReason`
     func step() {
-        if self.machineStatus == .NotStarted {
+        switch self.machineStatus {
+        case .NotStarted:
             self.machineStatus = .Continue
+        case .Exit:
+            return
+        default:
+            break
         }
 
         // Ensure that `PC` in code range, otherwise indicate `sTOP` execution.
@@ -453,12 +461,14 @@ public final class Machine {
         }
 
         // Evaluate opcode instruction
-        guard let op = rawOp, let evalFunc = self.instructionsEvalTable[op.index] else {
+        guard let op = rawOp, let evalFunc = Self.instructionsEvalTable[op.index] else {
             self.machineStatus = MachineStatus.Exit(ExitReason.Error(ExitError.InvalidOpcode(opcodeNum)))
             return
         }
 
         #if TRACING
+        // Stack preparation by the caller is not part of this instruction's journal.
+        self.stack.clearTraceStack()
         self.trace.beforeEval(self, op)
         #endif
 
@@ -481,16 +491,16 @@ public final class Machine {
 
         #if TRACING
         self.trace.afterEval(self).complete()
+        self.stack.clearTraceStack()
         #endif
     }
 
-    /// Evaluation loop for `Machine` code.
-    /// Return status of evaluation.
+    /// Runs a new or partially executed machine until exit, preserving an existing exit reason.
     func evalLoop() {
-        // Set `MachineStatus` to `Continue` to start evaluation.
-        self.machineStatus = MachineStatus.Continue
-        // Evaluation loop
-        while self.machineStatus == MachineStatus.Continue {
+        if self.machineStatus == .NotStarted {
+            self.machineStatus = .Continue
+        }
+        while self.machineStatus == .Continue {
             self.step()
         }
     }
@@ -607,6 +617,7 @@ public final class Machine {
     /// This function calculates the gas cost associated with resizing the memory using the provided
     /// offset and size. If the gas cost calculation is successful, it records the cost; otherwise,
     /// it updates the machine status with the corresponding error and returns false.
+    /// Gas and size limits produce `OutOfGas`; a host allocation failure produces `.Fatal(.ReadMemory)`.
     ///
     /// - Parameters:
     ///   - offset: The starting offset from which the memory should be resized.
@@ -626,9 +637,13 @@ public final class Machine {
                 guard self.gasRecordCost(cost: resizeMemoryCost) else {
                     return false
                 }
-                // Allocation can fail even after the size and gas checks succeed.
-                guard self.memory.resize(offset: offset, size: size) else {
+                // MemoryGas.resize validated the sum. A whole-word limit also bounds rounding in Memory.resize.
+                guard offset + size <= self.memory.capacityLimit else {
                     self.machineStatus = .Exit(.Error(.OutOfGas))
+                    return false
+                }
+                guard self.memory.resize(offset: offset, size: size) else {
+                    self.machineStatus = .Exit(.Fatal(.ReadMemory))
                     return false
                 }
             }

@@ -229,13 +229,9 @@ enum BitwiseInstructions {
 
         var newValue = U256.ZERO
         if op1 < U256(from: 32) {
-            // Force get Int, because we know it is less than 32
-            let o = op1.getInt!
-            for i in 0 ..< 8 {
-                let t = 255 - (7 - i + 8 * o)
-                let value = (op2 >> t) & U256(from: 1)
-                newValue += (value << i)
-            }
+            // `op1 < 32` was checked above, so the conversion cannot fail.
+            let shift = (31 - op1.getInt!) * 8
+            newValue = (op2 >> shift) & U256(from: 0xFF)
         }
         m.stackPush(value: newValue)
     }
@@ -328,5 +324,28 @@ enum BitwiseInstructions {
             (value >> op1.getInt!).toU256
         }
         m.stackPush(value: newValue)
+    }
+
+    /// Pushes the number of leading zero bits of the top item (EIP-7939); pushes `256` for zero.
+    ///
+    /// Requires Osaka or later and 1 stack item; fails with `StackUnderflow` or `OutOfGas` (`GasConstant.LOW`).
+    static func clz(machine m: Machine) {
+        guard m.hardFork.isOsaka() else {
+            m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.HardForkNotActive))
+            return
+        }
+
+        if !m.verifyStack(pop: 1) {
+            return
+        }
+
+        if !m.gasRecordCost(cost: GasConstant.LOW) {
+            return
+        }
+
+        // Stack size was verified above; this unwrap cannot fail.
+        let op1 = m.stackPop()!
+
+        m.stackPush(value: U256(from: UInt64(op1.leadingZeroBitCount)))
     }
 }

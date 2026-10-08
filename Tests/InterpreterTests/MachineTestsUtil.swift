@@ -134,3 +134,20 @@ func captureStandardError(action: () -> Void) -> String {
 
     return String(data: data, encoding: .utf8) ?? ""
 }
+
+#if TRACING
+func captureStandardOutput(action: () -> Void) -> String {
+    let pipe = Pipe()
+    fflush(stdout)
+    let original = dup(fileno(stdout))
+    dup2(pipe.fileHandleForWriting.fileDescriptor, fileno(stdout))
+    action()
+    fflush(stdout)
+    dup2(original, fileno(stdout))
+    close(original)
+    pipe.fileHandleForWriting.closeFile()
+    let data = pipe.fileHandleForReading.readDataToEndOfFile()
+    pipe.fileHandleForReading.closeFile()
+    return String(data: data, encoding: .utf8) ?? ""
+}
+#endif

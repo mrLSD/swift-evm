@@ -46,14 +46,19 @@ A specialized math library tailored for the EVM's 256-bit word size.
 *   **Why not BigInt?** Generic BigInt libraries introduce overhead for dynamic allocation and do not natively handle EVM-specific behaviors (e.g., specific overflow wrapping, two's complement representation for `SDIV`/`SMOD`).
 *   **UInt128 Support:** Leverages Swift 6 native `UInt128` for optimized high-precision calculations.
 
-### 2. `EVM` (Core Execution)
+### 2. `EVMCrypto` (Hashing)
+Keccak-256 for the `KECCAK256` opcode, exposed as `Keccak256.hash` over a raw byte buffer.
+*   **Two implementations:** CryptoSwift by default, or a native Keccak-f[1600] sponge selected by the `TinyKeccak` trait.
+*   **Verified against the Keccak team's KAT corpus:** every byte-aligned `ShortMsgKAT`/`LongMsgKAT` vector, all `MonteCarlo` checkpoints and, through a manual workflow, the one-GiB `ExtremelyLongMsgKAT` vector.
+
+### 3. `EVM` (Core Execution)
 The heart of the virtual machine.
 *   **Interpreter:** Optimized opcode dispatch loop.
 *   **Stack:** Fixed-size, high-performance LIFO structure with boundary safety checks.
 *   **Memory:** Dynamic linear memory with gas-metered expansion logic.
 *   **Gasometer:** Exact gas accounting for opcodes, intrinsic costs, and memory expansion.
 
-### 3. `Tracing`
+### 4. `Tracing`
 Granular execution tracing for debugging and state analysis. Supports standard JSON-RPC trace formats and custom hooks for indexers.
 
 ---
@@ -88,7 +93,7 @@ Targeting compliance with the following upgrades:
 ## Integration
 
 ### Requirements
-*   **Swift 6.0+** (Required for `UInt128` and concurrency features).
+*   **Swift 6.1+** (Required for package traits).
 *   **OS:** macOS 14+, iOS 17+, Ubuntu 22.04+, or any environment supporting Swift 6.
 
 ### Swift Package Manager
@@ -100,6 +105,44 @@ dependencies: [
 ]
 ```
 
+### Package traits
+
+The default configuration uses CryptoSwift and compiles without instruction tracing.
+Traits require Swift tools 6.1 or newer. To enable them from a consuming package,
+use a SwiftEVM revision that contains these declarations; for a local checkout:
+
+```swift
+.package(
+    path: "../evm-swift",
+    traits: [.defaults, "TinyKeccak", "TraceStackInOut"]
+)
+```
+
+| Trait | Effect |
+| :--- | :--- |
+| `TinyKeccak` | Selects the native Keccak-256 implementation instead of CryptoSwift. |
+| `Tracing` | Compiles instruction tracing support. |
+| `TraceStackInOut` | Collects per-instruction stack inputs and outputs. |
+| `TraceHideMemory`, `TraceHideStack` | Hide memory or the stack in the default trace configuration. |
+| `TraceCallTrace`, `TraceGasCalculation`, `TraceHideUnchanged`, `TraceHideStorage`, `TraceStorageHexValue`, `TraceOpcodeHexValue` | Set the corresponding existing `Trace.Config` defaults; they do not implement additional tracing features. |
+
+Every `Trace...` trait also enables `Tracing`. Traits are combined across the
+package dependency graph: one consumer enabling a trait enables it for that
+shared package. An empty trait list cannot veto another consumer's selection.
+CryptoSwift remains a dependency of `EVMCrypto` in both Keccak configurations.
+
+```sh
+swift test --enable-code-coverage
+swift test --enable-code-coverage --traits TinyKeccak
+swift test --enable-code-coverage --traits Tracing
+swift test --enable-code-coverage --traits TinyKeccak,TraceStackInOut
+```
+
+Traits map to the existing compiler defines. `DISABLE_TRACING` remains the
+explicit default marker; `TRACING` is the opt-in that the source checks.
+Legacy global `-Xswiftc -D...` options still work, but package traits configure
+SwiftEVM specifically and can be declared by a dependent package.
+
 ## Contributing
 
 We welcome contributions from EVM experts and systems engineers. To maintain the integrity of the consensus engine, we enforce strict quality gates:
@@ -109,6 +152,21 @@ We welcome contributions from EVM experts and systems engineers. To maintain the
 3.  **Performance:** PRs affecting the hot loop must demonstrate no regression in benchmarks.
 
 ### Development Environment
+
+The **Keccak 1 GiB** GitHub Actions workflow runs only through **Run workflow**.
+It executes the committed `ExtremelyLongMsgKAT_256` recipe from the Keccak team's
+archive, 16 777 216 repetitions of a 64-byte text, against both backends in
+release mode. The one-GiB input is generated in memory; allow several GiB of
+available RAM for CryptoSwift's input copy. Ordinary test runs do not include it.
+To opt in locally on macOS, set `EVM_KECCAK_EXTREMELY_LONG_KAT=1` and use the
+workflow's release build and `xcrun xctest` commands. Selecting the entire
+`Keccak256Spec` lets Quick discover its dynamic examples and keeps unrelated
+assertion-trap tests out of this release run.
+
+The full suite requires the debug assertion configuration: its trap tests
+capture `precondition` messages, which `-O` builds do not print, and Nimble's
+`throwAssertion()` can crash under `-O`. Run it with `swift test` (debug);
+release runs are limited to `Keccak256Spec` in the Keccak 1 GiB workflow.
 
 ```bash
 # Run test suite

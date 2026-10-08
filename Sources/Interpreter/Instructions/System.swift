@@ -1,4 +1,4 @@
-import CryptoSwift
+import EVMCrypto
 import PrimitiveTypes
 
 /// EVM System instructions
@@ -62,10 +62,8 @@ enum SystemInstructions {
         // Stack depth was verified above.
         m.stack.consume(count: 3)
 
-        // Perform the code copy. If the copy fails, update the machine status with the error.
-        if case .failure(let err) = m.memory.copyData(memoryOffset: memoryOffset, dataOffset: codeOffset, size: size, data: m.code) {
-            m.machineStatus = Machine.MachineStatus.Exit(err)
-        }
+        // The range was expanded above, so the copy cannot fail; bytes past the code are zero-filled.
+        m.memory.writeData(offset: memoryOffset, size: size, from: m.code, dataOffset: codeOffset)
     }
 
     /// Pushes the size of the call data onto the stack.
@@ -124,10 +122,8 @@ enum SystemInstructions {
         // Stack depth was verified above.
         m.stack.consume(count: 3)
 
-        // Perform the call-data copy. If the copy fails, update the machine status with the error.
-        if case .failure(let err) = m.memory.copyData(memoryOffset: memoryOffset, dataOffset: dataOffset, size: size, data: m.data) {
-            m.machineStatus = Machine.MachineStatus.Exit(err)
-        }
+        // The range was expanded above, so the copy cannot fail; bytes past the call data are zero-filled.
+        m.memory.writeData(offset: memoryOffset, size: size, from: m.data, dataOffset: dataOffset)
     }
 
     /// Loads 32 bytes from call data at the specified index and pushes it onto the stack.
@@ -302,10 +298,8 @@ enum SystemInstructions {
         // Stack depth was verified above.
         m.stack.consume(count: 2)
 
-        let data = m.memory.get(offset: memoryOffset, size: size)
-
-        let keccakHashBytes = data.sha3(.keccak256)
-        let newValue = U256.fromBigEndian(from: keccakHashBytes)
-        m.stackPush(value: newValue)
+        // Memory expansion above guarantees the range is allocated before hashing.
+        let hash = m.memory.withUnsafeBytes(offset: memoryOffset, size: size) { Keccak256.hash($0) }
+        m.stackPush(value: U256(from: hash))
     }
 }

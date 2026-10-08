@@ -35,6 +35,8 @@ public enum Opcode: UInt8, CustomStringConvertible {
     case SHL = 0x1b
     case SHR = 0x1c
     case SAR = 0x1d
+    // EIP-7939: count leading zeros (Osaka)
+    case CLZ = 0x1e
 
     //
     // Sha3
@@ -267,6 +269,7 @@ public enum Opcode: UInt8, CustomStringConvertible {
         case .SHL: "SHL"
         case .SHR: "SHR"
         case .SAR: "SAR"
+        case .CLZ: "CLZ"
         case .SHA3: "SHA3"
         case .ADDRESS: "ADDRESS"
         case .BALANCE: "BALANCE"
