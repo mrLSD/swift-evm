@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.2] - 2026-10-08
+
+This release implements `LOG0`–`LOG4`, enforces hard-fork activation for `SHL`, `SHR`, `SAR` and `PUSH0`, reports oversized memory operands and jump destinations with the same errors as EELS, and fixes `MemoryState` reads and storage resets across nested substates. Custom `InterpreterHandler` conformers and code that matches `Machine.ExitError` cases need source changes; see **Breaking Changes**.
+
+### Breaking Changes
+- **New `InterpreterHandler` requirements:** conformers must implement `isStatic()`, which reports whether the current call forbids state changes, and `log(address:topics:data:)`, which appends a log to the current substate and must leave the logs unchanged when it returns a failure ([#78]).
+- **`Machine.ExitError` cases:** `WriteInStaticContext` was added for state changes attempted in a static call ([#78]), and `IntOverflow` was removed ([#79]). Exhaustive `switch` statements over this `@frozen` enum must handle the new case; code that matched `IntOverflow` should match `OutOfGas` for memory operands or `InvalidJump` for jump destinations instead (see **Changed**).
+
+### Added
+- **`LOG0`–`LOG4` opcodes (0xA0–0xA4):** pass the executing contract's address, 0–4 topics as big-endian `H256` values in EVM order, and a copy of the memory range to `InterpreterHandler.log(address:topics:data:)`. Gas is `375 + 8 * size + 375 * topics` plus memory expansion, as specified by the Yellow Paper and EELS; a cost that does not fit in `UInt64` fails with `OutOfGas`. An empty range ignores the offset and does not expand memory. A static call fails with `WriteInStaticContext`, and a handler failure ends execution with the returned error ([#78]).
+
+### Changed
+- **Oversized memory operands fail with `OutOfGas`:** offsets and sizes that do not fit in `Int` for `MLOAD`, `MSTORE`, `MSTORE8`, `KECCAK256`, `CODECOPY`, `CALLDATACOPY`, `RETURN` and `REVERT` end execution with `OutOfGas`, because the memory expansion they require cannot be paid for; this matches EELS and revm. They previously ended with `IntOverflow` ([#79]).
+- **Oversized jump destinations fail with `InvalidJump`:** `JUMP`, and `JUMPI` with a nonzero condition, treat a destination that does not fit in `Int` like any other invalid destination. They previously ended with `IntOverflow`. A `JUMPI` with a zero condition still ignores its destination ([#79]).
+
+### Fixed
+- **Hard-fork activation:** `SHL`, `SHR` and `SAR` (EIP-145) require Constantinople and `PUSH0` (EIP-3855) requires Shanghai. On earlier forks they fail with `HardForkNotActive` before the stack or gas is checked, as `REVERT` already does before Byzantium; previously they executed in every fork ([#79]).
+- **Empty `RETURN` and `REVERT` output:** a zero length ignores the offset, as in EELS, and produces an empty return range without touching memory. Previously the offset was converted first, so an offset that did not fit in `Int` failed with `IntOverflow` ([#79]).
+- **`MemoryState` reads:** `basic(address:)`, `code(address:)` and `storage(address:index:)` return the value known to the substate chain or the backend's value without recording it in the current substate. Previously a read cached the backend value like a write, which made it part of the substate and merged it into the parent on commit ([#79]).
+- **Storage reset across commits:** committing a child substate keeps a storage reset made by an enclosing state. Previously a child that touched the account committed a copy with the reset flag cleared, replacing the parent's account, so later reads of untouched slots could return pre-reset backend values ([#79]).
+- **Original storage after a reset:** `originalStorage(address:index:)` returns zero when the account's storage was reset in the current or any enclosing substate, instead of always returning the backend value ([#79]).
+- **Stepping a new machine:** `step()` on a machine that has not started now starts it. Previously the status stayed `.NotStarted`, the program counter did not advance, and the next step executed the same instruction again ([#79]).
+
+### Tests
+- **`LOG0`–`LOG4`:** for every topic count, emitted address, data and topic order; empty data without inspecting the offset or expanding memory; exact memory expansion including the quadratic term; unaligned zero-padded slices; insufficient base, data and memory gas; missing arguments checked before consuming stack or gas; static calls; handler failures; a full stack; and availability in every hard fork. Further cases cover unrepresentable operands, gas overflow before allocation, allocation failures, event order and data snapshots, no double charge after `MSTORE`, refunds that cannot pay for logs, substate log retention through commit, revert and discard, and tracing. `GasCost.logCost` is checked at the last representable cost and on overflow ([#78]).
+- **Fork activation:** `SHL`, `SHR`, `SAR` and `PUSH0` in every supported fork, with activation checked before stack and gas requirements, and `REVERT` activation at Byzantium before its stack check ([#79]).
+- **Error classification:** oversized memory operands report `OutOfGas` across opcodes, copies from oversized source offsets are zero-filled, zero-length `CODECOPY` and `CALLDATACOPY` accept any offset, and oversized jump destinations fail only when the jump is taken ([#79]).
+- **`RETURN` and `REVERT`:** empty output for every offset, including a `PUSH32` offset with the highest bit set, and exact nonempty slices across a word boundary ([#79]).
+- **Stepping:** stepping a new machine executes each instruction once and matches `evalLoop`, preserves immediate exits and specific errors, starts before invoking the handler, and keeps instruction-controlled program-counter changes ([#79]).
+- **`MemoryState`:** reads of existing and absent accounts stay out of the journal across committed substates, and zero or empty overrides are preserved. Reset cases cover a parent reset surviving a touched child's commit on every fork, post-reset writes through nested commits, parent writes cleared only by the child's own reset, restoration after a reverted or discarded inner reset, and zero original storage after local and ancestor resets ([#79]).
+
 ## [0.6.1] - 2026-10-03
 
 ### Added
@@ -554,7 +585,8 @@ This is the **initial public release** of `swift-evm` — a Swift-native Ethereu
 
 
 <!-- Versions -->
-[Unreleased]: https://github.com/mrLSD/swift-evm/compare/v0.6.1...HEAD
+[Unreleased]: https://github.com/mrLSD/swift-evm/compare/v0.6.2...HEAD
+[0.6.2]: https://github.com/mrLSD/swift-evm/compare/v0.6.1...v0.6.2
 [0.6.1]: https://github.com/mrLSD/swift-evm/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/mrLSD/swift-evm/compare/v0.5.26...v0.6.0
 [0.5.26]: https://github.com/mrLSD/swift-evm/compare/v0.5.25...v0.5.26
@@ -590,6 +622,8 @@ This is the **initial public release** of `swift-evm` — a Swift-native Ethereu
 [0.1.0]: https://github.com/mrLSD/swift-evm/releases/tag/v0.1.0
 
 <!-- PRs -->
+[#79]: https://github.com/mrLSD/swift-evm/pull/79
+[#78]: https://github.com/mrLSD/swift-evm/pull/78
 [#76]: https://github.com/mrLSD/swift-evm/pull/76
 [#74]: https://github.com/mrLSD/swift-evm/pull/74
 [#73]: https://github.com/mrLSD/swift-evm/pull/73
