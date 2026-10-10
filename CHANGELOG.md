@@ -7,6 +7,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.3] - 2026-10-10
+
+This release adds the Osaka `CLZ` opcode, moves Keccak-256 into a new `EVMCrypto` module with a trait-selected native implementation, introduces SwiftPM package traits, and hardens interpreter memory, gas, machine-state and tracing behavior. It requires Swift tools 6.1 and contains source-breaking changes; see **Breaking Changes**.
+
+### Breaking Changes
+- **Swift tools 6.1:** the manifest declares `swift-tools-version: 6.1` for package traits, so Swift 6.0 toolchains can no longer resolve the package ([#80]).
+- **`Opcode.CLZ`:** the new case breaks exhaustive `switch` statements over `Opcode` that have no `default` ([#80]).
+- **`Memory.ceil32(_:)` and `Memory.numWords(_:)`:** `ceil32(_:)` returns `Int?` and yields `nil` when rounding up overflows `Int`, instead of saturating to a capacity smaller than the requested end. Both functions trap on negative input, and `numWords(_:)` is exact up to `Int.max` instead of undercounting by one word near it ([#80]).
+
+### Added
+- **`CLZ` opcode (0x1E, EIP-7939):** active from Osaka; pushes the number of leading zero bits of the top stack item, 256 for zero, for `LOW` (5) gas. Earlier forks fail with `HardForkNotActive` before the stack or gas is checked ([#80]).
+- **`EVMCrypto` module and product:** `Keccak256.hash(_:)` computes the EVM Keccak-256 digest (`0x01` padding, not SHA3-256) of an `UnsafeRawBufferPointer`. The buffer needs no alignment, may be empty with a `nil` base address, and is neither modified nor retained. CryptoSwift is the default backend; the `TinyKeccak` trait selects a native Keccak-f[1600] sponge that keeps its state in temporary storage without per-hash heap allocations. `Interpreter` uses `EVMCrypto` and no longer depends on CryptoSwift directly ([#80]).
+- **Package traits:** `TinyKeccak`, `Tracing`, `TraceCallTrace`, `TraceGasCalculation`, `TraceStackInOut`, `TraceHideUnchanged`, `TraceHideMemory`, `TraceHideStack`, `TraceHideStorage`, `TraceStorageHexValue` and `TraceOpcodeHexValue` map to the existing compiler defines, and every `Trace...` trait also enables `Tracing`. The default trait set is empty, so the default build is unchanged, and legacy `-Xswiftc -D...` options still work ([#80]).
+- **`U256.leadingZeroBitCount`:** counts leading zero bits on the stored limbs and returns 256 for zero ([#80]).
+
+### Changed
+- **Memory limit bounds allocation:** `Memory` checks the whole-word capacity against its limit before calling the allocator, for reads as well as writes, so memory never grows past the limit; a limit that is not a multiple of 32 is rounded down. An opcode whose expansion exceeds the limit ends with `OutOfGas` after charging the expansion and without allocating. Previously opcode expansion allocated without checking the limit, and only a following write reported a `MemoryOperation` limit error. With the default limit of `Int.max`, gas runs out long before the limit ([#80]).
+- **Allocation failure is fatal:** when the host allocator fails after the gas and limit checks, a memory-expanding opcode ends with `.Fatal(.ReadMemory)` instead of `OutOfGas`, so a host failure is no longer reported as an ordinary EVM error. An embedding executor must abort the enclosing execution on a fatal exit ([#80]).
+- **In-place memory access:** opcodes expand and charge a range first and then read or write it through precondition-checked accessors. `MSTORE` and `MSTORE8` write into the expanded range, `CODECOPY` and `CALLDATACOPY` copy with zero-fill, and `KECCAK256` passes the range to `Keccak256.hash` without copying it through `Memory.get`; only the CryptoSwift backend still copies it internally. The checked `set`, `copy` and `copyData` methods keep their own limit validation. Results of successful operations are unchanged ([#80]).
+- **Allocation-free opcodes:** `SIGNEXTEND`, `BYTE`, `MSTORE8`, `ORIGIN`, `COINBASE` and the `EXP` gas calculation work on stored fields instead of building `BYTES` arrays. Results are unchanged ([#80]).
+- **Shared instruction table:** opcode dispatch uses a static, immutable table of `@Sendable` functions shared by all machines, so creating a `Machine` no longer rebuilds 256 entries ([#80]).
+- **Exact memory gas:** `GasCost.memoryGas(numWords:)` evaluates `3 * N + floor(N * N / 512)` with a full-width square and reports overflow only when the total does not fit in `UInt64`. It previously reported overflow from 2^32 words, as soon as `N * N` exceeded 64 bits, although the cost still fit. Both thresholds are far beyond any payable gas, so opcode results are unchanged ([#80]).
+- **Documented contracts:** `Keccak256.hash(_:)` documents its buffer contract, `Memory` documents its two access tiers, `ExitFatal.ReadMemory` documents allocation failure, and the arithmetic handler comments state that a stack underflow or gas failure sets an error exit ([#80]).
+
+### Fixed
+- **Terminal machine state:** `step()` does nothing once the machine has exited, and `evalLoop()` preserves an existing exit reason. Previously `step()` executed the instruction at the program counter again, and `evalLoop()` reset the status to `.Continue`, so a second call re-ran the instruction that had exited and could replace the exit reason ([#80]).
+- **Trace data:** each entry stores a snapshot of memory instead of a reference to the machine's live memory, which made every entry show the final memory. `afterEval` keeps the program counter of the executed opcode instead of the advanced one, and a new step discards the previous `afterEval`. With `TRACE_STACK_INOUT`, entries record stack inputs and outputs when `Trace.Config.stackInOut` is set, and the stack journal is cleared around each instruction so values pushed by the caller are not attributed to it ([#80]).
+
+### Tests
+- **Keccak-256 KAT corpus:** `EVMCryptoTests` checks every byte-aligned entry of the Keccak team's `ShortMsgKAT_256` (lengths 0–255) and `LongMsgKAT_256` (256–4288 bytes) at eight buffer alignments, all 100 `MonteCarlo_256` checkpoints, an empty buffer with a `nil` base address, and vectors published by tiny-keccak, alloy-primitives (including EIP-191) and CryptoSwift (including one million bytes). Under `TinyKeccak`, seeded messages are also compared with CryptoSwift. Fixtures keep the original format and record the source archive and its SHA-256; the one-GiB `ExtremelyLongMsgKAT_256` recipe runs only when `EVM_KECCAK_EXTREMELY_LONG_KAT=1` is set ([#80]).
+- **`CLZ`:** activation in every fork before stack and gas checks, every leading-bit position and zero, exact gas, and a full stack ([#80]).
+- **Memory:** rounded-capacity limits for every memory-expanding opcode, the last allocated byte against the next word, empty ranges with a zero limit, rejection before the allocator for limits and rounding overflow, in-place reads and writes at unaligned offsets, zero-filled copies, accessor precondition messages, and exact `ceil32`/`numWords` near `Int.max` ([#80]).
+- **Allocation failures:** `MLOAD`, `MSTORE` and `LOG` end with `.Fatal(.ReadMemory)` on a failed `malloc` or `realloc` without changing memory or emitting logs, the fatal exit survives later `step()` and `evalLoop()` calls, and limit and gas failures never reach the allocator ([#80]).
+- **Gas:** `memoryGas` against independently computed values around 2^32 words and at the true overflow boundary, and an `MLOAD` that needs 2^32 words failing before allocation ([#80]).
+- **Machine state and tracing:** every exit reason and all observable state survive repeated `step()` and `evalLoop()` calls; tracing records historical memory, the executed program counter, gas and per-instruction stack changes, honors hiding and stack-journal settings, maps traits to the default configuration, and renders output ([#80]).
+- **Opcodes and primitives:** `MSTORE8` stores only the low byte, `KECCAK256` hashes memory ranges with exact gas, and `U256.leadingZeroBitCount` is checked at all 256 bit positions with sparse and dense lower bits ([#80]).
+
+### CI/Build
+- **Trait matrix:** CI builds, lints and tests six configurations, CryptoSwift and `TinyKeccak` each without tracing, with `Tracing` and with every `Trace...` trait, and uploads coverage for each configuration under its own name ([#80]).
+- **Manual Keccak workflow:** the **Keccak 1 GiB** workflow runs only through `workflow_dispatch`. It builds the tests in release, runs `Keccak256Spec` with the one-GiB vector for both backends, and fails unless that example actually ran ([#80]).
+- **Documentation:** the README describes `EVMCrypto`, the package traits, the Swift 6.1 requirement, the manual workflow, and that the full test suite requires a debug build ([#80]).
+
 ## [0.6.2] - 2026-10-08
 
 This release implements `LOG0`–`LOG4`, enforces hard-fork activation for `SHL`, `SHR`, `SAR` and `PUSH0`, reports oversized memory operands and jump destinations with the same errors as EELS, and fixes `MemoryState` reads and storage resets across nested substates. Custom `InterpreterHandler` conformers and code that matches `Machine.ExitError` cases need source changes; see **Breaking Changes**.
@@ -585,7 +627,8 @@ This is the **initial public release** of `swift-evm` — a Swift-native Ethereu
 
 
 <!-- Versions -->
-[Unreleased]: https://github.com/mrLSD/swift-evm/compare/v0.6.2...HEAD
+[Unreleased]: https://github.com/mrLSD/swift-evm/compare/v0.6.3...HEAD
+[0.6.3]: https://github.com/mrLSD/swift-evm/compare/v0.6.2...v0.6.3
 [0.6.2]: https://github.com/mrLSD/swift-evm/compare/v0.6.1...v0.6.2
 [0.6.1]: https://github.com/mrLSD/swift-evm/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/mrLSD/swift-evm/compare/v0.5.26...v0.6.0
@@ -622,6 +665,7 @@ This is the **initial public release** of `swift-evm` — a Swift-native Ethereu
 [0.1.0]: https://github.com/mrLSD/swift-evm/releases/tag/v0.1.0
 
 <!-- PRs -->
+[#80]: https://github.com/mrLSD/swift-evm/pull/80
 [#79]: https://github.com/mrLSD/swift-evm/pull/79
 [#78]: https://github.com/mrLSD/swift-evm/pull/78
 [#76]: https://github.com/mrLSD/swift-evm/pull/76
