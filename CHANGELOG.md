@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.6.3] - 2026-10-09
+## [0.6.3] - 2026-10-10
 
 This release adds the Osaka `CLZ` opcode, moves Keccak-256 into a new `EVMCrypto` module with a trait-selected native implementation, introduces SwiftPM package traits, and hardens interpreter memory, gas, machine-state and tracing behavior. It requires Swift tools 6.1 and contains source-breaking changes; see **Breaking Changes**.
 
