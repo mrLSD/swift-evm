@@ -226,6 +226,7 @@ public final class Machine {
         // System
         table[Opcode.CODESIZE.index] = SystemInstructions.codeSize
         table[Opcode.CODECOPY.index] = SystemInstructions.codeCopy
+        table[Opcode.EXTCODECOPY.index] = SystemInstructions.extCodeCopy
         table[Opcode.CALLDATASIZE.index] = SystemInstructions.callDataSize
         table[Opcode.CALLDATACOPY.index] = SystemInstructions.callDataCopy
         table[Opcode.CALLDATALOAD.index] = SystemInstructions.callDataLoad

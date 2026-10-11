@@ -66,6 +66,51 @@ enum SystemInstructions {
         m.memory.writeData(offset: memoryOffset, size: size, from: m.code, dataOffset: codeOffset)
     }
 
+    /// Copies an account's own code into memory, zero-filling bytes beyond its end.
+    static func extCodeCopy(machine m: Machine) {
+        if !m.verifyStack(pop: 4) {
+            return
+        }
+
+        // Stack size was verified above; these unwraps cannot fail.
+        let address = H256(from: m.stackPeek(indexFromTop: 0)!).toH160()
+        let rawMemoryOffset = m.stackPeek(indexFromTop: 1)!
+        let rawCodeOffset = m.stackPeek(indexFromTop: 2)!
+        let rawSize = m.stackPeek(indexFromTop: 3)!
+
+        guard let size = m.getMemoryIntOrFail(rawSize) else {
+            return
+        }
+
+        var isCold = false
+        if m.hardFork.isBerlin() {
+            isCold = m.state.isCold(address: address)
+            m.state.warm(address: address, isCold: isCold)
+        }
+        let cost = GasCost.extCodeCopyCost(hardFork: m.hardFork, isCold: isCold, size: size)
+        if !m.gasRecordCost(cost: cost) {
+            return
+        }
+
+        if size == 0 {
+            m.stack.consume(count: 4)
+            return
+        }
+
+        guard let memoryOffset = m.getMemoryIntOrFail(rawMemoryOffset) else {
+            return
+        }
+        let codeOffset = rawCodeOffset.saturatingInt
+
+        guard m.resizeMemoryAndRecordGas(offset: memoryOffset, size: size) else {
+            return
+        }
+
+        // Stack depth and the destination range were validated above.
+        m.stack.consume(count: 4)
+        m.memory.writeData(offset: memoryOffset, size: size, from: m.handler.code(address: address), dataOffset: codeOffset)
+    }
+
     /// Pushes the size of the call data onto the stack.
     static func callDataSize(machine m: Machine) {
         if !m.verifyStack(pop: 0, push: 1) {
