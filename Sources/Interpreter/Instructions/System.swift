@@ -82,32 +82,31 @@ enum SystemInstructions {
             return
         }
 
+        var memoryOffset = 0
+        if size > 0 {
+            guard let offset = m.getMemoryIntOrFail(rawMemoryOffset) else {
+                return
+            }
+            memoryOffset = offset
+        }
+
         var isCold = false
         if m.hardFork.isBerlin() {
             isCold = m.state.isCold(address: address)
             m.state.warm(address: address, isCold: isCold)
         }
         let cost = GasCost.extCodeCopyCost(hardFork: m.hardFork, isCold: isCold, size: size)
-        if !m.gasRecordCost(cost: cost) {
-            return
-        }
-
-        if size == 0 {
-            m.stack.consume(count: 4)
-            return
-        }
-
-        guard let memoryOffset = m.getMemoryIntOrFail(rawMemoryOffset) else {
-            return
-        }
-        let codeOffset = rawCodeOffset.saturatingInt
-
-        guard m.resizeMemoryAndRecordGas(offset: memoryOffset, size: size) else {
+        guard m.recordGasAndResizeMemory(cost: cost, offset: memoryOffset, size: size) else {
             return
         }
 
         // Stack depth and the destination range were validated above.
         m.stack.consume(count: 4)
+        if size == 0 {
+            return
+        }
+
+        let codeOffset = rawCodeOffset.saturatingInt
         m.memory.writeData(offset: memoryOffset, size: size, from: m.handler.code(address: address), dataOffset: codeOffset)
     }
 
