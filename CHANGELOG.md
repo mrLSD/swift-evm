@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.4] - 2026-10-12
+
+This release adds the `EXTCODECOPY` opcode and aligns every memory-accessing opcode on one evaluation order: read the operands, validate them, charge the opcode cost, charge memory expansion, and only then consume the stack. Custom `InterpreterHandler` conformers need a source change; see **Breaking Changes**.
+
+### Breaking Changes
+- **New `InterpreterHandler` requirement:** conformers must implement `code(address:)`, which returns the account's own code, including an EIP-7702 delegation indicator, or an empty array for an absent account ([#83]).
+
+### Added
+- **`EXTCODECOPY` opcode (0x3C):** copies an account's code into memory, zero-filling bytes past the end of the code; the address is the low 160 bits of the operand. The account access costs 20 gas before Tangerine Whistle, 700 from Tangerine Whistle through Istanbul, and 2600 cold or 100 warm from Berlin (EIP-2929), plus 3 gas per copied 32-byte word and memory expansion, as specified by the Yellow Paper and EELS. The opcode warms the address but never a delegate, and copies an EIP-7702 delegation indicator itself. A zero size ignores both offsets and does not expand memory but still charges the access cost and warms the address. The opcode is available in static calls and in every hard fork ([#83]).
+
+### Changed
+- **Memory opcodes consume operands only after charging:** `MLOAD`, `MSTORE`, `MSTORE8`, `KECCAK256`, `CODECOPY`, `CALLDATACOPY`, `EXTCODECOPY`, `LOG0`–`LOG4`, `RETURN` and `REVERT` read their operands without popping, convert the size and, for a nonempty range, the memory offset to `Int` before charging the opcode cost, then charge memory expansion, and consume the operands once both charges succeed. Results of successful execution and the error on failure are unchanged. After an `OutOfGas` exit the machine now keeps the operands on the stack, where `MLOAD`, `MSTORE`, `MSTORE8`, `RETURN` and `REVERT` previously had popped them, and an offset or size that does not fit in `Int` fails before any gas is charged, where the opcode cost was previously charged first. This is the order in which aurora-evm's gasometer and EELS evaluate operands ([#83]).
+
+### Tests
+- **`EXTCODECOPY`:** exact access, copy and memory gas on every hard fork for cold and warm addresses; stack underflow before gas or account access; zero size with oversized offsets; address masking; slice copies and zero-fill at every source, destination and size boundary; absent and empty accounts; quadratic expansion of already allocated memory; warming shared with `BALANCE`, repeated copies and a parent's warm set; insufficient gas, unrepresentable operands and overflowing memory gas without consuming operands or reading code; the memory limit and allocation failures; the EIP-7702 indicator in a static call; and tracing of all four operands ([#83]).
+- **`GasCost.extCodeCopyCost`:** hard-fork pricing with word rounding, the maximum representable size, and the negative-size trap message ([#83]).
+- **Evaluation order:** expectations for `MLOAD`, `MSTORE`, `MSTORE8`, `KECCAK256`, `CODECOPY`, `CALLDATACOPY`, `LOG0`, `RETURN`, `REVERT` and the allocation-failure machine test now assert preserved operands and no charge for unrepresentable operands; `TestHandler` records `code(address:)` requests ([#83]).
+
+### CI/Build
+- **Dependencies:** `Package.resolved` moves CryptoSwift from 1.9.0 to 1.10.0 and the transitive swift-argument-parser from 1.7.0 to 1.8.2 ([#83]).
+
 ## [0.6.3] - 2026-10-10
 
 This release adds the Osaka `CLZ` opcode, moves Keccak-256 into a new `EVMCrypto` module with a trait-selected native implementation, introduces SwiftPM package traits, and hardens interpreter memory, gas, machine-state and tracing behavior. It requires Swift tools 6.1 and contains source-breaking changes; see **Breaking Changes**.
@@ -627,7 +648,8 @@ This is the **initial public release** of `swift-evm` — a Swift-native Ethereu
 
 
 <!-- Versions -->
-[Unreleased]: https://github.com/mrLSD/swift-evm/compare/v0.6.3...HEAD
+[Unreleased]: https://github.com/mrLSD/swift-evm/compare/v0.6.4...HEAD
+[0.6.4]: https://github.com/mrLSD/swift-evm/compare/v0.6.3...v0.6.4
 [0.6.3]: https://github.com/mrLSD/swift-evm/compare/v0.6.2...v0.6.3
 [0.6.2]: https://github.com/mrLSD/swift-evm/compare/v0.6.1...v0.6.2
 [0.6.1]: https://github.com/mrLSD/swift-evm/compare/v0.6.0...v0.6.1
@@ -665,6 +687,7 @@ This is the **initial public release** of `swift-evm` — a Swift-native Ethereu
 [0.1.0]: https://github.com/mrLSD/swift-evm/releases/tag/v0.1.0
 
 <!-- PRs -->
+[#83]: https://github.com/mrLSD/swift-evm/pull/83
 [#80]: https://github.com/mrLSD/swift-evm/pull/80
 [#79]: https://github.com/mrLSD/swift-evm/pull/79
 [#78]: https://github.com/mrLSD/swift-evm/pull/78
