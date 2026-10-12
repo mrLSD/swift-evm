@@ -371,6 +371,24 @@ final class InterpreterGasSpec: QuickSpec {
                 }
             }
 
+            context("extCodeAccessCost") {
+                it("prices account access for every hard fork, cold and warm") {
+                    let prices: [HardFork: (cold: UInt64, warm: UInt64)] = [
+                        .Frontier: (20, 20), .Homestead: (20, 20), .Tangerine: (700, 700), .SpuriousDragon: (700, 700),
+                        .Byzantium: (700, 700), .Constantinople: (700, 700), .Istanbul: (700, 700), .Berlin: (2600, 100),
+                        .London: (2600, 100), .Paris: (2600, 100), .Shanghai: (2600, 100), .Cancun: (2600, 100),
+                        .Prague: (2600, 100), .Osaka: (2600, 100)
+                    ]
+                    expect(Set(prices.keys)).to(equal(Set(HardFork.allCases)))
+                    for (fork, price) in prices {
+                        let cold = GasCost.extCodeAccessCost(hardFork: fork, isCold: true)
+                        let warm = GasCost.extCodeAccessCost(hardFork: fork, isCold: false)
+                        expect(cold).to(equal(price.cold), description: "fork \(fork)")
+                        expect(warm).to(equal(price.warm), description: "fork \(fork)")
+                    }
+                }
+            }
+
             context("extCodeCopyCost") {
                 it("prices access by hard fork and rounds copied words without a VERYLOW surcharge") {
                     let cases: [(HardFork, Bool, UInt64)] = [
@@ -430,20 +448,20 @@ final class InterpreterGasSpec: QuickSpec {
                         (1, 3, false),
                         (22, 66, false),
                         (23, 70, false),
-                        (511, 2_043, false),
-                        (512, 2_048, false),
-                        (513, 2_053, false),
-                        (91_917, 16_777_186, false),
-                        (91_918, 16_777_548, false),
-                        (4_294_967_295, 36_028_809_887_088_637, false),
-                        (4_294_967_296, 36_028_809_903_865_856, false),
-                        (4_294_967_297, 36_028_809_920_643_075, false),
-                        (97_184_015_230, 18_446_744_073_241_248_723, false),
-                        (97_184_015_231, 18_446_744_073_620_873_785, false),
-                        (97_184_015_232, 0, true),
-                        (97_184_015_999, 0, true),
-                        (97_184_016_000, 0, true),
-                        (9_223_372_036_854_775_807, 0, true),
+                        (511, 2043, false),
+                        (512, 2048, false),
+                        (513, 2053, false),
+                        (91917, 16777186, false),
+                        (91918, 16777548, false),
+                        (4294967295, 36028809887088637, false),
+                        (4294967296, 36028809903865856, false),
+                        (4294967297, 36028809920643075, false),
+                        (97184015230, 18446744073241248723, false),
+                        (97184015231, 18446744073620873785, false),
+                        (97184015232, 0, true),
+                        (97184015999, 0, true),
+                        (97184016000, 0, true),
+                        (9223372036854775807, 0, true)
                     ]
                     for testCase in cases {
                         guard let words = Int(exactly: testCase.words) else { continue }

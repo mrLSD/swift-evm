@@ -19,6 +19,28 @@ enum SystemInstructions {
         m.stackPush(value: U256(from: newValue))
     }
 
+    /// Pushes the size of an account's own code onto the stack.
+    static func extCodeSize(machine m: Machine) {
+        if !m.verifyStack(pop: 1) {
+            return
+        }
+
+        // Stack size was verified above; this unwrap cannot fail.
+        let address = H256(from: m.stackPeek(indexFromTop: 0)!).toH160()
+
+        var isCold = false
+        if m.hardFork.isBerlin() {
+            isCold = m.state.isCold(address: address)
+            m.state.warm(address: address, isCold: isCold)
+        }
+        if !m.gasRecordCost(cost: GasCost.extCodeAccessCost(hardFork: m.hardFork, isCold: isCold)) {
+            return
+        }
+
+        m.stack.consume(count: 1)
+        m.stackPush(value: U256(from: UInt64(m.handler.code(address: address).count)))
+    }
+
     /// Performs a code copy operation by reading parameters from the machine's stack,
     /// calculating the associated gas costs, and executing the memory copy.
     static func codeCopy(machine m: Machine) {
