@@ -10,20 +10,22 @@ enum MemoryInstructions {
             return
         }
 
-        if !m.gasRecordCost(cost: GasConstant.VERYLOW) {
+        // Stack size was verified above; this unwrap cannot fail.
+        let rawIndex = m.stackPeek(indexFromTop: 0)!
+        guard let index = m.getMemoryIntOrFail(rawIndex) else {
             return
         }
 
-        // Stack size was verified above; these unwraps cannot fail.
-        let rawIndex = m.stackPop()!
-
-        guard let index = m.getMemoryIntOrFail(rawIndex) else {
+        if !m.gasRecordCost(cost: GasConstant.VERYLOW) {
             return
         }
 
         guard m.resizeMemoryAndRecordGas(offset: index, size: 32) else {
             return
         }
+
+        // Stack depth was verified above; the range was expanded above.
+        m.stack.consume(count: 1)
         m.stackPush(value: m.memory.getWord(offset: index))
     }
 
@@ -35,15 +37,14 @@ enum MemoryInstructions {
             return
         }
 
-        if !m.gasRecordCost(cost: GasConstant.VERYLOW) {
+        // Stack size was verified above; these unwraps cannot fail.
+        let rawIndex = m.stackPeek(indexFromTop: 0)!
+        guard let index = m.getMemoryIntOrFail(rawIndex) else {
             return
         }
+        let value = m.stackPeek(indexFromTop: 1)!
 
-        // Stack size was verified above; these unwraps cannot fail.
-        let rawIndex = m.stackPop()!
-        let value = m.stackPop()!
-
-        guard let index = m.getMemoryIntOrFail(rawIndex) else {
+        if !m.gasRecordCost(cost: GasConstant.VERYLOW) {
             return
         }
 
@@ -51,7 +52,8 @@ enum MemoryInstructions {
             return
         }
 
-        // The range was expanded above, so the write cannot fail.
+        // Stack depth was verified above; the range was expanded above, so the write cannot fail.
+        m.stack.consume(count: 2)
         m.memory.writeWord(offset: index, value)
     }
 
@@ -63,15 +65,14 @@ enum MemoryInstructions {
             return
         }
 
-        if !m.gasRecordCost(cost: GasConstant.VERYLOW) {
+        // Stack size was verified above; these unwraps cannot fail.
+        let rawIndex = m.stackPeek(indexFromTop: 0)!
+        guard let index = m.getMemoryIntOrFail(rawIndex) else {
             return
         }
+        let value = m.stackPeek(indexFromTop: 1)!
 
-        // Stack size was verified above; these unwraps cannot fail.
-        let rawIndex = m.stackPop()!
-        let value = m.stackPop()!
-
-        guard let index = m.getMemoryIntOrFail(rawIndex) else {
+        if !m.gasRecordCost(cost: GasConstant.VERYLOW) {
             return
         }
 
@@ -79,7 +80,8 @@ enum MemoryInstructions {
             return
         }
 
-        // Masking leaves a single byte, so the conversion cannot fail; the range was expanded above.
+        // Stack depth was verified above; masking leaves a single byte, so the conversion cannot fail.
+        m.stack.consume(count: 2)
         m.memory.writeByte(offset: index, UInt8((value & U256(from: 0xFF)).getInt!))
     }
 

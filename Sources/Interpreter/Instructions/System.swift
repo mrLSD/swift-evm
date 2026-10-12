@@ -36,24 +36,19 @@ enum SystemInstructions {
             return
         }
 
-        // Calculate the gas cost for the very low copy operation.
-        let cost = GasCost.veryLowCopy(size: size)
+        // An empty range ignores the offset and does not expand memory.
+        var memoryOffset = 0
+        if size > 0 {
+            guard let offset = m.getMemoryIntOrFail(rawMemoryOffset) else {
+                return
+            }
+            memoryOffset = offset
+        }
 
-        // Record the gas cost for the code copy operation.
+        let cost = GasCost.veryLowCopy(size: size)
         if !m.gasRecordCost(cost: cost) {
             return
         }
-
-        // If the size is zero, no copying is required.
-        if size == 0 {
-            m.stack.consume(count: 3)
-            return
-        }
-
-        guard let memoryOffset = m.getMemoryIntOrFail(rawMemoryOffset) else {
-            return
-        }
-        let codeOffset = rawCodeOffset.saturatingInt
 
         guard m.resizeMemoryAndRecordGas(offset: memoryOffset, size: size) else {
             return
@@ -61,6 +56,11 @@ enum SystemInstructions {
 
         // Stack depth was verified above.
         m.stack.consume(count: 3)
+        if size == 0 {
+            return
+        }
+
+        let codeOffset = rawCodeOffset.saturatingInt
 
         // The range was expanded above, so the copy cannot fail; bytes past the code are zero-filled.
         m.memory.writeData(offset: memoryOffset, size: size, from: m.code, dataOffset: codeOffset)
@@ -82,6 +82,7 @@ enum SystemInstructions {
             return
         }
 
+        // An empty range ignores the offset and does not expand memory.
         var memoryOffset = 0
         if size > 0 {
             guard let offset = m.getMemoryIntOrFail(rawMemoryOffset) else {
@@ -96,17 +97,22 @@ enum SystemInstructions {
             m.state.warm(address: address, isCold: isCold)
         }
         let cost = GasCost.extCodeCopyCost(hardFork: m.hardFork, isCold: isCold, size: size)
-        guard m.recordGasAndResizeMemory(cost: cost, offset: memoryOffset, size: size) else {
+        if !m.gasRecordCost(cost: cost) {
             return
         }
 
-        // Stack depth and the destination range were validated above.
+        guard m.resizeMemoryAndRecordGas(offset: memoryOffset, size: size) else {
+            return
+        }
+
+        // Stack depth was verified above.
         m.stack.consume(count: 4)
         if size == 0 {
             return
         }
 
         let codeOffset = rawCodeOffset.saturatingInt
+        // The range was expanded above, so the copy cannot fail; bytes past the code are zero-filled.
         m.memory.writeData(offset: memoryOffset, size: size, from: m.handler.code(address: address), dataOffset: codeOffset)
     }
 
@@ -131,7 +137,7 @@ enum SystemInstructions {
         }
 
         // Stack size was verified above; these unwraps cannot fail.
-        // Peek the required values from the stack: memory offset, code offset, and size.
+        // Peek the required values from the stack: memory offset, data offset, and size.
         let rawMemoryOffset = m.stackPeek(indexFromTop: 0)!
         let rawDataOffset = m.stackPeek(indexFromTop: 1)!
         let rawSize = m.stackPeek(indexFromTop: 2)!
@@ -140,24 +146,19 @@ enum SystemInstructions {
             return
         }
 
-        // Calculate the gas cost for the very low copy operation.
-        let cost = GasCost.veryLowCopy(size: size)
+        // An empty range ignores the offset and does not expand memory.
+        var memoryOffset = 0
+        if size > 0 {
+            guard let offset = m.getMemoryIntOrFail(rawMemoryOffset) else {
+                return
+            }
+            memoryOffset = offset
+        }
 
-        // Record the gas cost for the call data copy operation.
+        let cost = GasCost.veryLowCopy(size: size)
         if !m.gasRecordCost(cost: cost) {
             return
         }
-
-        // If the size is zero, no copying is required.
-        if size == 0 {
-            m.stack.consume(count: 3)
-            return
-        }
-
-        guard let memoryOffset = m.getMemoryIntOrFail(rawMemoryOffset) else {
-            return
-        }
-        let dataOffset = rawDataOffset.saturatingInt
 
         guard m.resizeMemoryAndRecordGas(offset: memoryOffset, size: size) else {
             return
@@ -165,7 +166,11 @@ enum SystemInstructions {
 
         // Stack depth was verified above.
         m.stack.consume(count: 3)
+        if size == 0 {
+            return
+        }
 
+        let dataOffset = rawDataOffset.saturatingInt
         // The range was expanded above, so the copy cannot fail; bytes past the call data are zero-filled.
         m.memory.writeData(offset: memoryOffset, size: size, from: m.data, dataOffset: dataOffset)
     }
@@ -263,29 +268,34 @@ enum SystemInstructions {
         // Stack depth was verified above; these unwraps cannot fail.
         let rawOffset = m.stackPeek(indexFromTop: 0)!
         let rawSize = m.stackPeek(indexFromTop: 1)!
-        guard let size = rawSize.getInt, let cost = GasCost.logCost(size: size, n: n) else {
+        guard let size = m.getMemoryIntOrFail(rawSize) else {
+            return
+        }
+        guard let cost = GasCost.logCost(size: size, n: n) else {
             m.machineStatus = .Exit(.Error(.OutOfGas))
             return
+        }
+
+        // An empty range ignores the offset and does not expand memory.
+        var offset = 0
+        if size > 0 {
+            guard let memoryOffset = m.getMemoryIntOrFail(rawOffset) else {
+                return
+            }
+            offset = memoryOffset
         }
 
         if !m.gasRecordCost(cost: cost) {
             return
         }
 
-        var data: [UInt8] = []
-        // An empty range ignores the offset and does not expand memory.
-        if size > 0 {
-            guard let offset = rawOffset.getInt else {
-                m.machineStatus = .Exit(.Error(.OutOfGas))
-                return
-            }
-            guard m.resizeMemoryAndRecordGas(offset: offset, size: size) else {
-                return
-            }
-            data = m.memory.get(offset: offset, size: size)
+        guard m.resizeMemoryAndRecordGas(offset: offset, size: size) else {
+            return
         }
 
+        // Stack depth was verified above; the nonempty range was expanded above.
         m.stack.consume(count: 2)
+        let data = size > 0 ? m.memory.get(offset: offset, size: size) : []
         var topics: [H256] = []
         topics.reserveCapacity(n)
         for _ in 0 ..< n {
@@ -313,25 +323,17 @@ enum SystemInstructions {
             return
         }
 
-        // Calculate the gas cost for Keccak256 operation.
+        // Per Yellow Paper, an empty input ignores the offset and does not expand memory.
+        var memoryOffset = 0
+        if size > 0 {
+            guard let offset = m.getMemoryIntOrFail(rawMemoryOffset) else {
+                return
+            }
+            memoryOffset = offset
+        }
+
         let cost = GasCost.keccak256Cost(size: size)
-
-        // Record the gas cost for the Keccak256 operation.
         if !m.gasRecordCost(cost: cost) {
-            return
-        }
-
-        // Short-circuit for empty input: keccak256("") is a well-known constant.
-        // Per Yellow Paper: with size == 0 no memory access happens, so memory offset
-        // validation and memory expansion are both skipped.
-        if size == 0 {
-            // Stack depth was verified above.
-            m.stack.consume(count: 2)
-            m.stackPush(value: U256(from: H256.KECCAK_EMPTY))
-            return
-        }
-
-        guard let memoryOffset = m.getMemoryIntOrFail(rawMemoryOffset) else {
             return
         }
 
@@ -341,6 +343,11 @@ enum SystemInstructions {
 
         // Stack depth was verified above.
         m.stack.consume(count: 2)
+        if size == 0 {
+            // keccak256("") is a well-known constant.
+            m.stackPush(value: U256(from: H256.KECCAK_EMPTY))
+            return
+        }
 
         // Memory expansion above guarantees the range is allocated before hashing.
         let hash = m.memory.withUnsafeBytes(offset: memoryOffset, size: size) { Keccak256.hash($0) }

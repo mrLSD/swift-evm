@@ -129,7 +129,7 @@ final class InstructionCodeCopySpec: QuickSpec {
 
                 expect(m1.machineStatus).to(equal(.Exit(.Error(.OutOfGas))))
                 expect(m1.stack.length).to(equal(3))
-                expect(m1.gas.remaining).to(equal(94))
+                expect(m1.gas.remaining).to(equal(100))
                 expect(m1.gas.memoryGas.numWords).to(equal(0))
                 expect(m1.gas.memoryGas.gasCost).to(equal(0))
 
@@ -378,80 +378,67 @@ final class InstructionCodeCopySpec: QuickSpec {
             }
 
             it("fails without consuming operands or reading code when gas is insufficient") {
-                for (size, limit) in [(0, 2599), (33, 2605), (1, 2605)] {
+                for (size, limit, remaining) in [(0, 2599, 2599), (33, 2605, 2605), (1, 2605, 2)] {
                     let m = TestMachine.machine(opcode: .EXTCODECOPY, gasLimit: UInt64(limit))
                     Self.pushExtCodeArguments(m, size: U256(from: UInt64(size)))
                     let original = m.stack.data
-                    let originalGas = m.gas
                     m.evalLoop()
                     expect(m.machineStatus).to(equal(.Exit(.Error(.OutOfGas))))
                     expect(m.stack.data).to(equal(original))
-                    expect(m.gas).to(equal(originalGas))
+                    expect(m.gas.remaining).to(equal(UInt64(remaining)))
                     expect(m.memory.effectiveLength).to(equal(0))
                     expect((m.handler as! TestHandler).codeRequests).to(beEmpty())
                 }
             }
 
-            it("rejects unrepresentable size and destination without trapping") {
-                let cases: [(U256, U256)] = [
-                    (.MAX, .ZERO), (U256(from: 1), .MAX),
-                    (U256(from: 1), U256(from: UInt64(Int.max)))
+            it("rejects unrepresentable size and destination before charging and overflowing ranges after") {
+                let cases: [(U256, U256, UInt64)] = [
+                    (.MAX, .ZERO, 10000), (U256(from: 1), .MAX, 10000),
+                    (U256(from: 1), U256(from: UInt64(Int.max)), 7397)
                 ]
-                for (size, offset) in cases {
+                for (size, offset, remaining) in cases {
                     let m = TestMachine.machine(opcode: .EXTCODECOPY, gasLimit: 10000)
                     Self.pushExtCodeArguments(m, size: size, memoryOffset: offset)
                     let original = m.stack.data
                     m.evalLoop()
                     expect(m.machineStatus).to(equal(.Exit(.Error(.OutOfGas))))
                     expect(m.stack.data).to(equal(original))
-                    expect(m.gas).to(equal(Gas(limit: 10000)))
+                    expect(m.gas.remaining).to(equal(remaining))
+                    expect(m.gas.memoryGas.numWords).to(equal(0))
                     expect(m.memory.effectiveLength).to(equal(0))
                     expect((m.handler as! TestHandler).codeRequests).to(beEmpty())
                 }
             }
 
-            it("preserves paid memory and all gas counters when the combined charge fails") {
+            it("preserves paid memory and operands when the memory charge fails") {
                 let m = TestMachine.machine(opcode: .EXTCODECOPY, gasLimit: 2608)
                 expect(m.resizeMemoryAndRecordGas(offset: 0, size: 32)).to(beTrue())
                 expect(m.memory.set(offset: 0, value: [0xab], size: 1)).to(beSuccess())
                 Self.pushExtCodeArguments(m, size: U256(from: 1), memoryOffset: U256(from: 32))
-                let originalGas = m.gas
                 let originalStack = m.stack.data
                 let originalMemory = m.memory.get(offset: 0, size: 32)
 
                 m.evalLoop()
 
                 expect(m.machineStatus).to(equal(.Exit(.Error(.OutOfGas))))
-                expect(m.gas).to(equal(originalGas))
+                // The access and copy cost of 2603 is paid; the second word's 3 gas is not affordable.
+                expect(m.gas.remaining).to(equal(2))
+                expect(m.gas.memoryGas.numWords).to(equal(2))
+                expect(m.gas.memoryGas.gasCost).to(equal(6))
                 expect(m.stack.data).to(equal(originalStack))
                 expect(m.memory.effectiveLength).to(equal(32))
                 expect(m.memory.get(offset: 0, size: 32)).to(equal(originalMemory))
                 expect((m.handler as! TestHandler).codeRequests).to(beEmpty())
             }
 
-            #if arch(x86_64) || arch(arm64)
-            it("rejects overflow of the combined cost even when both costs fit UInt64") {
-                // N = 97_184_015_231: memory costs UInt64.max - 88_677_830; copying costs more.
-                let m = TestMachine.machine(opcode: .EXTCODECOPY, gasLimit: UInt64.max)
-                Self.pushExtCodeArguments(m, size: U256(from: 3_109_888_487_392))
-                let originalGas = m.gas
-
-                m.evalLoop()
-
-                expect(m.machineStatus).to(equal(.Exit(.Error(.OutOfGas))))
-                expect(m.gas).to(equal(originalGas))
-                expect(m.stack.length).to(equal(4))
-                expect(m.memory.effectiveLength).to(equal(0))
-                expect((m.handler as! TestHandler).codeRequests).to(beEmpty())
-            }
-            #endif
-
             it("rejects overflowing memory gas even with the maximum gas budget") {
                 let m = TestMachine.machine(opcode: .EXTCODECOPY, gasLimit: UInt64.max)
                 Self.pushExtCodeArguments(m, size: U256(from: UInt64(Int.max)))
                 m.evalLoop()
                 expect(m.machineStatus).to(equal(.Exit(.Error(.OutOfGas))))
-                expect(m.gas).to(equal(Gas(limit: UInt64.max)))
+                // The access and copy cost is paid; the memory cost itself is unrepresentable.
+                expect(m.gas.remaining).to(equal(UInt64.max - 2600 - 3 * (UInt64(Int.max) / 32 + 1)))
+                expect(m.gas.memoryGas.numWords).to(equal(0))
                 expect(m.stack.length).to(equal(4))
                 expect(m.memory.effectiveLength).to(equal(0))
                 expect((m.handler as! TestHandler).codeRequests).to(beEmpty())

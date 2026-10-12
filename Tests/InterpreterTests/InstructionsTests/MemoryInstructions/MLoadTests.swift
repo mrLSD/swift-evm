@@ -35,7 +35,7 @@ final class MLoadSpec: QuickSpec {
                 m.evalLoop()
 
                 expect(m.machineStatus).to(equal(.Exit(.Error(.OutOfGas))))
-                expect(m.stack.length).to(equal(0))
+                expect(m.stack.length).to(equal(1))
                 expect(m.gas.remaining).to(equal(7))
                 expect(m.gas.memoryGas.numWords).to(equal(5))
                 expect(m.gas.memoryGas.gasCost).to(equal(15))
@@ -49,8 +49,8 @@ final class MLoadSpec: QuickSpec {
                 m.evalLoop()
 
                 expect(m.machineStatus).to(equal(.Exit(.Error(.OutOfGas))))
-                expect(m.stack.length).to(equal(0))
-                expect(m.gas.remaining).to(equal(97))
+                expect(m.stack.length).to(equal(1))
+                expect(m.gas.remaining).to(equal(100))
                 expect(m.gas.memoryGas.numWords).to(equal(0))
                 expect(m.gas.memoryGas.gasCost).to(equal(0))
             }

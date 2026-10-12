@@ -61,7 +61,7 @@ final class MStoreSpec: QuickSpec {
                 m.evalLoop()
 
                 expect(m.machineStatus).to(equal(.Exit(.Error(.OutOfGas))))
-                expect(m.stack.length).to(equal(0))
+                expect(m.stack.length).to(equal(2))
                 expect(m.gas.remaining).to(equal(7))
                 expect(m.gas.memoryGas.numWords).to(equal(5))
                 expect(m.gas.memoryGas.gasCost).to(equal(15))
@@ -78,7 +78,7 @@ final class MStoreSpec: QuickSpec {
                     .to(equal(.Exit(.Error(.OutOfGas))))
                 expect(m.memory.effectiveLength).to(equal(0))
 
-                expect(m.stack.length).to(equal(0))
+                expect(m.stack.length).to(equal(2))
                 expect(m.gas.remaining).to(equal(82))
                 expect(m.gas.memoryGas.numWords).to(equal(5))
                 expect(m.gas.memoryGas.gasCost).to(equal(15))
@@ -91,8 +91,8 @@ final class MStoreSpec: QuickSpec {
                 m.evalLoop()
 
                 expect(m.machineStatus).to(equal(.Exit(.Error(.OutOfGas))))
-                expect(m.stack.length).to(equal(0))
-                expect(m.gas.remaining).to(equal(97))
+                expect(m.stack.length).to(equal(2))
+                expect(m.gas.remaining).to(equal(100))
                 expect(m.gas.memoryGas.numWords).to(equal(0))
                 expect(m.gas.memoryGas.gasCost).to(equal(0))
             }

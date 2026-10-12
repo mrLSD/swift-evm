@@ -638,66 +638,23 @@ public final class Machine {
                 guard self.gasRecordCost(cost: resizeMemoryCost) else {
                     return false
                 }
-                return self.resizeMemory(offset: offset, size: size)
+
+                // MemoryGas.resize validated the sum. A whole-word limit also bounds rounding in Memory.resize.
+                guard offset + size <= self.memory.capacityLimit else {
+                    self.machineStatus = .Exit(.Error(.OutOfGas))
+                    return false
+                }
+
+                guard self.memory.resize(offset: offset, size: size) else {
+                    self.machineStatus = .Exit(.Fatal(.ReadMemory))
+                    return false
+                }
             }
         case .failure(let err):
             self.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(err))
             return false
         }
 
-        return true
-    }
-
-    /// Charges the opcode and memory expansion together, committing memory gas only after payment.
-    ///
-    /// - Parameters:
-    ///   - cost: The opcode cost excluding memory expansion.
-    ///   - offset: The nonnegative destination offset; ignored for zero size.
-    ///   - size: The nonnegative number of bytes accessed.
-    /// - Returns: Whether the combined charge and memory allocation succeeded.
-    func recordGasAndResizeMemory(cost: UInt64, offset: Int, size: Int) -> Bool {
-        if size == 0 {
-            return self.gasRecordCost(cost: cost)
-        }
-
-        var memoryGas = self.gas.memoryGas
-        switch memoryGas.resize(end: offset, length: size) {
-        case .success(let resizeMemory):
-            var memoryCost: UInt64 = 0
-            if case .Resized(let cost) = resizeMemory {
-                memoryCost = cost
-            }
-            let (totalCost, overflow) = cost.addingReportingOverflow(memoryCost)
-            guard !overflow else {
-                self.machineStatus = .Exit(.Error(.OutOfGas))
-                return false
-            }
-            guard self.gasRecordCost(cost: totalCost) else {
-                return false
-            }
-            self.gas.memoryGas = memoryGas
-            if case .Resized = resizeMemory {
-                return self.resizeMemory(offset: offset, size: size)
-            }
-        case .failure(let err):
-            self.machineStatus = .Exit(.Error(err))
-            return false
-        }
-
-        return true
-    }
-
-    /// Allocates a range whose sum was validated by MemoryGas.resize and whose gas was paid.
-    private func resizeMemory(offset: Int, size: Int) -> Bool {
-        // A whole-word limit also bounds rounding in Memory.resize.
-        guard offset + size <= self.memory.capacityLimit else {
-            self.machineStatus = .Exit(.Error(.OutOfGas))
-            return false
-        }
-        guard self.memory.resize(offset: offset, size: size) else {
-            self.machineStatus = .Exit(.Fatal(.ReadMemory))
-            return false
-        }
         return true
     }
 

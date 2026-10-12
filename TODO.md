@@ -3,6 +3,7 @@
 ## Add support for Opcodes
 
 ### System
+- [ ] EXTCODESIZE
 - [ ] EXTCODEHASH
 - [ ] SLOAD
 - [ ] SSTORE

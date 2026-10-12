@@ -275,7 +275,7 @@ final class InstructionLogSpec: QuickSpec {
                 let tooLarge = U256(from: UInt64(Int.max)) + U256(from: 1)
                 let cases: [(U256, U256, UInt64)] = [
                     (.ZERO, tooLarge, 0), (.ZERO, .MAX, 0),
-                    (tooLarge, U256(from: 1), 383), (.MAX, U256(from: 1), 383),
+                    (tooLarge, U256(from: 1), 0), (.MAX, U256(from: 1), 0),
                     (U256(from: UInt64(Int.max)), U256(from: 1), 383),
                     (U256(from: UInt64.max / 2 - 1), U256(from: 1), 383)
                 ]
