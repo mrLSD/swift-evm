@@ -11,6 +11,8 @@ class TestHandler: InterpreterHandler {
     static let address3: H160 = try! .fromString(hex: "9A6402EEa6d967dBd7609346c11A1702Db4E5003").get()
     static let testGasPrice: U256 = .init(from: 123)
     var logs: [Log] = []
+    var codes: [H160: [UInt8]] = [:]
+    var codeRequests: [H160] = []
 
     func beforeOpcodeExecution(machine: Machine, opcode: Opcode?) -> Machine.ExitError? {
         return nil
@@ -25,6 +27,11 @@ class TestHandler: InterpreterHandler {
         default:
             return U256.ZERO
         }
+    }
+
+    func code(address: H160) -> [UInt8] {
+        codeRequests.append(address)
+        return codes[address] ?? []
     }
 
     func gasPrice() -> U256 {

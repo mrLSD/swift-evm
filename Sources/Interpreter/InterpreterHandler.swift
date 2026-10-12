@@ -9,6 +9,8 @@ public protocol InterpreterHandler {
 
     /// Get environmental account balance for given address.
     func balance(address: H160) -> U256
+    /// Get the account's own code, including an EIP-7702 delegation indicator; empty for absent accounts.
+    func code(address: H160) -> [UInt8]
     /// Get environmental gas price.
     func gasPrice() -> U256
     /// Get environmental transaction origin (sender) address.

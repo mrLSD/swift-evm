@@ -226,6 +226,7 @@ public final class Machine {
         // System
         table[Opcode.CODESIZE.index] = SystemInstructions.codeSize
         table[Opcode.CODECOPY.index] = SystemInstructions.codeCopy
+        table[Opcode.EXTCODECOPY.index] = SystemInstructions.extCodeCopy
         table[Opcode.CALLDATASIZE.index] = SystemInstructions.callDataSize
         table[Opcode.CALLDATACOPY.index] = SystemInstructions.callDataCopy
         table[Opcode.CALLDATALOAD.index] = SystemInstructions.callDataLoad
@@ -637,11 +638,13 @@ public final class Machine {
                 guard self.gasRecordCost(cost: resizeMemoryCost) else {
                     return false
                 }
+
                 // MemoryGas.resize validated the sum. A whole-word limit also bounds rounding in Memory.resize.
                 guard offset + size <= self.memory.capacityLimit else {
                     self.machineStatus = .Exit(.Error(.OutOfGas))
                     return false
                 }
+
                 guard self.memory.resize(offset: offset, size: size) else {
                     self.machineStatus = .Exit(.Fatal(.ReadMemory))
                     return false

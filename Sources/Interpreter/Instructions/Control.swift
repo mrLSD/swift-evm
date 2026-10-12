@@ -109,8 +109,8 @@ enum ControlInstructions {
 
     /// Prepares the return-data range from stack operands and halts execution.
     ///
-    /// Pops the offset followed by the length and charges for any required memory expansion.
-    /// A zero length ignores the offset and produces `0..<0` without accessing memory.
+    /// Reads the offset followed by the length, charges for any required memory expansion and only then
+    /// consumes the operands. A zero length ignores the offset and produces `0..<0` without accessing memory.
     /// Stack underflow or a memory failure sets an error exit instead of the supplied reason.
     ///
     /// - Parameters:
@@ -122,8 +122,8 @@ enum ControlInstructions {
         }
 
         // Stack size was verified above; these unwraps cannot fail.
-        let rawOffset = m.stackPop()!
-        let rawLength = m.stackPop()!
+        let rawOffset = m.stackPeek(indexFromTop: 0)!
+        let rawLength = m.stackPeek(indexFromTop: 1)!
         guard let length = m.getMemoryIntOrFail(rawLength) else {
             return
         }
@@ -134,13 +134,15 @@ enum ControlInstructions {
             guard let memoryOffset = m.getMemoryIntOrFail(rawOffset) else {
                 return
             }
-            guard m.resizeMemoryAndRecordGas(offset: memoryOffset, size: length) else {
-                return
-            }
             offset = memoryOffset
         }
 
-        // Memory expansion validated the nonempty range's upper bound.
+        guard m.resizeMemoryAndRecordGas(offset: offset, size: length) else {
+            return
+        }
+
+        // Stack depth was verified above; memory expansion validated the nonempty range's upper bound.
+        m.stack.consume(count: 2)
         m.returnRange = offset ..< (offset + length)
         m.machineStatus = Machine.MachineStatus.Exit(reason)
     }

@@ -371,6 +371,37 @@ final class InterpreterGasSpec: QuickSpec {
                 }
             }
 
+            context("extCodeCopyCost") {
+                it("prices access by hard fork and rounds copied words without a VERYLOW surcharge") {
+                    let cases: [(HardFork, Bool, UInt64)] = [
+                        (.Frontier, true, 20), (.Homestead, false, 20),
+                        (.Tangerine, true, 700), (.Istanbul, false, 700),
+                        (.Berlin, true, 2600), (.Berlin, false, 100),
+                        (.Prague, true, 2600), (.Osaka, false, 100)
+                    ]
+                    for (fork, cold, base) in cases {
+                        for (size, copyCost) in [(0, 0), (1, 3), (31, 3), (32, 3), (33, 6), (64, 6), (65, 9)] {
+                            let cost = GasCost.extCodeCopyCost(hardFork: fork, isCold: cold, size: size)
+                            expect(cost).to(equal(base + UInt64(copyCost)), description: "fork \(fork), cold \(cold), size \(size)")
+                        }
+                    }
+                }
+
+                it("accepts the maximum representable size without arithmetic overflow") {
+                    let words = UInt64(Int.max) / 32 + 1
+                    let cost = GasCost.extCodeCopyCost(hardFork: .Berlin, isCold: true, size: Int.max)
+                    expect(cost).to(equal(2600 + 3 * words))
+                }
+
+                it("rejects negative sizes with the memory size contract") {
+                    for size in [-1, Int.min] {
+                        expect(captureStandardError {
+                            expect { _ = GasCost.extCodeCopyCost(hardFork: .Berlin, isCold: true, size: size) }.to(throwAssertion())
+                        }).to(contain("Memory size must be nonnegative."))
+                    }
+                }
+            }
+
             context("memoryGas") {
                 it("success") {
                     let numWords = 30

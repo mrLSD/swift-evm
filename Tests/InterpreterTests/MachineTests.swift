@@ -474,6 +474,7 @@ final class InterpreterMachineTestsSpec: QuickSpec {
                         )
                         if opcode == .MSTORE { m.stackPush(value: U256(from: 0xCD)) }
                         m.stackPush(value: U256(from: 32))
+                        let original = m.stack.data
                         m.evalLoop()
 
                         expect(m.machineStatus).to(equal(.Exit(.Fatal(.ReadMemory))))
@@ -481,7 +482,7 @@ final class InterpreterMachineTestsSpec: QuickSpec {
                         expect(m.gas.memoryGas.numWords).to(equal(2))
                         expect(m.memory.effectiveLength).to(equal(initialized ? 32 : 0))
                         expect(m.memory.get(offset: 0, size: 1)).to(equal([initialized ? 0xAB : 0]))
-                        expect(m.stack.length).to(equal(0))
+                        expect(m.stack.data).to(equal(original))
                         expect(memory.allocationSizes).to(equal(initialized ? [32, 64] : [64]))
 
                         // Releasing host pressure must not resume a frame that already failed fatally.

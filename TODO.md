@@ -5,7 +5,6 @@
 ### System
 - [ ] EXTCODESIZE
 - [ ] EXTCODEHASH
-- [ ] EXTCODECOPY
 - [ ] SLOAD
 - [ ] SSTORE
 - [ ] TLOAD

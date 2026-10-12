@@ -125,7 +125,7 @@ final class InstructionCallDataCopySpec: QuickSpec {
                 m1.evalLoop()
 
                 expect(m1.machineStatus).to(equal(.Exit(.Error(.OutOfGas))))
-                expect(m1.gas.remaining).to(equal(94))
+                expect(m1.gas.remaining).to(equal(100))
                 expect(m1.gas.memoryGas.numWords).to(equal(0))
                 expect(m1.gas.memoryGas.gasCost).to(equal(0))
 
