@@ -60,6 +60,13 @@ class TestHandler: InterpreterHandler {
     }
 }
 
+/// A handler for calls that forbid state changes.
+class StaticHandler: TestHandler {
+    override func isStatic() -> Bool {
+        true
+    }
+}
+
 enum TestMachine {
     static func defaultContext() -> Machine.Context {
         Machine.Context(targetAddress: H160.ZERO, callerAddress: H160.ZERO, callValue: U256.ZERO)

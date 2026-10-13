@@ -248,6 +248,22 @@ enum GasCost {
         return GasConstant.VERYLOW + costPerCopy
     }
 
+    /// Calculates the account access cost shared by EXTCODESIZE and EXTCODECOPY.
+    ///
+    /// - Parameters:
+    ///   - hardFork: The hard fork determining account access pricing.
+    ///   - isCold: Whether the address is cold; ignored before Berlin.
+    /// - Returns: 20 before Tangerine Whistle, 700 until Berlin, then the EIP-2929 cold or warm cost.
+    static func extCodeAccessCost(hardFork: HardFork, isCold: Bool) -> UInt64 {
+        if hardFork.isBerlin() {
+            self.warmOrColdCost(isCold: isCold)
+        } else if hardFork.isTangerine() {
+            700
+        } else {
+            20
+        }
+    }
+
     /// Calculates EXTCODECOPY account access and copy costs, excluding memory expansion.
     ///
     /// - Parameters:
@@ -256,18 +272,9 @@ enum GasCost {
     ///   - size: The nonnegative number of bytes to copy.
     /// - Returns: The account access cost plus three gas per 32-byte word, rounded up.
     static func extCodeCopyCost(hardFork: HardFork, isCold: Bool, size: Int) -> UInt64 {
-        let accessCost: UInt64
-        if hardFork.isBerlin() {
-            accessCost = self.warmOrColdCost(isCold: isCold)
-        } else if hardFork.isTangerine() {
-            accessCost = 700
-        } else {
-            accessCost = 20
-        }
-
         // For nonnegative Int sizes, the copy cost fits in Int and adding 2600 fits in UInt64.
         let copyCost = self.costPerWord(size: size, multiple: Int(GasConstant.COPY))!
-        return accessCost + copyCost
+        return self.extCodeAccessCost(hardFork: hardFork, isCold: isCold) + copyCost
     }
 
     /// Calculates the cost per word by multiplying the number of memory words for a given size by a specified multiplier.
