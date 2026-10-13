@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.5] - 2026-10-14
+
+This release adds the `EXTCODESIZE` opcode, which shares its account access pricing with `EXTCODECOPY`. It reads code through the `InterpreterHandler.code(address:)` requirement introduced in 0.6.4, so existing conformers need no source changes.
+
+### Added
+- **`EXTCODESIZE` opcode (0x3B):** pushes the byte length of an account's own code as returned by `InterpreterHandler.code(address:)`, so an absent account or empty code yields 0; the address is the low 160 bits of the operand. The account access costs 20 gas before Tangerine Whistle, 700 from Tangerine Whistle through Istanbul, and 2600 cold or 100 warm from Berlin (EIP-2929), as specified by the Yellow Paper and EELS. From Berlin the opcode warms the address before charging, as EELS does; it never warms a delegate, and for an EIP-7702 delegated account it returns 23, the length of the delegation indicator. It reads the account's stored code rather than the executing initialization code, does not touch memory, and on `OutOfGas` leaves the operand on the stack without reading code. The opcode is available in static calls and in every hard fork. Previously no handler was registered and the opcode executed as `InvalidOpcode` ([#85]).
+
+### Changed
+- **Shared account access pricing:** `EXTCODECOPY` takes its account access cost from `GasCost.extCodeAccessCost(hardFork:isCold:)`, which also prices `EXTCODESIZE`, mirroring aurora-evm, where both opcodes are priced through `gas_ext_code`. Gas costs and results are unchanged ([#85]).
+
+### Tests
+- **`EXTCODESIZE`:** exact access gas on every hard fork for cold and warm addresses and code sizes up to 24576 bytes; stack underflow before gas or code access; insufficient gas on every hard fork without consuming the operand, charging gas or reading code; a full stack; absent accounts and empty code; each of the 96 high address bits ignored for lookup and warming; cold then warm repeated queries; warming shared with `BALANCE` and `EXTCODECOPY` in both orders; account code rather than the executing initialization code; unchanged memory and memory gas; the EIP-7702 indicator in a static call without warming the delegate; and tracing of the operand, result and gas ([#85]).
+- **`GasCost.extCodeAccessCost`:** cold and warm prices for every hard fork, with a check that the price table covers all of them ([#85]).
+- **One spec per opcode:** the `EXTCODECOPY` examples move from the `CODECOPY` spec to `ExtCodeCopyTests.swift` without changes to their assertions, the `EXTCODESIZE` examples live in `ExtCodeSizeTests.swift`, and the nested `StaticHandler` becomes a shared test handler in `MachineTestsUtil.swift` ([#85]).
+
 ## [0.6.4] - 2026-10-12
 
 This release adds the `EXTCODECOPY` opcode and aligns every memory-accessing opcode on one evaluation order: read the operands, validate them, charge the opcode cost, charge memory expansion, and only then consume the stack. Custom `InterpreterHandler` conformers need a source change; see **Breaking Changes**.
@@ -648,7 +663,8 @@ This is the **initial public release** of `swift-evm` — a Swift-native Ethereu
 
 
 <!-- Versions -->
-[Unreleased]: https://github.com/mrLSD/swift-evm/compare/v0.6.4...HEAD
+[Unreleased]: https://github.com/mrLSD/swift-evm/compare/v0.6.5...HEAD
+[0.6.5]: https://github.com/mrLSD/swift-evm/compare/v0.6.4...v0.6.5
 [0.6.4]: https://github.com/mrLSD/swift-evm/compare/v0.6.3...v0.6.4
 [0.6.3]: https://github.com/mrLSD/swift-evm/compare/v0.6.2...v0.6.3
 [0.6.2]: https://github.com/mrLSD/swift-evm/compare/v0.6.1...v0.6.2
@@ -687,6 +703,7 @@ This is the **initial public release** of `swift-evm` — a Swift-native Ethereu
 [0.1.0]: https://github.com/mrLSD/swift-evm/releases/tag/v0.1.0
 
 <!-- PRs -->
+[#85]: https://github.com/mrLSD/swift-evm/pull/85
 [#83]: https://github.com/mrLSD/swift-evm/pull/83
 [#80]: https://github.com/mrLSD/swift-evm/pull/80
 [#79]: https://github.com/mrLSD/swift-evm/pull/79
