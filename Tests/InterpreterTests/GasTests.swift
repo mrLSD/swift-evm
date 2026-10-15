@@ -389,6 +389,21 @@ final class InterpreterGasSpec: QuickSpec {
                 }
             }
 
+            context("extCodeHashCost") {
+                it("prices active forks independently of EXTCODESIZE and EXTCODECOPY") {
+                    let prices: [(HardFork, UInt64, UInt64)] = [
+                        (.Constantinople, 400, 400), (.Istanbul, 700, 700),
+                        (.Berlin, 2600, 100), (.London, 2600, 100), (.Paris, 2600, 100),
+                        (.Shanghai, 2600, 100), (.Cancun, 2600, 100), (.Prague, 2600, 100), (.Osaka, 2600, 100)
+                    ]
+
+                    for (fork, cold, warm) in prices {
+                        expect(GasCost.extCodeHashCost(hardFork: fork, isCold: true)).to(equal(cold))
+                        expect(GasCost.extCodeHashCost(hardFork: fork, isCold: false)).to(equal(warm))
+                    }
+                }
+            }
+
             context("extCodeCopyCost") {
                 it("prices access by hard fork and rounds copied words without a VERYLOW surcharge") {
                     let cases: [(HardFork, Bool, UInt64)] = [

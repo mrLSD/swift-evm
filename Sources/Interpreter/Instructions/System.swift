@@ -26,7 +26,8 @@ enum SystemInstructions {
         }
 
         // Stack size was verified above; this unwrap cannot fail.
-        let address = H256(from: m.stackPeek(indexFromTop: 0)!).toH160()
+        let rawAddress = m.stackPeek(indexFromTop: 0)!
+        let address = H256(from: rawAddress).toH160()
 
         var isCold = false
         if m.hardFork.isBerlin() {
@@ -39,6 +40,35 @@ enum SystemInstructions {
 
         m.stack.consume(count: 1)
         m.stackPush(value: U256(from: UInt64(m.handler.code(address: address).count)))
+    }
+
+    /// Pushes the account's own code hash, or zero for an EIP-161 empty account.
+    static func extCodeHash(machine m: Machine) {
+        guard m.hardFork.isConstantinople() else {
+            m.machineStatus = .Exit(.Error(.HardForkNotActive))
+            return
+        }
+        if !m.verifyStack(pop: 1) {
+            return
+        }
+
+        // Stack size was verified above; this unwrap cannot fail.
+        let rawAddress = m.stackPeek(indexFromTop: 0)!
+        let address = H256(from: rawAddress).toH160()
+
+        var isCold = false
+        if m.hardFork.isBerlin() {
+            isCold = m.state.isCold(address: address)
+            m.state.warm(address: address, isCold: isCold)
+        }
+        if !m.gasRecordCost(cost: GasCost.extCodeHashCost(hardFork: m.hardFork, isCold: isCold)) {
+            return
+        }
+
+        m.stack.consume(count: 1)
+
+        let codeHash = m.handler.codeHash(address: address)
+        m.stackPush(value: U256(from: codeHash))
     }
 
     /// Performs a code copy operation by reading parameters from the machine's stack,
@@ -95,7 +125,7 @@ enum SystemInstructions {
         }
 
         // Stack size was verified above; these unwraps cannot fail.
-        let address = H256(from: m.stackPeek(indexFromTop: 0)!).toH160()
+        let rawAddress = m.stackPeek(indexFromTop: 0)!
         let rawMemoryOffset = m.stackPeek(indexFromTop: 1)!
         let rawCodeOffset = m.stackPeek(indexFromTop: 2)!
         let rawSize = m.stackPeek(indexFromTop: 3)!
@@ -113,6 +143,7 @@ enum SystemInstructions {
             memoryOffset = offset
         }
 
+        let address = H256(from: rawAddress).toH160()
         var isCold = false
         if m.hardFork.isBerlin() {
             isCold = m.state.isCold(address: address)
