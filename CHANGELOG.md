@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.6.5] - 2026-10-14
+## [0.6.5] - 2026-10-15
 
 This release adds the `EXTCODESIZE` opcode, which shares its account access pricing with `EXTCODECOPY`. It reads code through the `InterpreterHandler.code(address:)` requirement introduced in 0.6.4, so existing conformers need no source changes.
 
