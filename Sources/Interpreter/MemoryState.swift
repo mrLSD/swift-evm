@@ -320,17 +320,14 @@ public class MemoryState {
             return existingAccount
         }
 
-        let account: StateAccount
+        var account: StateAccount
 
         // We already checked current state for known account. So we can check directly from parent states for known account.
         if let knownAccount = parent?.knownAccount(address) {
             // We actually clone known account here to avoid mutating parent state. This is important for correct handling account state.
-            // And we clear `reset` flag to avoid incorrect handling state.
-            account = StateAccount(
-                basic: knownAccount.basic,
-                code: knownAccount.code,
-                reset: false
-            )
+            // And we clear `reset` flag to avoid incorrect handling state. The copy keeps the code hash, so code is not hashed again.
+            account = knownAccount
+            account.reset = false
         } else {
             // Get account data from backend if account is not known in current state or parent states.
             account = StateAccount(
@@ -394,36 +391,32 @@ public class MemoryState {
         return parent?.isCreated(address) ?? false
     }
 
-    /// Set account code.
+    /// Set account code and its hash, computed once here rather than on every read.
     public func setCode(address: H160, code: [UInt8]) {
         _ = getAccountAndTouch(address)
-        accounts[address]?.code = code
+        accounts[address]?.setCode(code)
+    }
+
+    /// Returns EXTCODEHASH using current account data; storage does not affect EIP-161 emptiness.
+    public func extCodeHash(address: H160) -> H256 {
+        let hash = codeHash(address: address)
+        // Code alone makes an account nonempty, so balance and nonce are read only without it.
+        guard hash == .KECCAK_EMPTY else {
+            return hash
+        }
+        let account = basic(address: address)
+        return account.balance.isZero && account.nonce == 0 ? .ZERO : hash
     }
 
     /// Check if the account at the given address is empty.
-    /// An account is empty if its balance is zero, its nonce is zero, and its code is empty.
+    /// An account is empty if its balance is zero, its nonce is zero, and its code hash is `KECCAK_EMPTY`;
+    /// code is never loaded.
     ///
     /// - Parameter address: The address to check.
     /// - Returns: `true` if the account is empty, `false` otherwise.
     public func isEmpty(address: H160) -> Bool {
-        if let account = knownAccount(address) {
-            if !account.basic.balance.isZero || account.basic.nonce != 0 {
-                return false
-            }
-
-            if let code = account.code {
-                return code.isEmpty
-            }
-            return backend.code(address: address).isEmpty
-        }
-
-        // If not known locally, fetch data from the environment backend.
-        let basic = backend.basic(address: address)
-
-        // Account is empty if: balance == 0 AND nonce == 0 AND code is empty.
-        return basic.balance.isZero &&
-            basic.nonce == 0 &&
-            backend.code(address: address).isEmpty
+        let account = basic(address: address)
+        return account.balance.isZero && account.nonce == 0 && codeHash(address: address) == .KECCAK_EMPTY
     }
 
     /// Internal helper to swap the entire state data between two instances.
@@ -731,6 +724,10 @@ extension MemoryState: Backend {
 
     public func code(address: H160) -> [UInt8] {
         return knownAccount(address)?.code ?? backend.code(address: address)
+    }
+
+    public func codeHash(address: H160) -> H256 {
+        return knownAccount(address)?.codeHash ?? backend.codeHash(address: address)
     }
 
     public func storage(address: H160, index: H256) -> H256 {
