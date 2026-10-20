@@ -1,3 +1,4 @@
+import EVMCrypto
 import PrimitiveTypes
 
 /// Basic account information.
@@ -20,7 +21,7 @@ public struct BasicAccount: Equatable, Sendable {
     /// - Trap: if `nonce == UInt64.max` at the point of call, the `+= 1` overflow traps
     ///   loudly (Swift's checked arithmetic).
     public mutating func incNonce() {
-        self.nonce += 1
+        nonce += 1
     }
 
     /// Sets the account's balance to the specified value.
@@ -50,15 +51,26 @@ extension BasicAccount {
 public struct StateAccount: Equatable, Sendable {
     /// Basic account information.
     public var basic: BasicAccount
-    /// Account code.
-    public var code: [UInt8]?
+    /// Account code; `setCode(_:)` keeps it paired with `codeHash`.
+    public private(set) var code: [UInt8]?
+    /// Hash of `code` (`nil` without code), stored with it so that reads and copies never hash the code again.
+    public private(set) var codeHash: H256?
     /// Account reset flag.
     public var reset: Bool
 
     /// Initializes a new `StateAccount` with the provided basic account information, code, and reset flag.
+    /// Non-nil code is hashed as by `setCode(_:)`.
     public init(basic: BasicAccount, code: [UInt8]?, reset: Bool) {
         self.basic = basic
-        self.code = code
         self.reset = reset
+        if let code {
+            setCode(code)
+        }
+    }
+
+    /// Sets the code and its hash, which is computed only here; empty code needs no hashing.
+    public mutating func setCode(_ code: [UInt8]) {
+        self.code = code
+        codeHash = code.isEmpty ? .KECCAK_EMPTY : code.withUnsafeBytes { Keccak256.hash($0) }
     }
 }

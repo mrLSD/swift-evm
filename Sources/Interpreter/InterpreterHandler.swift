@@ -11,6 +11,10 @@ public protocol InterpreterHandler {
     func balance(address: H160) -> U256
     /// Get the account's own code, including an EIP-7702 delegation indicator; empty for absent accounts.
     func code(address: H160) -> [UInt8]
+    /// Get EXTCODEHASH (EIP-1052): the own code hash, or zero for an absent or EIP-161 empty account, without
+    /// following delegation. Over `MemoryState`, read `codeHash(address:)` first and consult `basic(address:)`
+    /// only when it is `KECCAK_EMPTY`, so a contract costs one backend read.
+    func codeHash(address: H160) -> H256
     /// Get environmental gas price.
     func gasPrice() -> U256
     /// Get environmental transaction origin (sender) address.

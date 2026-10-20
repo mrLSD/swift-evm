@@ -31,6 +31,12 @@ public protocol Backend {
     func basic(address: H160) -> BasicAccount
     /// Get account code.
     func code(address: H160) -> [UInt8]
+    /// Get the account's own code hash: `keccak256` of `code(address:)`, or `KECCAK_EMPTY` for empty code and
+    /// absent accounts. Serve it from stored or cached data; do not hash code on every call.
+    func codeHash(address: H160) -> H256
+    /// Whether the account has code, that is `codeHash(address:) != KECCAK_EMPTY`; `false` for absent accounts.
+    /// Answer it from the account record or the code key without loading or hashing code.
+    func hasCode(address: H160) -> Bool
     /// Get storage value of address at index.
     func storage(address: H160, index: H256) -> H256
     /// Check if the storage of the address is empty.

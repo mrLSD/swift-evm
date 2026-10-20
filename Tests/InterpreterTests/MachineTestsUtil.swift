@@ -13,6 +13,8 @@ class TestHandler: InterpreterHandler {
     var logs: [Log] = []
     var codes: [H160: [UInt8]] = [:]
     var codeRequests: [H160] = []
+    var codeHashes: [H160: H256] = [:]
+    var codeHashRequests: [H160] = []
 
     func beforeOpcodeExecution(machine: Machine, opcode: Opcode?) -> Machine.ExitError? {
         return nil
@@ -32,6 +34,11 @@ class TestHandler: InterpreterHandler {
     func code(address: H160) -> [UInt8] {
         codeRequests.append(address)
         return codes[address] ?? []
+    }
+
+    func codeHash(address: H160) -> H256 {
+        codeHashRequests.append(address)
+        return codeHashes[address] ?? .ZERO
     }
 
     func gasPrice() -> U256 {

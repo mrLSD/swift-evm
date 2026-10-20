@@ -264,6 +264,22 @@ enum GasCost {
         }
     }
 
+    /// Calculates EXTCODEHASH account access cost for an active opcode.
+    ///
+    /// - Parameters:
+    ///   - hardFork: The hard fork determining account access pricing.
+    ///   - isCold: Whether the address is cold; ignored before Berlin.
+    /// - Returns: 400 before Istanbul, 700 until Berlin, then the EIP-2929 cold or warm cost.
+    static func extCodeHashCost(hardFork: HardFork, isCold: Bool) -> UInt64 {
+        if hardFork.isBerlin() {
+            self.warmOrColdCost(isCold: isCold)
+        } else if hardFork.isIstanbul() {
+            700
+        } else {
+            400
+        }
+    }
+
     /// Calculates EXTCODECOPY account access and copy costs, excluding memory expansion.
     ///
     /// - Parameters:

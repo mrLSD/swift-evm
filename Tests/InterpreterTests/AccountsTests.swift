@@ -81,11 +81,33 @@ final class AccountSpec: QuickSpec {
 
             describe("StateAccount") {
                 let basic = BasicAccount(balance: hundred, nonce: 1)
+                // `cast keccak` reference digests of `codeSample` and of "abc".
+                let codeSampleHash = try! H256.fromString(hex: "d003426e799329b8dca093f3bbab55a5e4e9f3c40160fc942068eef712ae88ad").get()
+                let abcHash = try! H256.fromString(hex: "4e03657aea45a94fc7d47ba826c8d667c0d1e6e33a64a036ec44f58fa12d6c45").get()
 
                 it("should initialize with provided values") {
                     let state = StateAccount(basic: basic, code: codeSample, reset: true)
                     expect(state.basic).to(equal(basic))
                     expect(state.code).to(equal(codeSample))
+                    expect(state.codeHash).to(equal(codeSampleHash))
+                    expect(state.reset).to(beTrue())
+                }
+
+                it("should leave the hash of unknown code unset and use KECCAK_EMPTY for empty code") {
+                    expect(StateAccount(basic: basic, code: nil, reset: false).codeHash).to(beNil())
+                    expect(StateAccount(basic: basic, code: [], reset: false).codeHash).to(equal(H256.KECCAK_EMPTY))
+                }
+
+                it("should replace code together with its hash") {
+                    var state = StateAccount(basic: basic, code: nil, reset: true)
+                    state.setCode([0x61, 0x62, 0x63])
+                    expect(state.code).to(equal([0x61, 0x62, 0x63]))
+                    expect(state.codeHash).to(equal(abcHash))
+
+                    state.setCode([])
+                    expect(state.code).to(equal([]))
+                    expect(state.codeHash).to(equal(H256.KECCAK_EMPTY))
+                    expect(state.basic).to(equal(basic))
                     expect(state.reset).to(beTrue())
                 }
 
