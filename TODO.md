@@ -16,7 +16,6 @@
 
 ### Host
 - [ ] BLOCKHASH
-- [ ] TIMESTAMP
 - [ ] DIFFICULTY
 - [ ] BASEFEE
 - [ ] NUMBER
