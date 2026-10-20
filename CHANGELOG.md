@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.6] - 2026-10-20
+
+This release adds the `EXTCODEHASH` opcode and makes the code hash part of account state: `Backend` supplies it for stored accounts, and `StateAccount` keeps it with code set during execution, so code is hashed once when it is set and an emptiness check asks the backend for neither code nor its hash. Custom `InterpreterHandler` and `Backend` conformers, and code that assigns `StateAccount.code`, need source changes; see **Breaking Changes**.
+
+### Breaking Changes
+- **New `InterpreterHandler` requirement:** conformers must implement `codeHash(address:)`, which returns the `EXTCODEHASH` result (EIP-1052): zero for an absent or EIP-161 empty account, otherwise the Keccak-256 hash of the account's own code, including an EIP-7702 delegation indicator, without following the delegation. An implementation over `MemoryState` should read `codeHash(address:)` first and consult `basic(address:)` only when the hash is `KECCAK_EMPTY`, so a contract costs one backend read ([#87]).
+- **New `Backend` requirements:** conformers must implement `codeHash(address:)` and `hasCode(address:)`. `codeHash(address:)` returns the Keccak-256 hash of `code(address:)`, or `KECCAK_EMPTY` for empty code and absent accounts, from stored or cached data rather than by hashing code on every call. `hasCode(address:)` reports whether that hash differs from `KECCAK_EMPTY` and must be answered from the account record or the code key without loading or hashing code. A trie or witness backend answers both from the account leaf ([#87]).
+- **`StateAccount.code` is read-only:** its setter is private; set code through `setCode(_:)`, which keeps it paired with `codeHash` ([#87]).
+
+### Added
+- **`EXTCODEHASH` opcode (0x3F, EIP-1052):** pushes the result of `InterpreterHandler.codeHash(address:)`; the address is the low 160 bits of the operand. The account access costs 400 gas from Constantinople, 700 from Istanbul (EIP-1884) until Berlin, and 2600 cold or 100 warm from Berlin (EIP-2929), as specified by the Yellow Paper and EELS. From Berlin the opcode warms the address before charging, as EELS does; it never warms a delegate, and for an EIP-7702 delegated account it pushes the hash of the 23-byte delegation indicator. Earlier forks fail with `HardForkNotActive` before the stack or gas is checked. The opcode requests only the hash, never the code, does not touch memory, and on `OutOfGas` leaves the operand on the stack without requesting the hash. It is available in static calls. Previously no handler was registered and the opcode executed as `InvalidOpcode` ([#87]).
+- **Code hash in account state:** `StateAccount.codeHash` holds the Keccak-256 hash of `code`, or `nil` without code. `StateAccount.setCode(_:)` replaces both and gives empty code `KECCAK_EMPTY` without hashing; `init(basic:code:reset:)` hashes non-nil code the same way. `MemoryState.codeHash(address:)` and `MemoryState.hasCode(address:)` answer from code set in the substate chain and otherwise from the backend ([#87]).
+
+### Changed
+- **Setting code computes its hash:** `MemoryState.setCode(address:code:)` hashes nonempty code once and stores the hash with it; reads, and substates that copy an inherited account, reuse the stored hash. The extra field grows `MemoryLayout<StateAccount>.stride` from 56 to 88 bytes on 64-bit platforms ([#87]).
+- **`MemoryState.isEmpty(address:)` asks the backend for neither code nor its hash:** balance and nonce come from the substate chain or, for an account unknown to it, from `Backend.basic(address:)`. Only when both are zero does it decide by the hash of code set in the substate chain, or else by `Backend.hasCode(address:)`. Previously, for zero balance and nonce without code set in the substate chain, it loaded the code with `Backend.code(address:)`. Results are unchanged when `hasCode(address:)` agrees with `code(address:)`. An emptiness check therefore needs no code bytes, which a stateless witness may omit, and never makes a backend without stored hashes hash code ([#87]).
+
+### Tests
+- **`EXTCODEHASH`:** exact gas and the pushed hash on every active hard fork for cold and warm addresses with zero, `KECCAK_EMPTY`, a contract hash and the maximum word; `HardForkNotActive` before Constantinople with an empty or one-item stack, without charging gas, requesting a hash or warming; stack underflow before gas or account access; insufficient gas on every active hard fork without consuming the operand, charging gas, requesting a hash or reading code; a full stack with unchanged memory and memory gas; each of the 96 high address bits ignored for lookup and warming; warming shared with `EXTCODESIZE`, `EXTCODECOPY`, `BALANCE` and a repeated `EXTCODEHASH` in both orders; absent, empty, funded, nonce-only and code accounts through `MemoryState` with one backend hash request, a `basic` request only for codeless accounts, and no code loads or journaled reads; the EIP-7702 indicator's hash in a static call without accessing the delegate; and tracing of the operand, hash and gas ([#87]).
+- **`GasCost.extCodeHashCost`:** cold and warm prices for every active hard fork ([#87]).
+- **`StateAccount`:** the initializer's hash against `cast keccak` reference digests, no hash for unknown code, `KECCAK_EMPTY` for empty code, and code replaced together with its hash ([#87]).
+- **`MemoryState` code hashes:** a contract's backend hash served without loading code or journaling reads; emptiness decided from balance and nonce before `hasCode` is requested, and from code set in the transaction even when the backend disagrees; `hasCode` answered from the local hash, asking the backend only for accounts without local code; hashes of code set and then emptied in the transaction taking precedence over a stale backend hash; hashes inherited and restored after commit, revert and discard; and absence restored after a reverted creation. `MockBackend` records `basic`, `code`, `codeHash` and `hasCode` requests, the existing emptiness example for known and unknown accounts asserts that `hasCode` is requested instead of code or its hash, and `TestHandler` records `codeHash(address:)` requests ([#87]).
+
 ## [0.6.5] - 2026-10-15
 
 This release adds the `EXTCODESIZE` opcode, which shares its account access pricing with `EXTCODECOPY`. It reads code through the `InterpreterHandler.code(address:)` requirement introduced in 0.6.4, so existing conformers need no source changes.
@@ -663,7 +686,8 @@ This is the **initial public release** of `swift-evm` — a Swift-native Ethereu
 
 
 <!-- Versions -->
-[Unreleased]: https://github.com/mrLSD/swift-evm/compare/v0.6.5...HEAD
+[Unreleased]: https://github.com/mrLSD/swift-evm/compare/v0.6.6...HEAD
+[0.6.6]: https://github.com/mrLSD/swift-evm/compare/v0.6.5...v0.6.6
 [0.6.5]: https://github.com/mrLSD/swift-evm/compare/v0.6.4...v0.6.5
 [0.6.4]: https://github.com/mrLSD/swift-evm/compare/v0.6.3...v0.6.4
 [0.6.3]: https://github.com/mrLSD/swift-evm/compare/v0.6.2...v0.6.3
@@ -703,6 +727,7 @@ This is the **initial public release** of `swift-evm` — a Swift-native Ethereu
 [0.1.0]: https://github.com/mrLSD/swift-evm/releases/tag/v0.1.0
 
 <!-- PRs -->
+[#87]: https://github.com/mrLSD/swift-evm/pull/87
 [#85]: https://github.com/mrLSD/swift-evm/pull/85
 [#83]: https://github.com/mrLSD/swift-evm/pull/83
 [#80]: https://github.com/mrLSD/swift-evm/pull/80
