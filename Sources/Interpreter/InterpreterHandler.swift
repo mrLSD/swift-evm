@@ -23,6 +23,8 @@ public protocol InterpreterHandler {
     func chainId() -> U256
     /// Get environmental transaction coinbase address.
     func coinbase() -> H160
+    /// Get the gas limit of the current block.
+    func blockGasLimit() -> U256
     /// Whether the current call forbids state changes.
     func isStatic() -> Bool
     /// Append to the current substate's logs; leave them unchanged on failure.

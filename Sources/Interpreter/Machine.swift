@@ -336,6 +336,9 @@ public final class Machine {
         table[Opcode.CHAINID.index] = HostInstructions.chainId
         table[Opcode.COINBASE.index] = HostInstructions.coinbase
 
+        // Block
+        table[Opcode.GASLIMIT.index] = BlockInstructions.gasLimit
+
         return table
     }()
 

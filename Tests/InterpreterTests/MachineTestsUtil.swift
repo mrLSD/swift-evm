@@ -15,6 +15,8 @@ class TestHandler: InterpreterHandler {
     var codeRequests: [H160] = []
     var codeHashes: [H160: H256] = [:]
     var codeHashRequests: [H160] = []
+    var blockGasLimitValue = U256(from: 30_000_000)
+    var blockGasLimitRequests = 0
 
     func beforeOpcodeExecution(machine: Machine, opcode: Opcode?) -> Machine.ExitError? {
         return nil
@@ -55,6 +57,11 @@ class TestHandler: InterpreterHandler {
 
     func coinbase() -> H160 {
         Self.address2
+    }
+
+    func blockGasLimit() -> U256 {
+        blockGasLimitRequests += 1
+        return blockGasLimitValue
     }
 
     func isStatic() -> Bool {
