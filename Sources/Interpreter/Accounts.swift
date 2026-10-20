@@ -51,10 +51,10 @@ extension BasicAccount {
 public struct StateAccount: Equatable, Sendable {
     /// Basic account information.
     public var basic: BasicAccount
-    /// Account code.
-    public var code: [UInt8]?
+    /// Account code; `setCode(_:)` keeps it paired with `codeHash`.
+    public private(set) var code: [UInt8]?
     /// Hash of `code` (`nil` without code), stored with it so that reads and copies never hash the code again.
-    public var codeHash: H256?
+    public private(set) var codeHash: H256?
     /// Account reset flag.
     public var reset: Bool
 

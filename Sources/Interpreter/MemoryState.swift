@@ -397,26 +397,24 @@ public class MemoryState {
         accounts[address]?.setCode(code)
     }
 
-    /// Returns EXTCODEHASH using current account data; storage does not affect EIP-161 emptiness.
-    public func extCodeHash(address: H160) -> H256 {
-        let hash = codeHash(address: address)
-        // Code alone makes an account nonempty, so balance and nonce are read only without it.
-        guard hash == .KECCAK_EMPTY else {
-            return hash
-        }
-        let account = basic(address: address)
-        return account.balance.isZero && account.nonce == 0 ? .ZERO : hash
-    }
-
-    /// Check if the account at the given address is empty.
-    /// An account is empty if its balance is zero, its nonce is zero, and its code hash is `KECCAK_EMPTY`;
-    /// code is never loaded.
+    /// Check if the account at the given address is empty (EIP-161): zero balance, zero nonce and no code.
+    ///
+    /// Local fields answer first; code set in this transaction is unknown to the backend. The backend is asked for
+    /// `basic` only when the account is unknown and whether it has code only when balance and nonce are zero. The
+    /// hash is never requested, so a backend without a stored hash hashes nothing; code is never loaded here.
     ///
     /// - Parameter address: The address to check.
     /// - Returns: `true` if the account is empty, `false` otherwise.
     public func isEmpty(address: H160) -> Bool {
-        let account = basic(address: address)
-        return account.balance.isZero && account.nonce == 0 && codeHash(address: address) == .KECCAK_EMPTY
+        let known = knownAccount(address)
+        let basic = known?.basic ?? backend.basic(address: address)
+        guard basic.balance.isZero, basic.nonce == 0 else {
+            return false
+        }
+        if let codeHash = known?.codeHash {
+            return codeHash == .KECCAK_EMPTY
+        }
+        return !backend.hasCode(address: address)
     }
 
     /// Internal helper to swap the entire state data between two instances.
@@ -728,6 +726,13 @@ extension MemoryState: Backend {
 
     public func codeHash(address: H160) -> H256 {
         return knownAccount(address)?.codeHash ?? backend.codeHash(address: address)
+    }
+
+    public func hasCode(address: H160) -> Bool {
+        if let codeHash = knownAccount(address)?.codeHash {
+            return codeHash != .KECCAK_EMPTY
+        }
+        return backend.hasCode(address: address)
     }
 
     public func storage(address: H160, index: H256) -> H256 {

@@ -135,12 +135,6 @@ final class AccountSpec: QuickSpec {
                         expect(state1).toNot(equal(state2))
                     }
 
-                    it("should not be equal if code hash differs") {
-                        var state2 = state1
-                        state2.codeHash = .ZERO
-                        expect(state1).toNot(equal(state2))
-                    }
-
                     it("should not be equal if reset flag differs") {
                         let state2 = StateAccount(basic: basic, code: codeSample, reset: true)
                         expect(state1).toNot(equal(state2))

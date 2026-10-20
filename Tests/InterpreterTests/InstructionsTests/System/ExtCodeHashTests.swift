@@ -11,9 +11,15 @@ final class InstructionExtCodeHashSpec: QuickSpec {
             self.state = state
         }
 
+        /// EIP-1052 from the state's facts: the hash first, balance and nonce only for codeless accounts.
         override func codeHash(address: H160) -> H256 {
             codeHashRequests.append(address)
-            return state.extCodeHash(address: address)
+            let hash = state.codeHash(address: address)
+            guard hash == .KECCAK_EMPTY else {
+                return hash
+            }
+            let account = state.basic(address: address)
+            return account.balance.isZero && account.nonce == 0 ? .ZERO : hash
         }
 
         override func isStatic() -> Bool {
@@ -217,6 +223,7 @@ final class InstructionExtCodeHashSpec: QuickSpec {
                     expect(m.stack.data).to(equal([U256(from: expected)]))
                     expect(m.gas.remaining).to(equal(0))
                     expect(backend.codeHashRequests).to(equal([address]))
+                    expect(backend.basicRequests).to(equal(codeHash == .KECCAK_EMPTY ? [address] : []))
                     expect(backend.codeRequests).to(beEmpty())
                     expect(handler.codeRequests).to(beEmpty())
                     expect(state.accounts).to(beEmpty())
@@ -240,6 +247,7 @@ final class InstructionExtCodeHashSpec: QuickSpec {
                 expect(handler.isStatic()).to(beTrue())
                 expect(handler.codeHashRequests).to(equal([address]))
                 expect(backend.codeHashRequests).to(beEmpty())
+                expect(backend.basicRequests).to(equal([address]))
                 expect(backend.codeRequests).to(beEmpty())
                 expect(m.state.isCold(address: target)).to(beTrue())
             }
