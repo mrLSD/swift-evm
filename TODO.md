@@ -9,16 +9,14 @@
 - [ ] TSTORE
 - [ ] RETURNDATASIZE
 - [ ] RETURNDATACOPY
-- [ ] PREVRANDAO
 
 ### Memory
 - [ ] MCOPY
 
 ### Host
 - [ ] BLOCKHASH
-- [ ] DIFFICULTY
+- [ ] DIFFICULTY + PREVRANDAO
 - [ ] BASEFEE
-- [ ] NUMBER
 - [ ] BLOBHASH
 - [ ] BLOBBASEFEE
 

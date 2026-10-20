@@ -19,6 +19,8 @@ class TestHandler: InterpreterHandler {
     var blockGasLimitRequests = 0
     var blockTimestampValue = U256(from: 1_700_000_123)
     var blockTimestampRequests = 0
+    var blockNumberValue = U256(from: 20_000_123)
+    var blockNumberRequests = 0
 
     func beforeOpcodeExecution(machine: Machine, opcode: Opcode?) -> Machine.ExitError? {
         return nil
@@ -64,6 +66,11 @@ class TestHandler: InterpreterHandler {
     func blockTimestamp() -> U256 {
         blockTimestampRequests += 1
         return blockTimestampValue
+    }
+
+    func blockNumber() -> U256 {
+        blockNumberRequests += 1
+        return blockNumberValue
     }
 
     func blockGasLimit() -> U256 {
