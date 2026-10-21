@@ -339,6 +339,7 @@ public final class Machine {
         // Block
         table[Opcode.TIMESTAMP.index] = BlockInstructions.timestamp
         table[Opcode.NUMBER.index] = BlockInstructions.number
+        table[Opcode.PREVRANDAO.index] = BlockInstructions.prevrandao
         table[Opcode.GASLIMIT.index] = BlockInstructions.gasLimit
 
         return table
