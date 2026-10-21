@@ -17,7 +17,6 @@
 ### Host
 - [ ] BLOCKHASH
 - [ ] TIMESTAMP
-- [ ] GASLIMIT
 - [ ] DIFFICULTY
 - [ ] BASEFEE
 - [ ] NUMBER
