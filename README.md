@@ -6,7 +6,7 @@
 
 
 <div align="center">
-  <img src=".github/logo.png" alt="SwiftEVM" />
+  <img src=".github/logo-v2.png" alt="SwiftEVM" />
 
   <h1>mrLSD<code>/SwiftEVM</code></h1>
   <p><strong>Portable, compliant, and high-performance pure Swift implementation of the Ethereum Virtual Machine (EVM)</strong></p>
@@ -17,8 +17,9 @@
 **SwiftEVM** is a modular EVM implementation for the Ethereum protocol, written in pure Swift. It is designed for low-overhead 
 integration into blockchain nodes, embedded systems, and Layer-2 solutions requiring deterministic EVM bytecode execution.
 
-Unlike general-purpose wrappers, SwiftEVM offers a ground-up implementation of the **Yellow Paper** specifications, optimizing 
-critical paths (dispatch loop, stack operations, and memory expansion) for Apple Silicon and other architectures.
+Unlike general-purpose wrappers, SwiftEVM offers a ground-up implementation of the **Yellow Paper** and the Ethereum
+Execution Layer Specifications ([EELS][eels]), optimizing critical paths (dispatch loop, stack operations, and memory
+expansion) for Apple Silicon and other architectures.
 
 ### 📦 Swift Package Index
 The project is indexed and verified on the Swift Package Index. You can view detailed build compatibility reports across platforms 
@@ -30,7 +31,7 @@ and generated documentation here:
 
 ## Key Features
 
-*   **Yellow Paper Compliant:** Strict adherence to Ethereum protocol specifications.
+*   **Yellow Paper and EELS Compliant:** Strict adherence to Ethereum protocol specifications; opcode semantics and gas are checked against [EELS][eels] for every supported hard fork.
 *   **Zero-Copy Architecture:** Optimized memory handling to minimize ARC overhead in hot execution paths.
 *   **Platform Agnostic:** Runs natively on **macOS**, **iOS**, **Linux**, and **WebAssembly (wasm32)** and many others.
 *   **Uncompromising Reliability:** The codebase maintains **100% unit test coverage**. Every opcode, edge case, and gas calculation path is rigorously tested, ensuring production-grade stability and correctness rarely seen in early-stage implementations.
@@ -42,9 +43,12 @@ and generated documentation here:
 SwiftEVM is composed of specialized modules to ensure performance and correctness:
 
 ### 1. `PrimitiveTypes` (Arithmetic Core)
-A specialized math library tailored for the EVM's 256-bit word size.
-*   **Why not BigInt?** Generic BigInt libraries introduce overhead for dynamic allocation and do not natively handle EVM-specific behaviors (e.g., specific overflow wrapping, two's complement representation for `SDIV`/`SMOD`).
-*   **UInt128 Support:** Leverages Swift 6 native `UInt128` for optimized high-precision calculations.
+A dependency-free, fixed-width integer library built for the EVM's 256-bit word rather than a general-purpose BigInt.
+*   **Inline value layout, no heap:** `U256` is four `UInt64` limbs stored directly in the struct, so an EVM word is a trivially copyable 32-byte value with no allocation, reference counting or dynamic length. Arithmetic works on the limbs in place; byte arrays are computed only at the EVM encoding boundary.
+*   **EVM semantics are the API:** wrapping `+`, `-` and `*`; full-width intermediates for `ADDMOD` and `MULMOD` through `U512`; `I256` with two's-complement conversions, truncating signed division and remainder, canonical nonnegative zero and arithmetic shifts for `SDIV`, `SMOD` and `SAR`. Preconditions such as a nonzero divisor are explicit, and the opcodes implement the EVM's zero-result rules on top.
+*   **One generic core:** `U128`, `U256`, `U512` and `I256` share the `BigUInt` protocol with little-endian limbs, explicit big-endian EVM encoding, hex parsing and Knuth Algorithm D division (normalization, quotient correction, add-back) built on `UInt64.dividingFullWidth`; hot paths are `@inlinable`, so the interpreter specializes them across the module boundary.
+*   **Portable and deterministic:** pure Swift with no external dependencies and no platform-specific intrinsics, so results are identical on macOS, iOS, Linux and WebAssembly.
+*   **Proven, not assumed:** over 500 examples cover zero, one, maxima, the signed minimum, every limb boundary, carry and borrow propagation, oversized shifts and endian conversions; seeded, reproducible property tests exercise full-width division and normalization for `U256` and `U512`; line and region coverage is 100% and enforced in CI.
 
 ### 2. `EVMCrypto` (Hashing)
 Keccak-256 for the `KECCAK256` opcode, exposed as `Keccak256.hash` over a raw byte buffer.
@@ -71,8 +75,8 @@ The project targets the Ethereum specification upgrades listed below.
 | :--- | :--- | :--- |
 | **Machine State** | ✅ Complete | Stack, Memory, Context, Gas |
 | **Opcode Logic** | ✅ Complete | Arithmetic, Bitwise, Control Flow, System |
+| **Runtime** | 🔄 In Progress | Transaction context, Block environment |
 | **Precompiles** | 🔄 In Progress | ECRecover, SHA256, RIPEMD160, Identity etc. |
-| **Runtime** | 🛠 Active Dev | Transaction context, Block environment |
 | **zkEVM** | 🔜 Planned | Guest program, Block validation & execution |
 
 ### Compliance & Verification
@@ -184,3 +188,5 @@ swift test | xcbeautify
 ## License
 
 SwiftEVM is released under the [MIT License](LICENSE).
+
+[eels]: https://github.com/ethereum/execution-specs
