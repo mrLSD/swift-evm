@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.7] - 2026-10-22
+
+This release adds the `GASLIMIT` opcode, the first block-environment opcode, which reads the block gas limit through a new `InterpreterHandler.blockGasLimit()` requirement. Custom `InterpreterHandler` conformers need a source change; see **Breaking Changes**.
+
+### Breaking Changes
+- **New `InterpreterHandler` requirement:** conformers must implement `blockGasLimit()`, which returns the gas limit of the current block header as a `U256`; it is constant for the whole block and independent of the gas remaining in the transaction. An implementation over `MemoryState` delegates to the existing `Backend.blockGasLimit()`; `Backend` is unchanged ([#89]).
+
+### Added
+- **`GASLIMIT` opcode (0x45):** pushes the block gas limit returned by `InterpreterHandler.blockGasLimit()` for `BASE` (2) gas in every hard fork from Frontier, as specified by the Yellow Paper and EELS. A full stack fails with `StackOverflow` before gas is charged, insufficient gas fails without querying the handler, and the opcode does not touch memory and is available in static calls. Previously no handler was registered and the opcode executed as `InvalidOpcode` ([#89]).
+
+### Tests
+- **`GASLIMIT`:** exact gas and the pushed value on every hard fork for zero, one, a 30M limit, each limb boundary and the maximum word; insufficient gas without charging gas or querying the handler; stack overflow before gas or handler access; the last free stack slot; the block limit independent of the changing execution gas; a subsequent out-of-gas instruction stopping before the handler is queried again; unchanged memory and refunds; a static call; and tracing of the pushed value and gas. `TestHandler` records `blockGasLimit()` requests ([#89]).
+
 ## [0.6.6] - 2026-10-20
 
 This release adds the `EXTCODEHASH` opcode and makes the code hash part of account state: `Backend` supplies it for stored accounts, and `StateAccount` keeps it with code set during execution, so code is hashed once when it is set and an emptiness check asks the backend for neither code nor its hash. Custom `InterpreterHandler` and `Backend` conformers, and code that assigns `StateAccount.code`, need source changes; see **Breaking Changes**.
@@ -686,7 +699,8 @@ This is the **initial public release** of `swift-evm` — a Swift-native Ethereu
 
 
 <!-- Versions -->
-[Unreleased]: https://github.com/mrLSD/swift-evm/compare/v0.6.6...HEAD
+[Unreleased]: https://github.com/mrLSD/swift-evm/compare/v0.6.7...HEAD
+[0.6.7]: https://github.com/mrLSD/swift-evm/compare/v0.6.6...v0.6.7
 [0.6.6]: https://github.com/mrLSD/swift-evm/compare/v0.6.5...v0.6.6
 [0.6.5]: https://github.com/mrLSD/swift-evm/compare/v0.6.4...v0.6.5
 [0.6.4]: https://github.com/mrLSD/swift-evm/compare/v0.6.3...v0.6.4
@@ -727,6 +741,7 @@ This is the **initial public release** of `swift-evm` — a Swift-native Ethereu
 [0.1.0]: https://github.com/mrLSD/swift-evm/releases/tag/v0.1.0
 
 <!-- PRs -->
+[#89]: https://github.com/mrLSD/swift-evm/pull/89
 [#87]: https://github.com/mrLSD/swift-evm/pull/87
 [#85]: https://github.com/mrLSD/swift-evm/pull/85
 [#83]: https://github.com/mrLSD/swift-evm/pull/83

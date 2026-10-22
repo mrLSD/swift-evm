@@ -101,7 +101,7 @@ Add SwiftEVM to your `Package.swift` dependencies:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/mrLSD/swift-evm.git", from: "0.6.6")
+    .package(url: "https://github.com/mrLSD/swift-evm.git", from: "0.6.7")
 ]
 ```
 
