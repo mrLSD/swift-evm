@@ -14,7 +14,6 @@
 - [ ] MCOPY
 
 ### Host
-- [ ] BLOCKHASH
 - [ ] BASEFEE
 - [ ] BLOBHASH
 - [ ] BLOBBASEFEE

@@ -337,6 +337,7 @@ public final class Machine {
         table[Opcode.COINBASE.index] = HostInstructions.coinbase
 
         // Block
+        table[Opcode.BLOCKHASH.index] = BlockInstructions.blockHash
         table[Opcode.TIMESTAMP.index] = BlockInstructions.timestamp
         table[Opcode.NUMBER.index] = BlockInstructions.number
         table[Opcode.PREVRANDAO.index] = BlockInstructions.prevrandao
