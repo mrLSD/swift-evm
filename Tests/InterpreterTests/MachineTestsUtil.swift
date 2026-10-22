@@ -17,6 +17,8 @@ class TestHandler: InterpreterHandler {
     var codeHashRequests: [H160] = []
     var blockGasLimitValue = U256(from: 30_000_000)
     var blockGasLimitRequests = 0
+    var blockTimestampValue = U256(from: 1_700_000_123)
+    var blockTimestampRequests = 0
 
     func beforeOpcodeExecution(machine: Machine, opcode: Opcode?) -> Machine.ExitError? {
         return nil
@@ -57,6 +59,11 @@ class TestHandler: InterpreterHandler {
 
     func coinbase() -> H160 {
         Self.address2
+    }
+
+    func blockTimestamp() -> U256 {
+        blockTimestampRequests += 1
+        return blockTimestampValue
     }
 
     func blockGasLimit() -> U256 {

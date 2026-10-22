@@ -337,6 +337,7 @@ public final class Machine {
         table[Opcode.COINBASE.index] = HostInstructions.coinbase
 
         // Block
+        table[Opcode.TIMESTAMP.index] = BlockInstructions.timestamp
         table[Opcode.GASLIMIT.index] = BlockInstructions.gasLimit
 
         return table
