@@ -15,6 +15,8 @@ class TestHandler: InterpreterHandler {
     var codeRequests: [H160] = []
     var codeHashes: [H160: H256] = [:]
     var codeHashRequests: [H160] = []
+    var blobVersionedHashes: [U256] = []
+    var blobHashRequests: [UInt] = []
     var blockGasLimitValue = U256(from: 30_000_000)
     var blockGasLimitRequests = 0
     var blockBaseFeePerGasValue = U256(from: 7)
@@ -57,6 +59,12 @@ class TestHandler: InterpreterHandler {
 
     func gasPrice() -> U256 {
         Self.testGasPrice
+    }
+
+    func getBlobHash(index: UInt) -> U256? {
+        blobHashRequests.append(index)
+        guard index < UInt(blobVersionedHashes.count) else { return nil }
+        return blobVersionedHashes[Int(index)]
     }
 
     func origin() -> H160 {
