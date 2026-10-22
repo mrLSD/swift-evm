@@ -175,8 +175,8 @@ swift test
 # Run tests with prettified output
 swift test | xcbeautify
 
-# Check coverage (requires llvm-cov)
-./Scripts/coverage.sh
+# Show failed tests report only with details
+./Tests/cli-test-runner
 ```
 
 ---

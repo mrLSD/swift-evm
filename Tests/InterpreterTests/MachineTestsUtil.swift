@@ -17,6 +17,8 @@ class TestHandler: InterpreterHandler {
     var codeHashRequests: [H160] = []
     var blockGasLimitValue = U256(from: 30_000_000)
     var blockGasLimitRequests = 0
+    var blockBaseFeePerGasValue = U256(from: 7)
+    var blockBaseFeePerGasRequests = 0
     var blockTimestampValue = U256(from: 1_700_000_123)
     var blockTimestampRequests = 0
     var blockNumberValue = U256(from: 20_000_123)
@@ -97,6 +99,11 @@ class TestHandler: InterpreterHandler {
     func blockGasLimit() -> U256 {
         blockGasLimitRequests += 1
         return blockGasLimitValue
+    }
+
+    func blockBaseFeePerGas() -> U256 {
+        blockBaseFeePerGasRequests += 1
+        return blockBaseFeePerGasValue
     }
 
     func isStatic() -> Bool {

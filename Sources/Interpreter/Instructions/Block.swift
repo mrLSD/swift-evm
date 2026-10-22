@@ -88,4 +88,23 @@ enum BlockInstructions {
 
         m.stackPush(value: m.handler.blockGasLimit())
     }
+
+    /// EIP-3198: pushes the current block's base fee per gas from London onward.
+    static func baseFee(machine m: Machine) {
+        // Check hardfork
+        guard m.hardFork.isLondon() else {
+            m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.HardForkNotActive))
+            return
+        }
+
+        if !m.verifyStack(pop: 0, push: 1) {
+            return
+        }
+
+        if !m.gasRecordCost(cost: GasConstant.BASE) {
+            return
+        }
+
+        m.stackPush(value: m.handler.blockBaseFeePerGas())
+    }
 }
