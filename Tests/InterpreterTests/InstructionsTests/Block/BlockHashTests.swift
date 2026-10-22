@@ -125,6 +125,7 @@ final class InstructionBlockHashSpec: QuickSpec {
                 let m = TestMachine.machine(opcode: .BLOCKHASH, gasLimit: 20)
                 let handler = m.handler as! TestHandler
                 handler.blockNumberValue = U256(from: 1)
+                handler.blockHashes[.ZERO] = .ZERO
                 expect(m.stack.push(value: .ZERO)).to(beSuccess())
 
                 m.evalLoop()
@@ -133,6 +134,49 @@ final class InstructionBlockHashSpec: QuickSpec {
                 expect(m.stack.data).to(equal([U256.ZERO]))
                 expect(m.gas.remaining).to(equal(0))
                 expect(handler.blockHashRequests).to(equal([U256.ZERO]))
+            }
+
+            it("exits fatally only for an eligible block whose hash the handler lacks") {
+                for distance: UInt64 in [1, 256] {
+                    let m = TestMachine.machine(opcode: .BLOCKHASH, gasLimit: 30)
+                    let handler = m.handler as! TestHandler
+                    let number = U256(from: 1000 - distance)
+                    handler.blockNumberValue = U256(from: 1000)
+                    expect(m.stack.push(value: U256(from: 99))).to(beSuccess())
+                    expect(m.stack.push(value: number)).to(beSuccess())
+                    let detail = "distance \(distance)"
+
+                    m.evalLoop()
+
+                    expect(m.machineStatus).to(equal(.Exit(.Fatal(.UnknownBlockHash))), description: detail)
+                    expect(m.stack.data).to(equal([U256(from: 99)]), description: detail)
+                    expect(m.gas.remaining).to(equal(10), description: detail)
+                    expect(m.pc).to(equal(0), description: detail)
+                    expect(handler.blockHashRequests).to(equal([number]), description: detail)
+
+                    // A hash supplied later must not resume a frame that already failed fatally.
+                    handler.blockHashes[number] = .MAX
+                    m.step()
+                    m.evalLoop()
+                    expect(m.machineStatus).to(equal(.Exit(.Fatal(.UnknownBlockHash))), description: detail)
+                    expect(m.pc).to(equal(0), description: detail)
+                    expect(handler.blockHashRequests).to(equal([number]), description: detail)
+                }
+
+                for number in [U256(from: 743), U256(from: 1000), U256(from: 1001), U256.MAX] {
+                    let m = TestMachine.machine(opcode: .BLOCKHASH, gasLimit: 20)
+                    let handler = m.handler as! TestHandler
+                    handler.blockNumberValue = U256(from: 1000)
+                    expect(m.stack.push(value: number)).to(beSuccess())
+                    let detail = "requested \(number)"
+
+                    m.evalLoop()
+
+                    expect(m.machineStatus).to(equal(.Exit(.Success(.Stop))), description: detail)
+                    expect(m.stack.data).to(equal([U256.ZERO]), description: detail)
+                    expect(m.gas.remaining).to(equal(0), description: detail)
+                    expect(handler.blockHashRequests).to(beEmpty(), description: detail)
+                }
             }
 
             it("rejects stack underflow before charging gas or querying the handler") {

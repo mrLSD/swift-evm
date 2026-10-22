@@ -2,7 +2,11 @@ import PrimitiveTypes
 
 /// EVM Block instructions
 enum BlockInstructions {
-    /// Pushes a hash from the previous 256 blocks, or zero outside that window.
+    /// Ancestors whose hashes BLOCKHASH can return; EIP-2935 does not widen this window.
+    static let BLOCK_HASH_HISTORY = U256(from: 256)
+
+    /// Pushes a hash from the previous `BLOCK_HASH_HISTORY` blocks, or zero outside that window.
+    /// A missing hash inside the window is a host failure and ends the machine with `ExitFatal.UnknownBlockHash`.
     static func blockHash(machine m: Machine) {
         if !m.verifyStack(pop: 1) {
             return
@@ -15,8 +19,12 @@ enum BlockInstructions {
         // Stack size was verified above; this unwrap cannot fail.
         let number = m.stackPop()!
         let currentNumber = m.handler.blockNumber()
-        if number < currentNumber && currentNumber - number <= U256(from: 256) {
-            m.stackPush(value: U256(from: m.handler.blockHash(number: number)))
+        if number < currentNumber && currentNumber - number <= Self.BLOCK_HASH_HISTORY {
+            guard let hash = m.handler.blockHash(number: number) else {
+                m.machineStatus = .Exit(.Fatal(.UnknownBlockHash))
+                return
+            }
+            m.stackPush(value: U256(from: hash))
         } else {
             m.stackPush(value: U256.ZERO)
         }

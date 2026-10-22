@@ -69,9 +69,9 @@ class TestHandler: InterpreterHandler {
         Self.address2
     }
 
-    func blockHash(number: U256) -> H256 {
+    func blockHash(number: U256) -> H256? {
         blockHashRequests.append(number)
-        return blockHashes[number] ?? .ZERO
+        return blockHashes[number]
     }
 
     func blockTimestamp() -> U256 {

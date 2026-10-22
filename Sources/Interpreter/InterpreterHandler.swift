@@ -23,8 +23,9 @@ public protocol InterpreterHandler {
     func chainId() -> U256
     /// Get environmental transaction coinbase address.
     func coinbase() -> H160
-    /// Get the canonical block hash; the number is within the previous 256 blocks.
-    func blockHash(number: U256) -> H256
+    /// Get the canonical hash of a block within the previous 256 blocks, or `nil` when the environment has none,
+    /// which ends execution with `ExitFatal.UnknownBlockHash`.
+    func blockHash(number: U256) -> H256?
     /// Get the current block's Unix timestamp in seconds.
     func blockTimestamp() -> U256
     /// Get the current block's number.
