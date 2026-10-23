@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.8] - 2026-10-23
+
+This release adds the `TIMESTAMP` opcode, which reads the block timestamp through a new `InterpreterHandler.blockTimestamp()` requirement, and refreshes the README. Custom `InterpreterHandler` conformers need a source change; see **Breaking Changes**.
+
+### Breaking Changes
+- **New `InterpreterHandler` requirement:** conformers must implement `blockTimestamp()`, which returns the current block header's Unix timestamp in seconds as a `U256`; it is constant for the whole block. An implementation over `MemoryState` delegates to the existing `Backend.blockTimestamp()`; `Backend` is unchanged ([#91]).
+
+### Added
+- **`TIMESTAMP` opcode (0x42):** pushes the block timestamp returned by `InterpreterHandler.blockTimestamp()` for `BASE` (2) gas in every hard fork from Frontier, as specified by the Yellow Paper and EELS. A full stack fails with `StackOverflow` before gas is charged, insufficient gas fails without querying the handler, and the opcode does not touch memory and is available in static calls. Previously no handler was registered and the opcode executed as `InvalidOpcode` ([#91]).
+
+### Changed
+- **Documentation:** the README states compliance with the Ethereum Execution Layer Specifications (EELS) next to the Yellow Paper, describes the `PrimitiveTypes` design (inline limb storage without heap allocation, EVM wrapping and signed semantics, the shared `BigUInt` core with Knuth division, portability and the test corpus) in place of an inaccurate note about native `UInt128`, lists the runtime as in progress, and uses a new logo ([#91]).
+
+### Tests
+- **`TIMESTAMP`:** exact gas and the pushed value on every hard fork for zero, one, a realistic timestamp, 2^31, 2^32, `UInt64.max`, each limb boundary and the maximum word; insufficient gas without charging gas or querying the handler; stack overflow before gas or handler access; the last free stack slot; the timestamp independent of the changing execution gas; a subsequent out-of-gas instruction stopping before the handler is queried again; unchanged memory and refunds; a static call; and tracing of the pushed value and gas. `TestHandler` records `blockTimestamp()` requests ([#91]).
+
 ## [0.6.7] - 2026-10-22
 
 This release adds the `GASLIMIT` opcode, the first block-environment opcode, which reads the block gas limit through a new `InterpreterHandler.blockGasLimit()` requirement. Custom `InterpreterHandler` conformers need a source change; see **Breaking Changes**.
@@ -699,7 +715,8 @@ This is the **initial public release** of `swift-evm` — a Swift-native Ethereu
 
 
 <!-- Versions -->
-[Unreleased]: https://github.com/mrLSD/swift-evm/compare/v0.6.7...HEAD
+[Unreleased]: https://github.com/mrLSD/swift-evm/compare/v0.6.8...HEAD
+[0.6.8]: https://github.com/mrLSD/swift-evm/compare/v0.6.7...v0.6.8
 [0.6.7]: https://github.com/mrLSD/swift-evm/compare/v0.6.6...v0.6.7
 [0.6.6]: https://github.com/mrLSD/swift-evm/compare/v0.6.5...v0.6.6
 [0.6.5]: https://github.com/mrLSD/swift-evm/compare/v0.6.4...v0.6.5
@@ -741,6 +758,7 @@ This is the **initial public release** of `swift-evm` — a Swift-native Ethereu
 [0.1.0]: https://github.com/mrLSD/swift-evm/releases/tag/v0.1.0
 
 <!-- PRs -->
+[#91]: https://github.com/mrLSD/swift-evm/pull/91
 [#89]: https://github.com/mrLSD/swift-evm/pull/89
 [#87]: https://github.com/mrLSD/swift-evm/pull/87
 [#85]: https://github.com/mrLSD/swift-evm/pull/85
