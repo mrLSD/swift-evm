@@ -21,6 +21,8 @@ class TestHandler: InterpreterHandler {
     var blockGasLimitRequests = 0
     var blockBaseFeePerGasValue = U256(from: 7)
     var blockBaseFeePerGasRequests = 0
+    var blobBaseFeeValue: U128? = U128(from: 7)
+    var blobBaseFeeRequests = 0
     var blockTimestampValue = U256(from: 1_700_000_123)
     var blockTimestampRequests = 0
     var blockNumberValue = U256(from: 20_000_123)
@@ -112,6 +114,11 @@ class TestHandler: InterpreterHandler {
     func blockBaseFeePerGas() -> U256 {
         blockBaseFeePerGasRequests += 1
         return blockBaseFeePerGasValue
+    }
+
+    func blobBaseFee() -> U128? {
+        blobBaseFeeRequests += 1
+        return blobBaseFeeValue
     }
 
     func isStatic() -> Bool {
