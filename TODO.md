@@ -7,18 +7,10 @@
 - [ ] SSTORE
 - [ ] TLOAD
 - [ ] TSTORE
-- [ ] RETURNDATASIZE
 - [ ] RETURNDATACOPY
 
 ### Memory
 - [ ] MCOPY
-
-### Host
-- [ ] BLOCKHASH
-- [ ] DIFFICULTY + PREVRANDAO
-- [ ] BASEFEE
-- [ ] BLOBHASH
-- [ ] BLOBBASEFEE
 
 ### Other
 - [ ] STATICCALL
@@ -34,3 +26,7 @@
 At the moment in Handler as temporary solution.
 But when Runtime will implemented, it should be moved to the EVM runtime, 
 and the EVM runtime should be aware of the static context.
+
+№№ RETURN
+
+After implementing CALL/CREATE - decide ReturnData.length, ReturnData.offset 

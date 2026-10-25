@@ -183,6 +183,26 @@ enum SystemInstructions {
         m.stackPush(value: U256(from: newValue))
     }
 
+    /// EIP-211: pushes the full return-data buffer size from Byzantium onward.
+    static func returnDataSize(machine m: Machine) {
+        // Check hardfork
+        guard m.hardFork.isByzantium() else {
+            m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.HardForkNotActive))
+            return
+        }
+
+        if !m.verifyStack(pop: 0, push: 1) {
+            return
+        }
+
+        if !m.gasRecordCost(cost: GasConstant.BASE) {
+            return
+        }
+
+        let newValue = UInt64(m.returnData.buffer.count)
+        m.stackPush(value: U256(from: newValue))
+    }
+
     /// Copies call data into memory at the specified offset and size.
     static func callDataCopy(machine m: Machine) {
         if !m.verifyStack(pop: 3) {
