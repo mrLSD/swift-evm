@@ -248,6 +248,61 @@ enum SystemInstructions {
         m.memory.writeData(offset: memoryOffset, size: size, from: m.data, dataOffset: dataOffset)
     }
 
+    /// EIP-211: copies return data without zero-padding; even an empty source range must be in bounds.
+    static func returnDataCopy(machine m: Machine) {
+        // Check hardfork
+        guard m.hardFork.isByzantium() else {
+            m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.HardForkNotActive))
+            return
+        }
+
+        if !m.verifyStack(pop: 3) {
+            return
+        }
+
+        // Stack size was verified above; these unwraps cannot fail.
+        let rawMemoryOffset = m.stackPeek(indexFromTop: 0)!
+        let rawDataOffset = m.stackPeek(indexFromTop: 1)!
+        let rawSize = m.stackPeek(indexFromTop: 2)!
+        guard let size = m.getMemoryIntOrFail(rawSize) else {
+            return
+        }
+
+        // An empty destination ignores its offset and does not expand memory.
+        var memoryOffset = 0
+        if size > 0 {
+            guard let offset = m.getMemoryIntOrFail(rawMemoryOffset) else {
+                return
+            }
+            memoryOffset = offset
+        }
+
+        if !m.gasRecordCost(cost: GasCost.veryLowCopy(size: size)) {
+            return
+        }
+
+        guard m.resizeMemoryAndRecordGas(offset: memoryOffset, size: size) else {
+            return
+        }
+
+        // Subtract only after bounding the offset, avoiding overflow in offset + size.
+        guard let dataOffset = rawDataOffset.getInt,
+              dataOffset <= m.returnData.buffer.count,
+              size <= m.returnData.buffer.count - dataOffset
+        else {
+            m.machineStatus = .Exit(.Error(.OutOfOffset))
+            return
+        }
+
+        m.stack.consume(count: 3)
+        if size == 0 {
+            return
+        }
+
+        // Both ranges are validated; writeData copies exactly size bytes without padding.
+        m.memory.writeData(offset: memoryOffset, size: size, from: m.returnData.buffer, dataOffset: dataOffset)
+    }
+
     /// Loads 32 bytes from call data at the specified index and pushes it onto the stack.
     static func callDataLoad(machine m: Machine) {
         if !m.verifyStack(pop: 1) {
