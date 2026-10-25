@@ -27,6 +27,10 @@ public protocol InterpreterHandler {
     func blockTimestamp() -> U256
     /// Get the current block's number.
     func blockNumber() -> U256
+    /// Get the block difficulty used before Paris.
+    func blockDifficulty() -> U256
+    /// Get the block's PREVRANDAO in big-endian order; must be non-nil from Paris onward.
+    func blockRandomness() -> H256?
     /// Get the gas limit of the current block.
     func blockGasLimit() -> U256
     /// Whether the current call forbids state changes.

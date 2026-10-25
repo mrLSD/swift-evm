@@ -15,7 +15,6 @@
 
 ### Host
 - [ ] BLOCKHASH
-- [ ] DIFFICULTY + PREVRANDAO
 - [ ] BASEFEE
 - [ ] BLOBHASH
 - [ ] BLOBBASEFEE

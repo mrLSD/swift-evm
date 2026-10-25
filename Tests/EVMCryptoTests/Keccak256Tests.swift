@@ -40,6 +40,14 @@ final class Keccak256Spec: QuickSpec {
                     }
                 }
 
+                it("reads the ExtremelyLongMsgKAT_256 recipe") {
+                    // Keeps the recipe reader and fixture verified in ordinary runs; hashing the one-GiB message stays opt-in.
+                    let recipe = KeccakKAT.extremelyLong("ExtremelyLongMsgKAT_256")
+                    expect(recipe.repetitions).to(equal(16_777_216))
+                    expect(recipe.text).to(equal(Array("abcdefghbcdefghicdefghijdefghijkefghijklfghijklmghijklmnhijklmno".utf8)))
+                    expect(recipe.digest).to(equal(try! H256.fromString(hex: "5F313C39963DCF792B5470D4ADE9F3A356A3E4021748690A958372E2B06F82A4").get()))
+                }
+
                 it("matches ShortMsgKAT_256 for every byte length below 256 at every alignment") {
                     let vectors = KeccakKAT.vectors("ShortMsgKAT_256")
                     expect(vectors.count).to(equal(256))

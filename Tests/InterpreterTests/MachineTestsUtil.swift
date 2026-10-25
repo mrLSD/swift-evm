@@ -21,6 +21,10 @@ class TestHandler: InterpreterHandler {
     var blockTimestampRequests = 0
     var blockNumberValue = U256(from: 20_000_123)
     var blockNumberRequests = 0
+    var blockDifficultyValue = U256(from: 999)
+    var blockDifficultyRequests = 0
+    var blockRandomnessValue: H256? = H256(from: U256(from: 22))
+    var blockRandomnessRequests = 0
 
     func beforeOpcodeExecution(machine: Machine, opcode: Opcode?) -> Machine.ExitError? {
         return nil
@@ -71,6 +75,16 @@ class TestHandler: InterpreterHandler {
     func blockNumber() -> U256 {
         blockNumberRequests += 1
         return blockNumberValue
+    }
+
+    func blockDifficulty() -> U256 {
+        blockDifficultyRequests += 1
+        return blockDifficultyValue
+    }
+
+    func blockRandomness() -> H256? {
+        blockRandomnessRequests += 1
+        return blockRandomnessValue
     }
 
     func blockGasLimit() -> U256 {
@@ -141,10 +155,6 @@ enum TestMachine {
 
     static func machine(opcode: Opcode, gasLimit: UInt64, context: Machine.Context, hardFork: HardFork) -> Machine {
         Machine(data: [], code: [opcode.rawValue], gasLimit: gasLimit, memoryLimit: 32000, context: context, state: ExecutionState(), handler: TestHandler(), hardFork: hardFork)
-    }
-
-    static func machine(opcodes code: [Opcode], gasLimit: UInt64, context: Machine.Context, hardFork: HardFork) -> Machine {
-        Machine(data: [], code: code.map(\.rawValue), gasLimit: gasLimit, memoryLimit: 32000, context: context, state: ExecutionState(), handler: TestHandler(), hardFork: hardFork)
     }
 }
 
