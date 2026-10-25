@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.10] - 2026-10-25
+
+This release adds the `PREVRANDAO` opcode, which executes as `DIFFICULTY` before Paris and reads the block difficulty and the beacon-chain randomness through two new `InterpreterHandler` requirements, and moves the Keccak 1 GiB check into the regular CI. Custom `InterpreterHandler` conformers need a source change; see **Breaking Changes**.
+
+### Breaking Changes
+- **New `InterpreterHandler` requirements:** conformers must implement `blockDifficulty()`, which returns the difficulty of the current block header as a `U256`, and `blockRandomness()`, which returns the header's RANDAO mix (`prevRandao`, the former `mixHash`) as an `H256` in big-endian order and may be `nil` only before Paris; both are constant for the whole block. An implementation over `MemoryState` delegates to the existing `Backend.blockDifficulty()` and `Backend.blockRandomness()`; `Backend` is unchanged ([#95]).
+
+### Added
+- **`PREVRANDAO` opcode (0x44, EIP-4399):** before Paris it is `DIFFICULTY` and pushes the block difficulty returned by `InterpreterHandler.blockDifficulty()`; from Paris it pushes the 32 bytes returned by `InterpreterHandler.blockRandomness()` as a big-endian word, as specified by the Yellow Paper and EELS. It costs `BASE` (2) gas in every hard fork from Frontier and queries the handler once, only for the active branch. A full stack fails with `StackOverflow` before gas is charged, insufficient gas fails without querying the handler, and the opcode does not touch memory and is available in static calls. From Paris a `nil` randomness violates the handler contract and traps with a precondition failure rather than falling back to the difficulty. Previously no handler was registered and the opcode executed as `InvalidOpcode` ([#95]).
+
+### Tests
+- **`PREVRANDAO`:** exact gas and the pushed value for zero, one, `UInt64.max`, each limb boundary and the maximum word, as the difficulty on every hard fork before Paris with and without randomness supplied and as the randomness from Paris onward; all 32 randomness bytes read as a big-endian word; the precondition message for missing randomness on every hard fork from Paris; insufficient gas without charging gas or querying the handler; stack overflow before gas or handler access; the last free stack slot; the value independent of the changing execution gas; a subsequent out-of-gas instruction stopping before the handler is queried again; unchanged memory and refunds; a static call; and tracing of the pushed value and gas. `TestHandler` records `blockDifficulty()` and `blockRandomness()` requests ([#95]).
+- **Keccak-256 known-answer recipe:** ordinary runs parse the `ExtremelyLongMsgKAT_256` fixture and assert its repetition count, message and digest, so the recipe reader is verified without the opt-in one-GiB hash ([#95]).
+
+### CI/Build
+- **Keccak 1 GiB job in the regular CI:** the release-mode `Keccak256Spec` run with the one-GiB `ExtremelyLongMsgKAT_256` vector moved from the manual **Keccak 1 GiB** workflow into a separate `keccak` job of the **Swift** workflow, so it runs for both backends on every push and pull request to `master` instead of through `workflow_dispatch` before a release. The job's steps are unchanged: a release build of the tests with `-enable-testing`, `xcrun xctest` on `Keccak256Spec` with `EVM_KECCAK_EXTREMELY_LONG_KAT=1`, and a failure unless that example actually ran.
+- **Documentation:** the README and the opt-in comment in `Keccak256Spec` describe the CI job instead of the manual workflow.
+
 ## [0.6.9] - 2026-10-24
 
 This release adds the `NUMBER` opcode, which reads the block number through a new `InterpreterHandler.blockNumber()` requirement. Custom `InterpreterHandler` conformers need a source change; see **Breaking Changes**.
@@ -95,10 +113,10 @@ This release adds the `EXTCODECOPY` opcode and aligns every memory-accessing opc
 - **New `InterpreterHandler` requirement:** conformers must implement `code(address:)`, which returns the account's own code, including an EIP-7702 delegation indicator, or an empty array for an absent account ([#83]).
 
 ### Added
-- **`EXTCODECOPY` opcode (0x3C):** copies an account's code into memory, zero-filling bytes past the end of the code; the address is the low 160 bits of the operand. The account access costs 20 gas before Tangerine Whistle, 700 from Tangerine Whistle until Berlin, and 2600 cold or 100 warm from Berlin (EIP-2929), plus 3 gas per copied 32-byte word and memory expansion, as specified by the Yellow Paper and EELS. The opcode warms the address but never a delegate, and copies an EIP-7702 delegation indicator itself. A zero size ignores both offsets and does not expand memory but still charges the access cost and warms the address. The opcode is available in static calls and in every hard fork ([#83]).
+- **`EXTCODECOPY` opcode (0x3C):** copies an account's code into memory, zero-filling bytes past the end of the code; the address is the low 160 bits of the operand. The account access costs 20 gas before Tangerine Whistle, 700 from Tangerine Whistle until Berlin, and 2600 cold or 100 warm from Berlin (EIP-2929), plus 3 gas per copied 32-byte word and memory expansion, as specified by the Yellow Paper and EELS. From Berlin the opcode warms the address before charging, but never a delegate, and it copies an EIP-7702 delegation indicator itself. A zero size ignores both offsets and does not expand memory but still charges the access cost and, from Berlin, warms the address. The opcode is available in static calls and in every hard fork ([#83]).
 
 ### Changed
-- **Memory opcodes consume operands only after charging:** `MLOAD`, `MSTORE`, `MSTORE8`, `KECCAK256`, `CODECOPY`, `CALLDATACOPY`, `EXTCODECOPY`, `LOG0`–`LOG4`, `RETURN` and `REVERT` read their operands without popping, convert the size and, for a nonempty range, the memory offset to `Int` before charging the opcode cost, then charge memory expansion, and consume the operands once both charges succeed. Results of successful execution and the error on failure are unchanged. After an `OutOfGas` exit the machine now keeps the operands on the stack, where `MLOAD`, `MSTORE`, `MSTORE8`, `RETURN` and `REVERT` previously had popped them, and an offset or size that does not fit in `Int` fails before any gas is charged, where the opcode cost was previously charged first. This is the order in which aurora-evm's gasometer and EELS evaluate operands ([#83]).
+- **Memory opcodes consume operands only after charging:** `MLOAD`, `MSTORE`, `MSTORE8`, `KECCAK256`, `CODECOPY`, `CALLDATACOPY`, `EXTCODECOPY`, `LOG0`–`LOG4`, `RETURN` and `REVERT` read their operands without popping, convert the size and, for a nonempty range, the memory offset to `Int` before charging the opcode cost, then charge memory expansion, and consume the operands once both charges succeed. Results of successful execution and the error on failure are unchanged. After an `OutOfGas` exit the machine now keeps the operands on the stack, where `MLOAD`, `MSTORE`, `MSTORE8`, `RETURN` and `REVERT` previously had popped them, and an offset or size that does not fit in `Int` fails before any gas is charged, where the opcode cost was previously charged first. aurora-evm's gasometer prices the operands in this order before its handler pops them; EELS pops the operands first and charges the opcode, copy and memory costs as one sum, with the same execution results ([#83]).
 
 ### Tests
 - **`EXTCODECOPY`:** exact access, copy and memory gas on every hard fork for cold and warm addresses; stack underflow before gas or account access; zero size with oversized offsets; address masking; slice copies and zero-fill at every source, destination and size boundary; absent and empty accounts; quadratic expansion of already allocated memory; warming shared with `BALANCE`, repeated copies and a parent's warm set; insufficient gas, unrepresentable operands and overflowing memory gas without consuming operands or reading code; the memory limit and allocation failures; the EIP-7702 indicator in a static call; and tracing of all four operands ([#83]).
@@ -129,7 +147,7 @@ This release adds the Osaka `CLZ` opcode, moves Keccak-256 into a new `EVMCrypto
 - **In-place memory access:** opcodes expand and charge a range first and then read or write it through precondition-checked accessors. `MSTORE` and `MSTORE8` write into the expanded range, `CODECOPY` and `CALLDATACOPY` copy with zero-fill, and `KECCAK256` passes the range to `Keccak256.hash` without copying it through `Memory.get`; only the CryptoSwift backend still copies it internally. The checked `set`, `copy` and `copyData` methods keep their own limit validation. Results of successful operations are unchanged ([#80]).
 - **Allocation-free opcodes:** `SIGNEXTEND`, `BYTE`, `MSTORE8`, `ORIGIN`, `COINBASE` and the `EXP` gas calculation work on stored fields instead of building `BYTES` arrays. Results are unchanged ([#80]).
 - **Shared instruction table:** opcode dispatch uses a static, immutable table of `@Sendable` functions shared by all machines, so creating a `Machine` no longer rebuilds 256 entries ([#80]).
-- **Exact memory gas:** `GasCost.memoryGas(numWords:)` evaluates `3 * N + floor(N * N / 512)` with a full-width square and reports overflow only when the total does not fit in `UInt64`. It previously reported overflow from 2^32 words, as soon as `N * N` exceeded 64 bits, although the cost still fit. Both thresholds are far beyond any payable gas, so opcode results are unchanged ([#80]).
+- **Exact memory gas:** `GasCost.memoryGas(numWords:)` evaluates `3 * N + floor(N * N / 512)` with a full-width square and reports overflow only when the total does not fit in `UInt64`. It previously reported overflow from 2^32 words, as soon as `N * N` exceeded 64 bits, although the cost still fit. Both thresholds lie far beyond the gas an Ethereum block can pay, so results are unchanged for such budgets; only a machine given more than about 3.6 × 10^16 gas can now pay for 2^32 words or more instead of failing with `OutOfGas` ([#80]).
 - **Documented contracts:** `Keccak256.hash(_:)` documents its buffer contract, `Memory` documents its two access tiers, `ExitFatal.ReadMemory` documents allocation failure, and the arithmetic handler comments state that a stack underflow or gas failure sets an error exit ([#80]).
 
 ### Fixed
@@ -728,7 +746,8 @@ This is the **initial public release** of `swift-evm` — a Swift-native Ethereu
 
 
 <!-- Versions -->
-[Unreleased]: https://github.com/mrLSD/swift-evm/compare/v0.6.9...HEAD
+[Unreleased]: https://github.com/mrLSD/swift-evm/compare/v0.6.10...HEAD
+[0.6.10]: https://github.com/mrLSD/swift-evm/compare/v0.6.9...v0.6.10
 [0.6.9]: https://github.com/mrLSD/swift-evm/compare/v0.6.8...v0.6.9
 [0.6.8]: https://github.com/mrLSD/swift-evm/compare/v0.6.7...v0.6.8
 [0.6.7]: https://github.com/mrLSD/swift-evm/compare/v0.6.6...v0.6.7
@@ -772,6 +791,7 @@ This is the **initial public release** of `swift-evm` — a Swift-native Ethereu
 [0.1.0]: https://github.com/mrLSD/swift-evm/releases/tag/v0.1.0
 
 <!-- PRs -->
+[#95]: https://github.com/mrLSD/swift-evm/pull/95
 [#93]: https://github.com/mrLSD/swift-evm/pull/93
 [#91]: https://github.com/mrLSD/swift-evm/pull/91
 [#89]: https://github.com/mrLSD/swift-evm/pull/89
