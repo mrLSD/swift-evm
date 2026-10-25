@@ -17,6 +17,8 @@ public protocol InterpreterHandler {
     func codeHash(address: H160) -> H256
     /// Read the current transaction's transient storage; an unset slot returns zero, including in static calls.
     func tload(address: H160, index: H256) -> Result<U256, Machine.ExitError>
+    /// Write the current transaction's transient storage; leave it unchanged on failure.
+    func tstore(address: H160, index: H256, value: U256) -> Result<Void, Machine.ExitError>
     /// Get environmental gas price.
     func gasPrice() -> U256
     /// Get environmental transaction origin (sender) address.

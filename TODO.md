@@ -5,7 +5,6 @@
 ### System
 - [ ] SLOAD
 - [ ] SSTORE
-- [ ] TSTORE
 
 ### Memory
 - [ ] MCOPY

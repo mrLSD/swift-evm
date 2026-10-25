@@ -239,6 +239,7 @@ public final class Machine {
         table[Opcode.CALLER.index] = SystemInstructions.caller
         table[Opcode.GAS.index] = SystemInstructions.gas
         table[Opcode.TLOAD.index] = SystemInstructions.tload
+        table[Opcode.TSTORE.index] = SystemInstructions.tstore
         table[Opcode.SHA3.index] = SystemInstructions.keccak256
         table[Opcode.LOG0.index] = { (_ m: Machine) in SystemInstructions.log(machine: m, n: 0) }
         table[Opcode.LOG1.index] = { (_ m: Machine) in SystemInstructions.log(machine: m, n: 1) }
