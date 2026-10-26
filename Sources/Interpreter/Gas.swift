@@ -152,6 +152,7 @@ enum GasConstant {
     /// Gas cost per word for copy operations.
     static let COPY: UInt64 = 3
     static let COLD_ACCOUNT_ACCESS_COST: UInt64 = 2600
+    static let COLD_SLOAD_COST: UInt64 = 2100
     static let WARM_STORAGE_READ_COST: UInt64 = 100
     /// Base gas cost for KECCAK256 instruction.
     static let KECCAK256: UInt64 = 30
@@ -246,6 +247,24 @@ enum GasCost {
         // Overflow impossible in that case
         let costPerCopy = self.costPerWord(size: size, multiple: Int(clamping: GasConstant.COPY))!
         return GasConstant.VERYLOW + costPerCopy
+    }
+
+    /// Calculates SLOAD pricing, including EIP-150, EIP-1884 and EIP-2929.
+    ///
+    /// - Parameters:
+    ///   - hardFork: The hard fork determining storage access pricing.
+    ///   - isCold: Whether the storage slot is cold; ignored before Berlin.
+    /// - Returns: 50 before Tangerine, 200 until Istanbul, 800 until Berlin, then 2100 cold or 100 warm.
+    static func sloadCost(hardFork: HardFork, isCold: Bool) -> UInt64 {
+        if hardFork.isBerlin() {
+            isCold ? GasConstant.COLD_SLOAD_COST : GasConstant.WARM_STORAGE_READ_COST
+        } else if hardFork.isIstanbul() {
+            800
+        } else if hardFork.isTangerine() {
+            200
+        } else {
+            50
+        }
     }
 
     /// Calculates the account access cost shared by EXTCODESIZE and EXTCODECOPY.

@@ -15,6 +15,8 @@ class TestHandler: InterpreterHandler {
     var codeRequests: [H160] = []
     var codeHashes: [H160: H256] = [:]
     var codeHashRequests: [H160] = []
+    var storages: [H160: [H256: H256]] = [:]
+    var storageRequests: [(address: H160, index: H256)] = []
     var tstorages: [H160: [H256: U256]] = [:]
     var tloadRequests: [(address: H160, index: H256)] = []
     var tstoreRequests: [(address: H160, index: H256, value: U256)] = []
@@ -52,6 +54,11 @@ class TestHandler: InterpreterHandler {
 
     func gasPrice() -> U256 {
         Self.testGasPrice
+    }
+
+    func storage(address: H160, index: H256) -> H256 {
+        storageRequests.append((address, index))
+        return storages[address]?[index] ?? .ZERO
     }
 
     func tload(address: H160, index: H256) -> Result<U256, Machine.ExitError> {
