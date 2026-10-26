@@ -2,9 +2,6 @@
 
 ## Add support for Opcodes
 
-### System
-- [ ] SSTORE
-
 ### Memory
 - [ ] MCOPY
 

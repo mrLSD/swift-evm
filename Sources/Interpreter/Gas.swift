@@ -154,6 +154,10 @@ enum GasConstant {
     static let COLD_ACCOUNT_ACCESS_COST: UInt64 = 2600
     static let COLD_SLOAD_COST: UInt64 = 2100
     static let WARM_STORAGE_READ_COST: UInt64 = 100
+    static let SSTORE_SET: UInt64 = 20000
+    static let SSTORE_RESET: UInt64 = 5000
+    static let SSTORE_CLEARS: Int64 = 15000
+    static let CALL_STIPEND: UInt64 = 2300
     /// Base gas cost for KECCAK256 instruction.
     static let KECCAK256: UInt64 = 30
     /// Gas cost per word for KECCAK256 instruction.
@@ -265,6 +269,61 @@ enum GasCost {
         } else {
             50
         }
+    }
+
+    /// Calculates SSTORE cost; the EIP-2200 stipend check belongs to the opcode.
+    ///
+    /// - Parameters:
+    ///   - hardFork: The hard fork determining storage pricing.
+    ///   - original: The value at transaction start.
+    ///   - current: The value before this write.
+    ///   - new: The value to store.
+    ///   - isCold: Whether the slot is cold; ignored before Berlin.
+    /// - Returns: The write cost including the Berlin cold-slot surcharge.
+    static func sstoreCost(hardFork: HardFork, original: H256, current: H256, new: H256, isCold: Bool) -> UInt64 {
+        if !hardFork.isIstanbul() {
+            return current.isZero && !new.isZero ? GasConstant.SSTORE_SET : GasConstant.SSTORE_RESET
+        }
+
+        let coldCost = hardFork.isBerlin() && isCold ? GasConstant.COLD_SLOAD_COST : 0
+        if current == new || original != current {
+            return coldCost + self.sloadCost(hardFork: hardFork, isCold: false)
+        }
+        let resetCost = hardFork.isBerlin() ? GasConstant.SSTORE_RESET - GasConstant.COLD_SLOAD_COST : GasConstant.SSTORE_RESET
+        return coldCost + (original.isZero ? GasConstant.SSTORE_SET : resetCost)
+    }
+
+    /// Calculates the signed SSTORE refund delta, before the transaction refund cap.
+    ///
+    /// - Parameters:
+    ///   - hardFork: The hard fork determining refund rules.
+    ///   - original: The value at transaction start.
+    ///   - current: The value before this write.
+    ///   - new: The value to store.
+    /// - Returns: The refund delta, including reversal of an earlier clearing refund.
+    static func sstoreRefund(hardFork: HardFork, original: H256, current: H256, new: H256) -> Int64 {
+        if !hardFork.isIstanbul() {
+            return !current.isZero && new.isZero ? GasConstant.SSTORE_CLEARS : 0
+        }
+        if current == new {
+            return 0
+        }
+
+        let clears: Int64 = hardFork.isLondon() ? 4800 : GasConstant.SSTORE_CLEARS
+        var refund: Int64 = 0
+        if !original.isZero {
+            if current.isZero {
+                refund -= clears
+            } else if new.isZero {
+                refund += clears
+            }
+        }
+        if original == new {
+            let resetCost = hardFork.isBerlin() ? GasConstant.SSTORE_RESET - GasConstant.COLD_SLOAD_COST : GasConstant.SSTORE_RESET
+            let restoredCost = original.isZero ? GasConstant.SSTORE_SET : resetCost
+            refund += Int64(restoredCost - self.sloadCost(hardFork: hardFork, isCold: false))
+        }
+        return refund
     }
 
     /// Calculates the account access cost shared by EXTCODESIZE and EXTCODECOPY.

@@ -28,6 +28,44 @@ enum SystemInstructions {
         m.stackPush(value: U256(from: value))
     }
 
+    /// Stores a word in the executing account's persistent storage.
+    static func sstore(machine m: Machine) {
+        if !m.verifyStack(pop: 2) {
+            return
+        }
+        if m.handler.isStatic() {
+            m.machineStatus = .Exit(.Error(.WriteInStaticContext))
+            return
+        }
+        if m.hardFork.isIstanbul() && m.gas.remaining <= GasConstant.CALL_STIPEND {
+            m.machineStatus = .Exit(.Error(.OutOfGas))
+            return
+        }
+
+        // Stack depth was verified above; these unwraps cannot fail.
+        let index = H256(from: m.stackPeek(indexFromTop: 0)!)
+        let value = H256(from: m.stackPeek(indexFromTop: 1)!)
+        let address = m.context.targetAddress
+        var isCold = false
+        if m.hardFork.isBerlin() {
+            isCold = m.state.isCold(address: address, index: index)
+            m.state.warm(address: address, index: index, isCold: isCold)
+        }
+        let original = m.hardFork.isIstanbul() ? m.handler.originalStorage(address: address, index: index) : .ZERO
+        let current = m.handler.storage(address: address, index: index)
+        if !m.gasRecordCost(cost: GasCost.sstoreCost(hardFork: m.hardFork, original: original, current: current, new: value, isCold: isCold)) {
+            return
+        }
+
+        switch m.handler.setStorage(address: address, index: index, value: value) {
+        case .success:
+            m.gas.recordRefund(refund: GasCost.sstoreRefund(hardFork: m.hardFork, original: original, current: current, new: value))
+            m.stack.consume(count: 2)
+        case .failure(let error):
+            m.machineStatus = .Exit(.Error(error))
+        }
+    }
+
     /// EIP-1153: loads a word from the executing account's transient storage.
     static func tload(machine m: Machine) {
         guard m.hardFork.isCancun() else {

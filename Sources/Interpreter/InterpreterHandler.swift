@@ -17,6 +17,10 @@ public protocol InterpreterHandler {
     func codeHash(address: H160) -> H256
     /// Read the current persistent storage value; an unset slot returns zero, including in static calls.
     func storage(address: H160, index: H256) -> H256
+    /// Read the slot's value at transaction start, unchanged by subsequent writes; zero for an absent slot.
+    func originalStorage(address: H160, index: H256) -> H256
+    /// Write persistent storage in the current substate; leave it unchanged on failure.
+    func setStorage(address: H160, index: H256, value: H256) -> Result<Void, Machine.ExitError>
     /// Read the current transaction's transient storage; an unset slot returns zero, including in static calls.
     func tload(address: H160, index: H256) -> Result<U256, Machine.ExitError>
     /// Write the current transaction's transient storage; leave it unchanged on failure.
