@@ -19,7 +19,7 @@ enum BlockInstructions {
         // Stack size was verified above; this unwrap cannot fail.
         let number = m.stackPop()!
         let currentNumber = m.handler.blockNumber()
-        if number < currentNumber && currentNumber - number <= Self.BLOCK_HASH_HISTORY {
+        if number < currentNumber, currentNumber - number <= Self.BLOCK_HASH_HISTORY {
             guard let hash = m.handler.blockHash(number: number) else {
                 m.machineStatus = .Exit(.Fatal(.UnknownBlockHash))
                 return
