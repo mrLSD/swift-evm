@@ -118,6 +118,8 @@ public final class Machine {
     public enum ExitFatal: Equatable, Error {
         /// Host memory allocation failed; callers must abort the enclosing execution.
         case ReadMemory
+        /// The environment has no hash for a block inside the `BLOCKHASH` window; callers must abort the enclosing execution.
+        case UnknownBlockHash
     }
 
     /// Errors produced by memory-related operations.
@@ -337,6 +339,7 @@ public final class Machine {
         table[Opcode.COINBASE.index] = HostInstructions.coinbase
 
         // Block
+        table[Opcode.BLOCKHASH.index] = BlockInstructions.blockHash
         table[Opcode.TIMESTAMP.index] = BlockInstructions.timestamp
         table[Opcode.NUMBER.index] = BlockInstructions.number
         table[Opcode.PREVRANDAO.index] = BlockInstructions.prevrandao

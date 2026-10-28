@@ -21,6 +21,8 @@ class TestHandler: InterpreterHandler {
     var blockTimestampRequests = 0
     var blockNumberValue = U256(from: 20_000_123)
     var blockNumberRequests = 0
+    var blockHashes: [U256: H256] = [:]
+    var blockHashRequests: [U256] = []
     var blockDifficultyValue = U256(from: 999)
     var blockDifficultyRequests = 0
     var blockRandomnessValue: H256? = H256(from: U256(from: 22))
@@ -65,6 +67,11 @@ class TestHandler: InterpreterHandler {
 
     func coinbase() -> H160 {
         Self.address2
+    }
+
+    func blockHash(number: U256) -> H256? {
+        blockHashRequests.append(number)
+        return blockHashes[number]
     }
 
     func blockTimestamp() -> U256 {
