@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.11] - 2026-10-28
+
+This release adds the `BLOCKHASH` opcode, which reads the hashes of the previous 256 blocks through a new `InterpreterHandler.blockHash(number:)` requirement, and makes `Backend.blockHash(number:)` optional so that a missing hash aborts execution instead of being invented. Custom `Backend` and `InterpreterHandler` conformers need a source change; see **Breaking Changes**.
+
+### Breaking Changes
+- **`Backend.blockHash(number:)` returns `H256?`:** a conformer returns the canonical hash of block `number`, or `nil` when the environment has none; `BLOCKHASH` asks only for the 256 blocks before the current one, where a missing hash aborts execution. `MemoryState.blockHash(number:)` forwards the optional unchanged ([#97]).
+- **New `InterpreterHandler` requirement:** conformers must implement `blockHash(number:)`, which returns the canonical hash of a block within the previous 256 blocks as an `H256` in big-endian order, or `nil` when the environment has none. An implementation over `MemoryState` delegates to `Backend.blockHash(number:)` ([#97]).
+- **New `Machine.ExitFatal.UnknownBlockHash` case:** exhaustive `switch` statements over `ExitFatal` must handle it; like `ReadMemory`, it means the enclosing execution must abort ([#97]).
+
+### Added
+- **`BLOCKHASH` opcode (0x40):** pops a block number and pushes the hash returned by `InterpreterHandler.blockHash(number:)` when that number is below the current block number returned by `InterpreterHandler.blockNumber()` and at most 256 blocks before it; any other number, including the current and later blocks, pushes zero without asking for a hash, as specified by the Yellow Paper and EELS (EIP-2935 does not widen this window). It costs `BLOCKHASH` (20) gas in every hard fork from Frontier, charged after the stack check and before the handler is queried, compares the full 256-bit number and does not underflow at genesis. A `nil` hash for an eligible block ends the machine with `ExitFatal.UnknownBlockHash` rather than pushing zero. The opcode does not touch memory or refunds, is available in static calls and has no warm-access discount. Previously no handler was registered and the opcode executed as `InvalidOpcode` ([#97]).
+
+### Tests
+- **`BLOCKHASH`:** the 256-block window at the exact gas budget on every hard fork for requested numbers at and around both edges, beyond the window, `UInt64.max`, the maximum word and words that differ only in a higher limb; the absolute number passed to the handler for each of the 256 ancestors; genesis and the first 257 blocks; full-width comparisons across every limb boundary and near the maximum word; a zero hash returned by the handler; the fatal exit for an eligible block without a hash at distances 1 and 256, with the number consumed, gas charged and no resumption after a hash is supplied later; zero for the current, later and far older blocks without a hash query; stack underflow and insufficient gas before gas is charged or the handler is queried; the top word of a full stack; the same cost for repeated reads, including an out-of-gas stop between them; unchanged memory and refunds; a static call; and tracing of the consumed number, pushed hash and gas. `TestHandler` serves hashes from a table and records `blockHash(number:)` requests; `MockBackend.blockHash(number:)` returns `nil` except for block zero, and the `MemoryState` spec asserts the `nil` passthrough ([#97]).
+
 ## [0.6.10] - 2026-10-25
 
 This release adds the `PREVRANDAO` opcode, which executes as `DIFFICULTY` before Paris and reads the block difficulty and the beacon-chain randomness through two new `InterpreterHandler` requirements, and moves the Keccak 1 GiB check into the regular CI. Custom `InterpreterHandler` conformers need a source change; see **Breaking Changes**.
@@ -56,7 +71,7 @@ This release adds the `TIMESTAMP` opcode, which reads the block timestamp throug
 
 ## [0.6.7] - 2026-10-22
 
-This release adds the `GASLIMIT` opcode, the first block-environment opcode, which reads the block gas limit through a new `InterpreterHandler.blockGasLimit()` requirement. Custom `InterpreterHandler` conformers need a source change; see **Breaking Changes**.
+This release adds the `GASLIMIT` opcode, which reads the block gas limit through a new `InterpreterHandler.blockGasLimit()` requirement. Custom `InterpreterHandler` conformers need a source change; see **Breaking Changes**.
 
 ### Breaking Changes
 - **New `InterpreterHandler` requirement:** conformers must implement `blockGasLimit()`, which returns the gas limit of the current block header as a `U256`; it is constant for the whole block and independent of the gas remaining in the transaction. An implementation over `MemoryState` delegates to the existing `Backend.blockGasLimit()`; `Backend` is unchanged ([#89]).
@@ -746,7 +761,8 @@ This is the **initial public release** of `swift-evm` — a Swift-native Ethereu
 
 
 <!-- Versions -->
-[Unreleased]: https://github.com/mrLSD/swift-evm/compare/v0.6.10...HEAD
+[Unreleased]: https://github.com/mrLSD/swift-evm/compare/v0.6.11...HEAD
+[0.6.11]: https://github.com/mrLSD/swift-evm/compare/v0.6.10...v0.6.11
 [0.6.10]: https://github.com/mrLSD/swift-evm/compare/v0.6.9...v0.6.10
 [0.6.9]: https://github.com/mrLSD/swift-evm/compare/v0.6.8...v0.6.9
 [0.6.8]: https://github.com/mrLSD/swift-evm/compare/v0.6.7...v0.6.8
@@ -791,6 +807,7 @@ This is the **initial public release** of `swift-evm` — a Swift-native Ethereu
 [0.1.0]: https://github.com/mrLSD/swift-evm/releases/tag/v0.1.0
 
 <!-- PRs -->
+[#97]: https://github.com/mrLSD/swift-evm/pull/97
 [#95]: https://github.com/mrLSD/swift-evm/pull/95
 [#93]: https://github.com/mrLSD/swift-evm/pull/93
 [#91]: https://github.com/mrLSD/swift-evm/pull/91
