@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.12] - 2026-10-29
+
+This release adds the `BASEFEE` opcode, which reads the block base fee per gas through a new `InterpreterHandler.blockBaseFeePerGas()` requirement, and corrects a README test command. Custom `InterpreterHandler` conformers need a source change; see **Breaking Changes**.
+
+### Breaking Changes
+- **New `InterpreterHandler` requirement:** conformers must implement `blockBaseFeePerGas()`, which returns the base fee per gas of the current block header in wei as a `U256`; it is constant for the whole block and independent of the transaction gas price. An implementation over `MemoryState` delegates to the existing `Backend.blockBaseFeePerGas()`; `Backend` is unchanged ([#99]).
+
+### Added
+- **`BASEFEE` opcode (0x48, EIP-3198):** active from London; pushes the block base fee per gas returned by `InterpreterHandler.blockBaseFeePerGas()` for `BASE` (2) gas, as specified by the Yellow Paper and EELS. Earlier forks fail with `HardForkNotActive` before the stack or gas is checked and without querying the handler. A full stack fails with `StackOverflow` before gas is charged, insufficient gas fails without querying the handler, and the opcode does not touch memory and is available in static calls. Previously no handler was registered and the opcode executed as `InvalidOpcode` ([#99]).
+
+### Changed
+- **Documentation:** the README's test commands show `Tests/cli-test-runner`, which prints only the failed expectations with their file, line, example, expected and actual values, in place of a `Scripts/coverage.sh` that never existed in the repository ([#99]).
+
+### Tests
+- **`BASEFEE`:** exact gas and the pushed value on every hard fork from London for zero, one, 7, 10 gwei, `UInt64.max`, each limb boundary and the maximum word; `HardForkNotActive` on every hard fork before London at four gas budgets with an empty and a full stack, without charging gas or querying the handler; the EIP-3198 example (`BASEFEE`, `STOP` with a base fee of 7) at its exact gas; insufficient gas without charging gas or querying the handler; stack overflow before gas or handler access; the last free stack slot; the base fee independent of the transaction gas price and the changing execution gas; a subsequent out-of-gas instruction stopping before the handler is queried again; unchanged memory and refunds; a static call; and tracing of the pushed value and gas. `TestHandler` records `blockBaseFeePerGas()` requests ([#99]).
+
 ## [0.6.11] - 2026-10-28
 
 This release adds the `BLOCKHASH` opcode, which reads the hashes of the previous 256 blocks through a new `InterpreterHandler.blockHash(number:)` requirement, and makes `Backend.blockHash(number:)` optional so that a missing hash aborts execution instead of being invented. Custom `Backend` and `InterpreterHandler` conformers need a source change; see **Breaking Changes**.
@@ -761,7 +777,8 @@ This is the **initial public release** of `swift-evm` — a Swift-native Ethereu
 
 
 <!-- Versions -->
-[Unreleased]: https://github.com/mrLSD/swift-evm/compare/v0.6.11...HEAD
+[Unreleased]: https://github.com/mrLSD/swift-evm/compare/v0.6.12...HEAD
+[0.6.12]: https://github.com/mrLSD/swift-evm/compare/v0.6.11...v0.6.12
 [0.6.11]: https://github.com/mrLSD/swift-evm/compare/v0.6.10...v0.6.11
 [0.6.10]: https://github.com/mrLSD/swift-evm/compare/v0.6.9...v0.6.10
 [0.6.9]: https://github.com/mrLSD/swift-evm/compare/v0.6.8...v0.6.9
@@ -807,6 +824,7 @@ This is the **initial public release** of `swift-evm` — a Swift-native Ethereu
 [0.1.0]: https://github.com/mrLSD/swift-evm/releases/tag/v0.1.0
 
 <!-- PRs -->
+[#99]: https://github.com/mrLSD/swift-evm/pull/99
 [#97]: https://github.com/mrLSD/swift-evm/pull/97
 [#95]: https://github.com/mrLSD/swift-evm/pull/95
 [#93]: https://github.com/mrLSD/swift-evm/pull/93
