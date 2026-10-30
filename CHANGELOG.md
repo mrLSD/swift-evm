@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.13] - 2026-10-30
+
+This release adds the `BLOBHASH` opcode, which reads the versioned hashes of the transaction's blobs through a new `InterpreterHandler.getBlobHash(index:)` requirement. Custom `InterpreterHandler` conformers need a source change; see **Breaking Changes**.
+
+### Breaking Changes
+- **New `InterpreterHandler` requirement:** conformers must implement `getBlobHash(index:)`, which returns the versioned hash at `index` of the transaction's blob list as a `U256` in big-endian order, or `nil` for an index outside the list, including every index of a transaction without blobs. An implementation over `MemoryState` delegates to the existing `Backend.getBlobHash(index:)`; `Backend` is unchanged ([#101]).
+
+### Added
+- **`BLOBHASH` opcode (0x49, EIP-4844):** active from Cancun; pops an index and pushes the versioned hash returned by `InterpreterHandler.getBlobHash(index:)` for that position in the transaction's blob list, or zero when the handler returns `nil`, for `VERYLOW` (3) gas, as specified by EIP-4844 and EELS. An index that does not fit in `UInt` is passed to the handler as `UInt.max`, which lies outside any blob list, so the result matches the full 256-bit comparison of EELS. Earlier forks fail with `HardForkNotActive` before the stack or gas is checked and without querying the handler. Stack underflow fails before gas is charged, insufficient gas fails without consuming the index or querying the handler, and the opcode does not touch memory and is available in static calls. Previously no handler was registered and the opcode executed as `InvalidOpcode` ([#101]).
+
+### Tests
+- **`BLOBHASH`:** exact gas, the pushed hash and the index passed to the handler on every hard fork from Cancun for both hashes of a two-blob transaction, the two indexes just past the list, `Int.max`, `Int.max + 1`, `UInt.max`, words that differ only in a higher limb and the maximum word; `HardForkNotActive` on every hard fork before Cancun at four gas budgets with an empty and a one-item stack, without charging gas or querying the handler; zero for a transaction without blobs on every active fork; handler words pushed without hashing or masking; all nine hashes of a Prague transaction and zero past its end; stack underflow and insufficient gas before gas is charged or the handler is queried, with the index left on the stack; the top word replaced on a full stack; three gas for each of two reads, with an out-of-gas stop before the second read reaches the handler; unchanged memory and refunds; a static call; and tracing of the consumed index, pushed hash and gas. `TestHandler` serves hashes from a list and records `getBlobHash(index:)` requests ([#101]).
+
 ## [0.6.12] - 2026-10-29
 
 This release adds the `BASEFEE` opcode, which reads the block base fee per gas through a new `InterpreterHandler.blockBaseFeePerGas()` requirement, and corrects a README test command. Custom `InterpreterHandler` conformers need a source change; see **Breaking Changes**.
@@ -777,7 +790,8 @@ This is the **initial public release** of `swift-evm` — a Swift-native Ethereu
 
 
 <!-- Versions -->
-[Unreleased]: https://github.com/mrLSD/swift-evm/compare/v0.6.12...HEAD
+[Unreleased]: https://github.com/mrLSD/swift-evm/compare/v0.6.13...HEAD
+[0.6.13]: https://github.com/mrLSD/swift-evm/compare/v0.6.12...v0.6.13
 [0.6.12]: https://github.com/mrLSD/swift-evm/compare/v0.6.11...v0.6.12
 [0.6.11]: https://github.com/mrLSD/swift-evm/compare/v0.6.10...v0.6.11
 [0.6.10]: https://github.com/mrLSD/swift-evm/compare/v0.6.9...v0.6.10
@@ -824,6 +838,7 @@ This is the **initial public release** of `swift-evm` — a Swift-native Ethereu
 [0.1.0]: https://github.com/mrLSD/swift-evm/releases/tag/v0.1.0
 
 <!-- PRs -->
+[#101]: https://github.com/mrLSD/swift-evm/pull/101
 [#99]: https://github.com/mrLSD/swift-evm/pull/99
 [#97]: https://github.com/mrLSD/swift-evm/pull/97
 [#95]: https://github.com/mrLSD/swift-evm/pull/95
