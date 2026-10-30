@@ -334,6 +334,7 @@ public final class Machine {
         table[Opcode.BALANCE.index] = HostInstructions.balance
         table[Opcode.SELFBALANCE.index] = HostInstructions.selfBalance
         table[Opcode.GASPRICE.index] = HostInstructions.gasPrice
+        table[Opcode.BLOBHASH.index] = HostInstructions.blobHash
         table[Opcode.ORIGIN.index] = HostInstructions.origin
         table[Opcode.CHAINID.index] = HostInstructions.chainId
         table[Opcode.COINBASE.index] = HostInstructions.coinbase

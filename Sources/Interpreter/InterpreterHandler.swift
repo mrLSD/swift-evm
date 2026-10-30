@@ -17,6 +17,8 @@ public protocol InterpreterHandler {
     func codeHash(address: H160) -> H256
     /// Get environmental gas price.
     func gasPrice() -> U256
+    /// Get the transaction's versioned blob hash, or nil for an out-of-range index or a transaction without blobs.
+    func getBlobHash(index: UInt) -> U256?
     /// Get environmental transaction origin (sender) address.
     func origin() -> H160
     /// Get environmental transaction chain ID.
