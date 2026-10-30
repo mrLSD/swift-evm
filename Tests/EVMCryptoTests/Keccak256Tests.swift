@@ -17,7 +17,7 @@ final class Keccak256Spec: QuickSpec {
             }
 
             context("Keccak team known-answer tests") {
-                // Opt-in for release runs: the manual CI workflow sets the variable to 1; ordinary runs stay fast.
+                // Opt-in for release runs: the Keccak 1 GiB CI job sets the variable to 1; ordinary runs stay fast.
                 if ProcessInfo.processInfo.environment["EVM_KECCAK_EXTREMELY_LONG_KAT"] == "1" {
                     it("matches ExtremelyLongMsgKAT_256 for one GiB") {
                         let recipe = KeccakKAT.extremelyLong("ExtremelyLongMsgKAT_256")
