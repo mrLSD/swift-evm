@@ -2,15 +2,6 @@
 
 ## Add support for Opcodes
 
-### System
-- [ ] SLOAD
-- [ ] SSTORE
-- [ ] TLOAD
-- [ ] TSTORE
-
-### Memory
-- [ ] MCOPY
-
 ### Other
 - [ ] STATICCALL
 - [ ] SELFDESTRUCT
