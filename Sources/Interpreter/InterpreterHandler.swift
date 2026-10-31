@@ -40,6 +40,8 @@ public protocol InterpreterHandler {
     func blockGasLimit() -> U256
     /// Get the current block's base fee per gas in wei.
     func blockBaseFeePerGas() -> U256
+    /// Get the current block's base fee per blob gas in wei, or nil when unavailable (read as zero).
+    func blobBaseFee() -> U128?
     /// Whether the current call forbids state changes.
     func isStatic() -> Bool
     /// Append to the current substate's logs; leave them unchanged on failure.

@@ -107,4 +107,23 @@ enum BlockInstructions {
 
         m.stackPush(value: m.handler.blockBaseFeePerGas())
     }
+
+    /// EIP-7516: pushes the current block's base fee per blob gas from Cancun onward.
+    static func blobBaseFee(machine m: Machine) {
+        // Check hardfork
+        guard m.hardFork.isCancun() else {
+            m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.HardForkNotActive))
+            return
+        }
+
+        if !m.verifyStack(pop: 0, push: 1) {
+            return
+        }
+
+        if !m.gasRecordCost(cost: GasConstant.BASE) {
+            return
+        }
+
+        m.stackPush(value: U256(from: m.handler.blobBaseFee() ?? U128.ZERO))
+    }
 }

@@ -346,6 +346,7 @@ public final class Machine {
         table[Opcode.PREVRANDAO.index] = BlockInstructions.prevrandao
         table[Opcode.GASLIMIT.index] = BlockInstructions.gasLimit
         table[Opcode.BASEFEE.index] = BlockInstructions.baseFee
+        table[Opcode.BLOBBASEFEE.index] = BlockInstructions.blobBaseFee
 
         return table
     }()

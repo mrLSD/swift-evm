@@ -13,9 +13,6 @@
 ### Memory
 - [ ] MCOPY
 
-### Host
-- [ ] BLOBBASEFEE
-
 ### Other
 - [ ] STATICCALL
 - [ ] SELFDESTRUCT
