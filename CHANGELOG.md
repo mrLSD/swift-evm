@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.14] - 2026-11-01
+
+This release adds the `BLOBBASEFEE` opcode, which reads the block's base fee per blob gas through a new `InterpreterHandler.blobBaseFee()` requirement, and a `U256` initializer from `U128`. Custom `InterpreterHandler` conformers need a source change; see **Breaking Changes**.
+
+### Breaking Changes
+- **New `InterpreterHandler` requirement:** conformers must implement `blobBaseFee()`, which returns the base fee per blob gas of the current block in wei as a `U128`, derived from the header's excess blob gas as EIP-4844 specifies, or `nil` for a chain without a blob market, which `BLOBBASEFEE` reads as zero; it is constant for the whole block. An implementation over `MemoryState` delegates to the existing `Backend.blobGasPrice()`; `Backend` is unchanged ([#103]).
+
+### Added
+- **`BLOBBASEFEE` opcode (0x4A, EIP-7516):** active from Cancun; pushes the base fee per blob gas returned by `InterpreterHandler.blobBaseFee()`, zero-extended to a word, or zero when the handler returns `nil`, for `BASE` (2) gas, as specified by EIP-7516 and EELS. Earlier forks fail with `HardForkNotActive` before the stack or gas is checked and without querying the handler. A full stack fails with `StackOverflow` before gas is charged, insufficient gas fails without querying the handler, and the opcode does not touch memory and is available in static calls. Previously no handler was registered and the opcode executed as `InvalidOpcode` ([#103]).
+- **`U256.init(from: U128)`:** zero-extends a 128-bit value to an EVM word by placing its two limbs in the low half of the word ([#103]).
+
+### Tests
+- **`BLOBBASEFEE`:** exact gas and the pushed value on every hard fork from Cancun for `nil`, zero, one, 7, `UInt64.max`, 2^64, 2^127, `U128.MAX` and a limb pattern that detects a swapped or dropped limb; `HardForkNotActive` on every hard fork before Cancun at four gas budgets with an empty and a full stack, without charging gas or querying the handler; the EIP-7516 example (`BLOBBASEFEE`, `STOP` with a fee of 7); insufficient gas without charging gas or querying the handler; stack overflow before gas or handler access; the last free stack slot; the fee independent of `BASEFEE`, the transaction gas price and the changing execution gas, with the other handler requests counted; a subsequent out-of-gas instruction stopping before the handler is queried again; unchanged memory and refunds; a static call; and tracing of the pushed value and gas. `TestHandler` records `blobBaseFee()` requests ([#103]).
+- **`U256.init(from: U128)`:** the limb array `[low, high, 0, 0]` for zero, one, a full low limb, 2^64, 2^127, `U128.MAX` and an asymmetric limb pattern ([#103]).
+
 ## [0.6.13] - 2026-10-30
 
 This release adds the `BLOBHASH` opcode, which reads the versioned hashes of the transaction's blobs through a new `InterpreterHandler.getBlobHash(index:)` requirement. Custom `InterpreterHandler` conformers need a source change; see **Breaking Changes**.
@@ -790,7 +805,8 @@ This is the **initial public release** of `swift-evm` — a Swift-native Ethereu
 
 
 <!-- Versions -->
-[Unreleased]: https://github.com/mrLSD/swift-evm/compare/v0.6.13...HEAD
+[Unreleased]: https://github.com/mrLSD/swift-evm/compare/v0.6.14...HEAD
+[0.6.14]: https://github.com/mrLSD/swift-evm/compare/v0.6.13...v0.6.14
 [0.6.13]: https://github.com/mrLSD/swift-evm/compare/v0.6.12...v0.6.13
 [0.6.12]: https://github.com/mrLSD/swift-evm/compare/v0.6.11...v0.6.12
 [0.6.11]: https://github.com/mrLSD/swift-evm/compare/v0.6.10...v0.6.11
@@ -838,6 +854,7 @@ This is the **initial public release** of `swift-evm` — a Swift-native Ethereu
 [0.1.0]: https://github.com/mrLSD/swift-evm/releases/tag/v0.1.0
 
 <!-- PRs -->
+[#103]: https://github.com/mrLSD/swift-evm/pull/103
 [#101]: https://github.com/mrLSD/swift-evm/pull/101
 [#99]: https://github.com/mrLSD/swift-evm/pull/99
 [#97]: https://github.com/mrLSD/swift-evm/pull/97
