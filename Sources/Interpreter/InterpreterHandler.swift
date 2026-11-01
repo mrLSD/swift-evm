@@ -17,18 +17,31 @@ public protocol InterpreterHandler {
     func codeHash(address: H160) -> H256
     /// Get environmental gas price.
     func gasPrice() -> U256
+    /// Get the transaction's versioned blob hash, or nil for an out-of-range index or a transaction without blobs.
+    func getBlobHash(index: UInt) -> U256?
     /// Get environmental transaction origin (sender) address.
     func origin() -> H160
     /// Get environmental transaction chain ID.
     func chainId() -> U256
     /// Get environmental transaction coinbase address.
     func coinbase() -> H160
+    /// Get the canonical hash of a block within the previous 256 blocks, or `nil` when the environment has none,
+    /// which ends execution with `ExitFatal.UnknownBlockHash`.
+    func blockHash(number: U256) -> H256?
     /// Get the current block's Unix timestamp in seconds.
     func blockTimestamp() -> U256
     /// Get the current block's number.
     func blockNumber() -> U256
+    /// Get the block difficulty used before Paris.
+    func blockDifficulty() -> U256
+    /// Get the block's PREVRANDAO in big-endian order; must be non-nil from Paris onward.
+    func blockRandomness() -> H256?
     /// Get the gas limit of the current block.
     func blockGasLimit() -> U256
+    /// Get the current block's base fee per gas in wei.
+    func blockBaseFeePerGas() -> U256
+    /// Get the current block's base fee per blob gas in wei, or nil when unavailable (read as zero).
+    func blobBaseFee() -> U128?
     /// Whether the current call forbids state changes.
     func isStatic() -> Bool
     /// Append to the current substate's logs; leave them unchanged on failure.

@@ -53,7 +53,7 @@ A dependency-free, fixed-width integer library built for the EVM's 256-bit word 
 ### 2. `EVMCrypto` (Hashing)
 Keccak-256 for the `KECCAK256` opcode, exposed as `Keccak256.hash` over a raw byte buffer.
 *   **Two implementations:** CryptoSwift by default, or a native Keccak-f[1600] sponge selected by the `TinyKeccak` trait.
-*   **Verified against the Keccak team's KAT corpus:** every byte-aligned `ShortMsgKAT`/`LongMsgKAT` vector, all `MonteCarlo` checkpoints and, through a manual workflow, the one-GiB `ExtremelyLongMsgKAT` vector.
+*   **Verified against the Keccak team's KAT corpus:** every byte-aligned `ShortMsgKAT`/`LongMsgKAT` vector, all `MonteCarlo` checkpoints and, in a separate CI job, the one-GiB `ExtremelyLongMsgKAT` vector.
 
 ### 3. `EVM` (Core Execution)
 The heart of the virtual machine.
@@ -105,7 +105,7 @@ Add SwiftEVM to your `Package.swift` dependencies:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/mrLSD/swift-evm.git", from: "0.6.9")
+    .package(url: "https://github.com/mrLSD/swift-evm.git", from: "0.6.14")
 ]
 ```
 
@@ -157,20 +157,21 @@ We welcome contributions from EVM experts and systems engineers. To maintain the
 
 ### Development Environment
 
-The **Keccak 1 GiB** GitHub Actions workflow runs only through **Run workflow**.
-It executes the committed `ExtremelyLongMsgKAT_256` recipe from the Keccak team's
+The **Keccak 1 GiB** job of the Swift GitHub Actions workflow runs on every
+push and pull request to `master`, separately from the coverage matrix. It
+executes the committed `ExtremelyLongMsgKAT_256` recipe from the Keccak team's
 archive, 16 777 216 repetitions of a 64-byte text, against both backends in
 release mode. The one-GiB input is generated in memory; allow several GiB of
 available RAM for CryptoSwift's input copy. Ordinary test runs do not include it.
 To opt in locally on macOS, set `EVM_KECCAK_EXTREMELY_LONG_KAT=1` and use the
-workflow's release build and `xcrun xctest` commands. Selecting the entire
+job's release build and `xcrun xctest` commands. Selecting the entire
 `Keccak256Spec` lets Quick discover its dynamic examples and keeps unrelated
 assertion-trap tests out of this release run.
 
 The full suite requires the debug assertion configuration: its trap tests
 capture `precondition` messages, which `-O` builds do not print, and Nimble's
 `throwAssertion()` can crash under `-O`. Run it with `swift test` (debug);
-release runs are limited to `Keccak256Spec` in the Keccak 1 GiB workflow.
+release runs are limited to `Keccak256Spec` in the Keccak 1 GiB job.
 
 ```bash
 # Run test suite
@@ -179,8 +180,8 @@ swift test
 # Run tests with prettified output
 swift test | xcbeautify
 
-# Check coverage (requires llvm-cov)
-./Scripts/coverage.sh
+# Show failed tests report only with details
+./Tests/cli-test-runner
 ```
 
 ---
