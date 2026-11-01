@@ -23,6 +23,17 @@ final class U256Spec: QuickSpec {
             }
 
             context("word conversions") {
+                it("zero-extends both limbs of a U128") {
+                    let cases: [(UInt64, UInt64)] = [
+                        (0, 0), (1, 0), (.max, 0), (0, 1), (0, 1 << 63), (.max, .max),
+                        (0x0123_4567_89ab_cdef, 0xfedc_ba98_7654_3210)
+                    ]
+                    for (low, high) in cases {
+                        let value = U256(from: U128(l0: low, h0: high))
+                        expect(value.BYTES).to(equal([low, high, 0, 0]))
+                    }
+                }
+
                 it("reads every big-endian length at unaligned offsets and preserves surrounding bytes") {
                     let bytes = (0 ..< 32).map { UInt8($0 * 7 + 1) }
                     for offset in 0 ... 7 {

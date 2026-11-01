@@ -6,8 +6,9 @@ public protocol Backend {
     func gasPrice() -> U256
     /// Get environmental transaction origin.
     func origin() -> H160
-    /// Environmental block hash.
-    func blockHash(number: U256) -> H256
+    /// The canonical hash of block `number`, or `nil` when the environment has none. `BLOCKHASH` asks only for
+    /// the 256 blocks before the current one, where a missing hash aborts execution.
+    func blockHash(number: U256) -> H256?
     /// Environmental block number.
     func blockNumber() -> U256
     /// Environmental coinbase.

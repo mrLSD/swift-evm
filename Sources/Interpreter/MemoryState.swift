@@ -666,7 +666,7 @@ extension MemoryState: Backend {
         return backend.origin()
     }
 
-    public func blockHash(number: U256) -> H256 {
+    public func blockHash(number: U256) -> H256? {
         return backend.blockHash(number: number)
     }
 

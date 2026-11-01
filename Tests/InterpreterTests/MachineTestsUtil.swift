@@ -15,12 +15,24 @@ class TestHandler: InterpreterHandler {
     var codeRequests: [H160] = []
     var codeHashes: [H160: H256] = [:]
     var codeHashRequests: [H160] = []
+    var blobVersionedHashes: [U256] = []
+    var blobHashRequests: [UInt] = []
     var blockGasLimitValue = U256(from: 30_000_000)
     var blockGasLimitRequests = 0
+    var blockBaseFeePerGasValue = U256(from: 7)
+    var blockBaseFeePerGasRequests = 0
+    var blobBaseFeeValue: U128? = U128(from: 7)
+    var blobBaseFeeRequests = 0
     var blockTimestampValue = U256(from: 1_700_000_123)
     var blockTimestampRequests = 0
     var blockNumberValue = U256(from: 20_000_123)
     var blockNumberRequests = 0
+    var blockHashes: [U256: H256] = [:]
+    var blockHashRequests: [U256] = []
+    var blockDifficultyValue = U256(from: 999)
+    var blockDifficultyRequests = 0
+    var blockRandomnessValue: H256? = H256(from: U256(from: 22))
+    var blockRandomnessRequests = 0
 
     func beforeOpcodeExecution(machine: Machine, opcode: Opcode?) -> Machine.ExitError? {
         return nil
@@ -51,6 +63,12 @@ class TestHandler: InterpreterHandler {
         Self.testGasPrice
     }
 
+    func getBlobHash(index: UInt) -> U256? {
+        blobHashRequests.append(index)
+        guard index < UInt(blobVersionedHashes.count) else { return nil }
+        return blobVersionedHashes[Int(index)]
+    }
+
     func origin() -> H160 {
         Self.address1
     }
@@ -63,6 +81,11 @@ class TestHandler: InterpreterHandler {
         Self.address2
     }
 
+    func blockHash(number: U256) -> H256? {
+        blockHashRequests.append(number)
+        return blockHashes[number]
+    }
+
     func blockTimestamp() -> U256 {
         blockTimestampRequests += 1
         return blockTimestampValue
@@ -73,9 +96,29 @@ class TestHandler: InterpreterHandler {
         return blockNumberValue
     }
 
+    func blockDifficulty() -> U256 {
+        blockDifficultyRequests += 1
+        return blockDifficultyValue
+    }
+
+    func blockRandomness() -> H256? {
+        blockRandomnessRequests += 1
+        return blockRandomnessValue
+    }
+
     func blockGasLimit() -> U256 {
         blockGasLimitRequests += 1
         return blockGasLimitValue
+    }
+
+    func blockBaseFeePerGas() -> U256 {
+        blockBaseFeePerGasRequests += 1
+        return blockBaseFeePerGasValue
+    }
+
+    func blobBaseFee() -> U128? {
+        blobBaseFeeRequests += 1
+        return blobBaseFeeValue
     }
 
     func isStatic() -> Bool {
@@ -141,10 +184,6 @@ enum TestMachine {
 
     static func machine(opcode: Opcode, gasLimit: UInt64, context: Machine.Context, hardFork: HardFork) -> Machine {
         Machine(data: [], code: [opcode.rawValue], gasLimit: gasLimit, memoryLimit: 32000, context: context, state: ExecutionState(), handler: TestHandler(), hardFork: hardFork)
-    }
-
-    static func machine(opcodes code: [Opcode], gasLimit: UInt64, context: Machine.Context, hardFork: HardFork) -> Machine {
-        Machine(data: [], code: code.map(\.rawValue), gasLimit: gasLimit, memoryLimit: 32000, context: context, state: ExecutionState(), handler: TestHandler(), hardFork: hardFork)
     }
 }
 
