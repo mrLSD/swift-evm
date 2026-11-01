@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.15] - 2026-11-02
+
+This release adds the `RETURNDATASIZE` opcode, which reads the size of the output of the most recent child call. `Backend` and `InterpreterHandler` are unchanged.
+
+### Added
+- **`RETURNDATASIZE` opcode (0x3D, EIP-211):** active from Byzantium; pushes the byte count of the machine's return-data buffer, the complete output of the most recent child call regardless of the range the caller asked to copy, for `BASE` (2) gas, as specified by the Yellow Paper and EELS. Earlier forks fail with `HardForkNotActive` before the stack or gas is checked. A full stack fails with `StackOverflow` before gas is charged, and the opcode does not touch memory, refunds or the frame's own output range and is available in static calls. Nothing fills the buffer until `CALL` and `CREATE` exist, so ordinary execution pushes zero; the EIP-211 buffer lifecycle, cleared by every call-like opcode and then set to the callee's output or revert data, belongs to the future executor. Previously no handler was registered and the opcode executed as `InvalidOpcode` ([#105]).
+
+### Tests
+- **`RETURNDATASIZE`:** an empty buffer in both machine initializers; the byte count for buffer sizes from zero to 65536 around the byte and word boundaries on every hard fork from Byzantium, with the buffer and its bookkeeping fields untouched; `HardForkNotActive` on every hard fork before Byzantium at four gas budgets with an empty and a full stack, without charging gas; insufficient gas and stack overflow before gas is charged, with the buffer preserved; the last free stack slot; a replaced and then cleared buffer read between steps without caching its size; buffers local to each machine; the cost charged for every read with an out-of-gas stop on the second; the count distinguished from `CALLDATASIZE`, `CODESIZE`, `MSIZE` and the frame's output range with unchanged memory and refunds; a static call; and tracing of the pushed count and gas. The spec supplies the buffer through the internal `returnData` field until child calls exist ([#105]).
+
 ## [0.6.14] - 2026-11-01
 
 This release adds the `BLOBBASEFEE` opcode, which reads the block's base fee per blob gas through a new `InterpreterHandler.blobBaseFee()` requirement, and a `U256` initializer from `U128`. Custom `InterpreterHandler` conformers need a source change; see **Breaking Changes**.
@@ -805,7 +815,8 @@ This is the **initial public release** of `swift-evm` — a Swift-native Ethereu
 
 
 <!-- Versions -->
-[Unreleased]: https://github.com/mrLSD/swift-evm/compare/v0.6.14...HEAD
+[Unreleased]: https://github.com/mrLSD/swift-evm/compare/v0.6.15...HEAD
+[0.6.15]: https://github.com/mrLSD/swift-evm/compare/v0.6.14...v0.6.15
 [0.6.14]: https://github.com/mrLSD/swift-evm/compare/v0.6.13...v0.6.14
 [0.6.13]: https://github.com/mrLSD/swift-evm/compare/v0.6.12...v0.6.13
 [0.6.12]: https://github.com/mrLSD/swift-evm/compare/v0.6.11...v0.6.12
@@ -854,6 +865,7 @@ This is the **initial public release** of `swift-evm` — a Swift-native Ethereu
 [0.1.0]: https://github.com/mrLSD/swift-evm/releases/tag/v0.1.0
 
 <!-- PRs -->
+[#105]: https://github.com/mrLSD/swift-evm/pull/105
 [#103]: https://github.com/mrLSD/swift-evm/pull/103
 [#101]: https://github.com/mrLSD/swift-evm/pull/101
 [#99]: https://github.com/mrLSD/swift-evm/pull/99
