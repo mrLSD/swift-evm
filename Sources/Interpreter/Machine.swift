@@ -37,7 +37,7 @@ public final class Machine {
 
     /// EVM  hard fork
     let hardFork: HardFork
-    /// EVM return data
+    /// Output of the most recent child call, separate from this frame's `returnRange`.
     var returnData: ReturnData
     /// EVM execution context
     var context: Context
@@ -232,6 +232,7 @@ public final class Machine {
         table[Opcode.CODECOPY.index] = SystemInstructions.codeCopy
         table[Opcode.EXTCODECOPY.index] = SystemInstructions.extCodeCopy
         table[Opcode.CALLDATASIZE.index] = SystemInstructions.callDataSize
+        table[Opcode.RETURNDATASIZE.index] = SystemInstructions.returnDataSize
         table[Opcode.CALLDATACOPY.index] = SystemInstructions.callDataCopy
         table[Opcode.CALLDATALOAD.index] = SystemInstructions.callDataLoad
         table[Opcode.CALLVALUE.index] = SystemInstructions.callValue
