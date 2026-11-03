@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.16] - 2026-11-03
+
+This release adds the `RETURNDATACOPY` opcode, which copies a range of the output of the most recent child call into memory. `Backend` and `InterpreterHandler` are unchanged.
+
+### Added
+- **`RETURNDATACOPY` opcode (0x3E, EIP-211):** active from Byzantium; copies `size` bytes of the machine's return-data buffer, starting at the source offset, into memory at the destination offset for `VERYLOW` (3) gas plus 3 gas per copied 32-byte word and memory expansion, as specified by the Yellow Paper and EELS. Unlike `CALLDATACOPY` and `CODECOPY`, it never zero-fills: a source range that ends past the buffer, including an empty range that starts past its end and a source offset that does not fit in `Int`, ends the machine with `OutOfOffset` after the copy and memory costs are charged, as EELS raises `OutOfBoundsRead` after charging gas and aurora-evm reports `OutOfOffset`. A zero size ignores the destination offset and does not expand memory. Earlier forks fail with `HardForkNotActive` before the stack or gas is checked. Stack underflow fails before gas is charged, a size or a nonempty destination offset that does not fit in `Int` fails with `OutOfGas` before any gas is charged, and the operands stay on the stack on every failure, as for the other memory opcodes. The opcode does not touch refunds, the frame's own output range or the buffer and is available in static calls. Nothing fills the buffer until `CALL` and `CREATE` exist, so in ordinary execution only an empty copy from offset zero succeeds and any nonempty copy fails with `OutOfOffset`. Previously no handler was registered and the opcode executed as `InvalidOpcode` ([#107]).
+
+### Tests
+- **`RETURNDATACOPY`:** the copied bytes, memory size and exact copy and memory gas for sizes 1, 31, 32, 33 and 65 at destinations 0, 1, 31 and 32 on every hard fork from Byzantium, with the buffer and its bookkeeping fields untouched; `HardForkNotActive` on every hard fork before Byzantium with zero to three operands, without charging gas; stack underflow before gas is charged; empty copies from every source offset through the end of the buffer with destinations zero, `Int.max` and the maximum word, without expanding memory; `OutOfOffset` for ranges past the end, empty reads past the end, source offsets at and beyond `Int.max`, words that differ only in a higher limb and the maximum word, with the copy cost charged and memory and operands preserved; a nonempty read from an empty buffer after memory is charged and expanded; a copy ending exactly at the end of the buffer without changing the surrounding bytes, refunds, the frame's output range or the size read by a following `RETURNDATASIZE`; quadratic expansion charged once across two copies from a replaced buffer; insufficient copy or memory gas, unrepresentable sizes and destinations, overflowing memory ranges and unrepresentable memory gas without consuming operands; unpaid memory reported before an invalid source range; only the three operands consumed on a full stack; the memory limit and allocation failures; a static call; and tracing of the operands, copied byte and gas. The spec supplies the buffer through the internal `returnData` field until child calls exist ([#107]).
+
 ## [0.6.15] - 2026-11-02
 
 This release adds the `RETURNDATASIZE` opcode, which reads the size of the output of the most recent child call. `Backend` and `InterpreterHandler` are unchanged.
@@ -815,7 +825,8 @@ This is the **initial public release** of `swift-evm` — a Swift-native Ethereu
 
 
 <!-- Versions -->
-[Unreleased]: https://github.com/mrLSD/swift-evm/compare/v0.6.15...HEAD
+[Unreleased]: https://github.com/mrLSD/swift-evm/compare/v0.6.16...HEAD
+[0.6.16]: https://github.com/mrLSD/swift-evm/compare/v0.6.15...v0.6.16
 [0.6.15]: https://github.com/mrLSD/swift-evm/compare/v0.6.14...v0.6.15
 [0.6.14]: https://github.com/mrLSD/swift-evm/compare/v0.6.13...v0.6.14
 [0.6.13]: https://github.com/mrLSD/swift-evm/compare/v0.6.12...v0.6.13
@@ -865,6 +876,7 @@ This is the **initial public release** of `swift-evm` — a Swift-native Ethereu
 [0.1.0]: https://github.com/mrLSD/swift-evm/releases/tag/v0.1.0
 
 <!-- PRs -->
+[#107]: https://github.com/mrLSD/swift-evm/pull/107
 [#105]: https://github.com/mrLSD/swift-evm/pull/105
 [#103]: https://github.com/mrLSD/swift-evm/pull/103
 [#101]: https://github.com/mrLSD/swift-evm/pull/101
