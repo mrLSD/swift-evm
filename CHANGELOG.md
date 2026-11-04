@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.17] - 2026-11-04
+
+This release adds the `TLOAD` opcode, which reads the executing account's transient storage through a new `InterpreterHandler.tload(address:index:)` requirement. Custom `InterpreterHandler` conformers need a source change; see **Breaking Changes**.
+
+### Breaking Changes
+- **New `InterpreterHandler` requirement:** conformers must implement `tload(address:index:) -> Result<U256, Machine.ExitError>`, which reads a word from the current transaction's transient storage for the given account and full-width key, returning zero for an unset slot, including in static calls. An implementation over `MemoryState` converts the result of the existing `getTStorage(address:key:)` from `H256` to `U256`; `Backend` is unchanged. A handler failure ends the machine with the supplied error after gas is charged, leaving the key on the stack ([#109]).
+
+### Added
+- **`TLOAD` opcode (0x5C, EIP-1153):** active from Cancun; replaces the top stack word, used as a big-endian storage key, with the transient value returned by `InterpreterHandler.tload(address:index:)` for `context.targetAddress`, for a fixed 100 gas (`WARM_STORAGE_READ_COST`). Reads have no cold-access surcharge or warm-access discount and do not warm accounts or storage slots, access persistent storage, change memory or refunds, or modify the transient value. The opcode is available in static calls. Earlier forks fail with `HardForkNotActive` before the stack or gas is checked and without querying the handler. Stack underflow fails before gas is charged, and insufficient gas leaves the key on the stack without querying the handler. Previously no handler was registered and the opcode executed as `InvalidOpcode`. `TSTORE` remains unimplemented ([#109]).
+
+### Tests
+- **`TLOAD`:** exact gas and full-width keys and values on every hard fork from Cancun for zero, one, `UInt64.max`, each limb boundary, the highest bit, an asymmetric byte pattern and the maximum word; `HardForkNotActive` on every hard fork before Cancun with an empty and a one-item stack, before gas or handler access; all key bytes passed in big-endian order and storage read for the target rather than the caller; zero for an unset slot without reading another account or key; stack underflow and insufficient gas before handler access, with the key and refunds preserved; the top word replaced on a full stack; static reads for exactly 100 gas on every active fork; repeated reads at the same cost for cold and warm accounts and slots, with an out-of-gas stop before the third handler query and unchanged memory, refunds and access sets; a concrete handler error propagated after charging without consuming the key or resuming execution; existing `MemoryState` transient storage read independently of persistent storage without touching accounts; and tracing of the key, loaded value and gas. `TestHandler` serves transient values and records `tload(address:index:)` requests ([#109]).
+
 ## [0.6.16] - 2026-11-03
 
 This release adds the `RETURNDATACOPY` opcode, which copies a range of the output of the most recent child call into memory. `Backend` and `InterpreterHandler` are unchanged.
@@ -825,7 +838,8 @@ This is the **initial public release** of `swift-evm` — a Swift-native Ethereu
 
 
 <!-- Versions -->
-[Unreleased]: https://github.com/mrLSD/swift-evm/compare/v0.6.16...HEAD
+[Unreleased]: https://github.com/mrLSD/swift-evm/compare/v0.6.17...HEAD
+[0.6.17]: https://github.com/mrLSD/swift-evm/compare/v0.6.16...v0.6.17
 [0.6.16]: https://github.com/mrLSD/swift-evm/compare/v0.6.15...v0.6.16
 [0.6.15]: https://github.com/mrLSD/swift-evm/compare/v0.6.14...v0.6.15
 [0.6.14]: https://github.com/mrLSD/swift-evm/compare/v0.6.13...v0.6.14
@@ -876,6 +890,7 @@ This is the **initial public release** of `swift-evm` — a Swift-native Ethereu
 [0.1.0]: https://github.com/mrLSD/swift-evm/releases/tag/v0.1.0
 
 <!-- PRs -->
+[#109]: https://github.com/mrLSD/swift-evm/pull/109
 [#107]: https://github.com/mrLSD/swift-evm/pull/107
 [#105]: https://github.com/mrLSD/swift-evm/pull/105
 [#103]: https://github.com/mrLSD/swift-evm/pull/103
