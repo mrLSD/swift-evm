@@ -29,8 +29,8 @@ final class MockBackend: Backend {
         sender
     }
 
-    func blockHash(number: U256) -> H256 {
-        H256(from: U256(from: 100).toBigEndian)
+    func blockHash(number: U256) -> H256? {
+        number == U256.ZERO ? H256(from: U256(from: 100).toBigEndian) : nil
     }
 
     func blockNumber() -> U256 {
@@ -809,6 +809,7 @@ final class MemoryStateSpec: QuickSpec {
                     let backend = MockBackend()
                     let state = MemoryState(gasLimit: 10000, backend: backend, hardFork: .Berlin)
                     expect(state.blockHash(number: U256.ZERO)).to(equal(H256(from: U256(from: 100).toBigEndian)))
+                    expect(state.blockHash(number: U256(from: 1))).to(beNil())
                 }
 
                 it("blockNumber") {
