@@ -40,6 +40,12 @@ public struct U256: BigUInt {
         self.init(l0: value, l1: 0, h0: 0, h1: 0)
     }
 
+    /// Zero-extends a 128-bit value to an EVM word.
+    @inlinable @inline(__always)
+    public init(from value: U128) {
+        self.init(l0: value.l0, l1: value.h0, h0: 0, h1: 0)
+    }
+
     /// Keeps the low 256 bits of a full-width EVM intermediate.
     @inlinable @inline(__always)
     public init(truncating value: U512) {
