@@ -5,7 +5,6 @@
 ### System
 - [ ] SLOAD
 - [ ] SSTORE
-- [ ] TLOAD
 - [ ] TSTORE
 
 ### Memory
