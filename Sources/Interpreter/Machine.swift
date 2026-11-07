@@ -118,6 +118,8 @@ public final class Machine {
     public enum ExitFatal: Equatable, Error {
         /// Host memory allocation failed; callers must abort the enclosing execution.
         case ReadMemory
+        /// The environment has no hash for a block inside the `BLOCKHASH` window; callers must abort the enclosing execution.
+        case UnknownBlockHash
     }
 
     /// Errors produced by memory-related operations.
@@ -238,6 +240,8 @@ public final class Machine {
         table[Opcode.ADDRESS.index] = SystemInstructions.address
         table[Opcode.CALLER.index] = SystemInstructions.caller
         table[Opcode.GAS.index] = SystemInstructions.gas
+        table[Opcode.TLOAD.index] = SystemInstructions.tload
+        table[Opcode.TSTORE.index] = SystemInstructions.tstore
         table[Opcode.SHA3.index] = SystemInstructions.keccak256
         table[Opcode.LOG0.index] = { (_ m: Machine) in SystemInstructions.log(machine: m, n: 0) }
         table[Opcode.LOG1.index] = { (_ m: Machine) in SystemInstructions.log(machine: m, n: 1) }
@@ -335,14 +339,19 @@ public final class Machine {
         table[Opcode.BALANCE.index] = HostInstructions.balance
         table[Opcode.SELFBALANCE.index] = HostInstructions.selfBalance
         table[Opcode.GASPRICE.index] = HostInstructions.gasPrice
+        table[Opcode.BLOBHASH.index] = HostInstructions.blobHash
         table[Opcode.ORIGIN.index] = HostInstructions.origin
         table[Opcode.CHAINID.index] = HostInstructions.chainId
         table[Opcode.COINBASE.index] = HostInstructions.coinbase
 
         // Block
+        table[Opcode.BLOCKHASH.index] = BlockInstructions.blockHash
         table[Opcode.TIMESTAMP.index] = BlockInstructions.timestamp
         table[Opcode.NUMBER.index] = BlockInstructions.number
+        table[Opcode.PREVRANDAO.index] = BlockInstructions.prevrandao
         table[Opcode.GASLIMIT.index] = BlockInstructions.gasLimit
+        table[Opcode.BASEFEE.index] = BlockInstructions.baseFee
+        table[Opcode.BLOBBASEFEE.index] = BlockInstructions.blobBaseFee
 
         return table
     }()
