@@ -15,6 +15,9 @@ class TestHandler: InterpreterHandler {
     var codeRequests: [H160] = []
     var codeHashes: [H160: H256] = [:]
     var codeHashRequests: [H160] = []
+    var tstorages: [H160: [H256: U256]] = [:]
+    var tloadRequests: [(address: H160, index: H256)] = []
+    var tstoreRequests: [(address: H160, index: H256, value: U256)] = []
     var blobVersionedHashes: [U256] = []
     var blobHashRequests: [UInt] = []
     var blockGasLimitValue = U256(from: 30_000_000)
@@ -61,6 +64,17 @@ class TestHandler: InterpreterHandler {
 
     func gasPrice() -> U256 {
         Self.testGasPrice
+    }
+
+    func tload(address: H160, index: H256) -> Result<U256, Machine.ExitError> {
+        tloadRequests.append((address, index))
+        return .success(tstorages[address]?[index] ?? .ZERO)
+    }
+
+    func tstore(address: H160, index: H256, value: U256) -> Result<Void, Machine.ExitError> {
+        tstoreRequests.append((address, index, value))
+        tstorages[address, default: [:]][index] = value
+        return .success(())
     }
 
     func getBlobHash(index: UInt) -> U256? {
@@ -184,6 +198,10 @@ enum TestMachine {
 
     static func machine(opcode: Opcode, gasLimit: UInt64, context: Machine.Context, hardFork: HardFork) -> Machine {
         Machine(data: [], code: [opcode.rawValue], gasLimit: gasLimit, memoryLimit: 32000, context: context, state: ExecutionState(), handler: TestHandler(), hardFork: hardFork)
+    }
+
+    static func machine(opcodes code: [Opcode], gasLimit: UInt64, context: Machine.Context, hardFork: HardFork) -> Machine {
+        Machine(data: [], code: code.map(\.rawValue), gasLimit: gasLimit, memoryLimit: 32000, context: context, state: ExecutionState(), handler: TestHandler(), hardFork: hardFork)
     }
 }
 
