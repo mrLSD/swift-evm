@@ -31,6 +31,37 @@ enum SystemInstructions {
         }
     }
 
+    /// EIP-1153: stores a word in the executing account's transient storage.
+    static func tstore(machine m: Machine) {
+        guard m.hardFork.isCancun() else {
+            m.machineStatus = .Exit(.Error(.HardForkNotActive))
+            return
+        }
+
+        if !m.verifyStack(pop: 2) {
+            return
+        }
+
+        if m.handler.isStatic() {
+            m.machineStatus = .Exit(.Error(.WriteInStaticContext))
+            return
+        }
+
+        if !m.gasRecordCost(cost: GasConstant.WARM_STORAGE_READ_COST) {
+            return
+        }
+
+        // Stack depth was verified above; these unwraps cannot fail.
+        let index = H256(from: m.stackPeek(indexFromTop: 0)!)
+        let value = m.stackPeek(indexFromTop: 1)!
+        switch m.handler.tstore(address: m.context.targetAddress, index: index, value: value) {
+        case .success:
+            m.stack.consume(count: 2)
+        case .failure(let error):
+            m.machineStatus = .Exit(.Error(error))
+        }
+    }
+
     /// Pushes the size of the current code onto the stack.
     static func codeSize(machine m: Machine) {
         if !m.verifyStack(pop: 0, push: 1) {
