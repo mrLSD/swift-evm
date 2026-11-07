@@ -64,6 +64,27 @@ enum HostInstructions {
         m.stackPush(value: m.handler.gasPrice())
     }
 
+    /// EIP-4844: pushes a transaction's versioned blob hash, or zero for an out-of-range index.
+    static func blobHash(machine m: Machine) {
+        // Check hardfork
+        guard m.hardFork.isCancun() else {
+            m.machineStatus = Machine.MachineStatus.Exit(Machine.ExitReason.Error(.HardForkNotActive))
+            return
+        }
+
+        if !m.verifyStack(pop: 1) {
+            return
+        }
+
+        if !m.gasRecordCost(cost: GasConstant.VERYLOW) {
+            return
+        }
+
+        // Stack size was verified above; UInt.max is outside any transaction's blob list.
+        let index = m.stackPop()!.getUInt ?? UInt.max
+        m.stackPush(value: m.handler.getBlobHash(index: index) ?? U256.ZERO)
+    }
+
     /// Pushes the address of the originator (sender) of the transaction onto the stack.
     static func origin(machine m: Machine) {
         if !m.verifyStack(pop: 0, push: 1) {
