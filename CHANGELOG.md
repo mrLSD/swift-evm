@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.18] - 2026-11-07
+
+This release adds the `TSTORE` opcode, which writes the executing account's transient storage through a new `InterpreterHandler.tstore(address:index:value:)` requirement. Custom `InterpreterHandler` conformers need a source change; see **Breaking Changes**.
+
+### Breaking Changes
+- **New `InterpreterHandler` requirement:** conformers must implement `tstore(address:index:value:) -> Result<Void, Machine.ExitError>`, which writes a word to the current transaction's transient storage for the given account and full-width key and leaves the storage unchanged on failure. An implementation over `MemoryState` passes the value converted to `H256` to the existing `setTStorage(address:key:value:)`; `Backend` is unchanged. A handler failure ends the machine with the supplied error after gas is charged, leaving both operands on the stack ([#111]).
+
+### Added
+- **`TSTORE` opcode (0x5D, EIP-1153):** active from Cancun; takes the top stack word as a big-endian storage key and the word below it as the value and writes them through `InterpreterHandler.tstore(address:index:value:)` for `context.targetAddress`, for a fixed 100 gas (`WARM_STORAGE_READ_COST`), as specified by EIP-1153 and EELS. Every write costs the same, including zero and unchanged values, with no cold-access surcharge, no refunds and no EIP-2200 sentry, so it succeeds with 2300 gas or less left; it does not warm accounts or storage slots, access persistent storage or change memory. Earlier forks fail with `HardForkNotActive` before the stack, static context or gas is checked and without querying the handler, and stack underflow fails before the static context or gas is checked. In a static call the opcode fails with `WriteInStaticContext` before gas is charged and without querying the handler; EELS charges the 100 gas before raising the same error, and both are exceptional halts. Insufficient gas leaves both operands on the stack without querying the handler. Previously no handler was registered and the opcode executed as `InvalidOpcode` ([#111]).
+
+### Tests
+- **`TSTORE`:** exact gas and the address, key and value passed to the handler on every hard fork from Cancun for every combination of zero, one, `UInt64.max`, each limb boundary, the highest bit, an asymmetric byte pattern and the maximum word as key and value; `HardForkNotActive` on every hard fork before Cancun in a static call with zero to two operands, without charging gas or querying the handler; all key bytes taken in big-endian order and only the target account written; stack underflow before the static context or gas is checked, in ordinary and static calls; `WriteInStaticContext` on every active fork at four gas budgets, including zero and unchanged values, without charging gas, querying the handler or changing the slot; insufficient gas without consuming operands, querying the handler or changing refunds; writes with 2299, 2300 and 2301 gas left and exactly 100 gas charged at the largest gas limits; two operands consumed from a full stack; overwritten and cleared slots for cold and warm accounts and slots without changing refunds, memory, memory gas or access sets; a concrete handler error propagated after charging without consuming operands, changing the slot or resuming execution; `MemoryState` slots stored, overwritten, cleared and read back by `TLOAD` without touching persistent storage or accounts; a write inside a substate that ends with `STOP`, `REVERT` or `INVALID`, kept by `exitCommit` and dropped by `exitRevert` and `exitDiscard` as a following `TLOAD` observes; and tracing of the key, value and gas. `TestHandler` stores transient values and records `tstore(address:index:value:)` requests ([#111]).
+
 ## [0.6.17] - 2026-11-04
 
 This release adds the `TLOAD` opcode, which reads the executing account's transient storage through a new `InterpreterHandler.tload(address:index:)` requirement. Custom `InterpreterHandler` conformers need a source change; see **Breaking Changes**.
@@ -15,7 +28,7 @@ This release adds the `TLOAD` opcode, which reads the executing account's transi
 - **New `InterpreterHandler` requirement:** conformers must implement `tload(address:index:) -> Result<U256, Machine.ExitError>`, which reads a word from the current transaction's transient storage for the given account and full-width key, returning zero for an unset slot, including in static calls. An implementation over `MemoryState` converts the result of the existing `getTStorage(address:key:)` from `H256` to `U256`; `Backend` is unchanged. A handler failure ends the machine with the supplied error after gas is charged, leaving the key on the stack ([#109]).
 
 ### Added
-- **`TLOAD` opcode (0x5C, EIP-1153):** active from Cancun; replaces the top stack word, used as a big-endian storage key, with the transient value returned by `InterpreterHandler.tload(address:index:)` for `context.targetAddress`, for a fixed 100 gas (`WARM_STORAGE_READ_COST`). Reads have no cold-access surcharge or warm-access discount and do not warm accounts or storage slots, access persistent storage, change memory or refunds, or modify the transient value. The opcode is available in static calls. Earlier forks fail with `HardForkNotActive` before the stack or gas is checked and without querying the handler. Stack underflow fails before gas is charged, and insufficient gas leaves the key on the stack without querying the handler. Previously no handler was registered and the opcode executed as `InvalidOpcode`. `TSTORE` remains unimplemented ([#109]).
+- **`TLOAD` opcode (0x5C, EIP-1153):** active from Cancun; replaces the top stack word, used as a big-endian storage key, with the transient value returned by `InterpreterHandler.tload(address:index:)` for `context.targetAddress`, for a fixed 100 gas (`WARM_STORAGE_READ_COST`). Reads have no cold-access surcharge or warm-access discount and do not warm accounts or storage slots, access persistent storage, change memory or refunds, or modify the transient value. The opcode is available in static calls. Earlier forks fail with `HardForkNotActive` before the stack or gas is checked and without querying the handler. Stack underflow fails before gas is charged, and insufficient gas leaves the key on the stack without querying the handler. Previously no handler was registered and the opcode executed as `InvalidOpcode`.
 
 ### Tests
 - **`TLOAD`:** exact gas and full-width keys and values on every hard fork from Cancun for zero, one, `UInt64.max`, each limb boundary, the highest bit, an asymmetric byte pattern and the maximum word; `HardForkNotActive` on every hard fork before Cancun with an empty and a one-item stack, before gas or handler access; all key bytes passed in big-endian order and storage read for the target rather than the caller; zero for an unset slot without reading another account or key; stack underflow and insufficient gas before handler access, with the key and refunds preserved; the top word replaced on a full stack; static reads for exactly 100 gas on every active fork; repeated reads at the same cost for cold and warm accounts and slots, with an out-of-gas stop before the third handler query and unchanged memory, refunds and access sets; a concrete handler error propagated after charging without consuming the key or resuming execution; existing `MemoryState` transient storage read independently of persistent storage without touching accounts; and tracing of the key, loaded value and gas. `TestHandler` serves transient values and records `tload(address:index:)` requests ([#109]).
@@ -838,7 +851,8 @@ This is the **initial public release** of `swift-evm` — a Swift-native Ethereu
 
 
 <!-- Versions -->
-[Unreleased]: https://github.com/mrLSD/swift-evm/compare/v0.6.17...HEAD
+[Unreleased]: https://github.com/mrLSD/swift-evm/compare/v0.6.18...HEAD
+[0.6.18]: https://github.com/mrLSD/swift-evm/compare/v0.6.17...v0.6.18
 [0.6.17]: https://github.com/mrLSD/swift-evm/compare/v0.6.16...v0.6.17
 [0.6.16]: https://github.com/mrLSD/swift-evm/compare/v0.6.15...v0.6.16
 [0.6.15]: https://github.com/mrLSD/swift-evm/compare/v0.6.14...v0.6.15
@@ -890,6 +904,7 @@ This is the **initial public release** of `swift-evm` — a Swift-native Ethereu
 [0.1.0]: https://github.com/mrLSD/swift-evm/releases/tag/v0.1.0
 
 <!-- PRs -->
+[#111]: https://github.com/mrLSD/swift-evm/pull/111
 [#109]: https://github.com/mrLSD/swift-evm/pull/109
 [#107]: https://github.com/mrLSD/swift-evm/pull/107
 [#105]: https://github.com/mrLSD/swift-evm/pull/105
