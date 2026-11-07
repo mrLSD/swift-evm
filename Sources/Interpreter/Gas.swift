@@ -144,6 +144,8 @@ enum GasConstant {
     static let MID: UInt64 = 8
     /// Gas cost for high-cost operations.
     static let HIGH: UInt64 = 10
+    /// Gas cost for BLOCKHASH instruction.
+    static let BLOCKHASH: UInt64 = 20
     static let JUMPDEST: UInt64 = 1
     /// Base gas cost for EXP instruction.
     static let EXP: UInt64 = 10
