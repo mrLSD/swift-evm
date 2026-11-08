@@ -57,4 +57,20 @@ public final class ExecutionState {
             self.accessed.addresses.insert(address)
         }
     }
+
+    /// Checks a storage slot in this context and its parents, independently of account warmth.
+    func isCold(address: H160, index: H256) -> Bool {
+        if self.accessed.storage.contains(StorageKey(address: address, key: index)) {
+            return false
+        } else {
+            return self.parent?.isCold(address: address, index: index) ?? true
+        }
+    }
+
+    /// Marks a storage slot as accessed without warming its account.
+    func warm(address: H160, index: H256, isCold: Bool = true) {
+        if isCold {
+            self.accessed.storage.insert(StorageKey(address: address, key: index))
+        }
+    }
 }

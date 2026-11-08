@@ -5,6 +5,29 @@ import PrimitiveTypes
 ///
 /// This enum provides static functions for EVM system-level opcodes such as CODECOPY, CALLDATACOPY, CALLVALUE, KECCAK256, etc.
 enum SystemInstructions {
+    /// Loads a word from the executing account's persistent storage.
+    static func sload(machine m: Machine) {
+        if !m.verifyStack(pop: 1) {
+            return
+        }
+
+        // Stack depth was verified above; this unwrap cannot fail.
+        let index = H256(from: m.stackPeek(indexFromTop: 0)!)
+        let address = m.context.targetAddress
+        var isCold = false
+        if m.hardFork.isBerlin() {
+            isCold = m.state.isCold(address: address, index: index)
+            m.state.warm(address: address, index: index, isCold: isCold)
+        }
+        if !m.gasRecordCost(cost: GasCost.sloadCost(hardFork: m.hardFork, isCold: isCold)) {
+            return
+        }
+
+        let value = m.handler.storage(address: address, index: index)
+        m.stack.consume(count: 1)
+        m.stackPush(value: U256(from: value))
+    }
+
     /// EIP-1153: loads a word from the executing account's transient storage.
     static func tload(machine m: Machine) {
         guard m.hardFork.isCancun() else {

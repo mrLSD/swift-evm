@@ -3,7 +3,6 @@
 ## Add support for Opcodes
 
 ### System
-- [ ] SLOAD
 - [ ] SSTORE
 
 ### Memory

@@ -371,6 +371,25 @@ final class InterpreterGasSpec: QuickSpec {
                 }
             }
 
+            context("sloadCost") {
+                it("prices every fork across the Tangerine, Istanbul and Berlin boundaries") {
+                    let forks = HardFork.allCases
+                    let groups: [([HardFork], UInt64, UInt64)] = [
+                        (Array(forks.prefix(while: { $0 != .Tangerine })), 50, 50),
+                        (Array(forks.drop(while: { $0 != .Tangerine }).prefix(while: { $0 != .Istanbul })), 200, 200),
+                        (Array(forks.drop(while: { $0 != .Istanbul }).prefix(while: { $0 != .Berlin })), 800, 800),
+                        (Array(forks.drop(while: { $0 != .Berlin })), 2100, 100)
+                    ]
+                    expect(groups.flatMap { $0.0 }).to(equal(forks))
+                    for (group, cold, warm) in groups {
+                        for fork in group {
+                            expect(GasCost.sloadCost(hardFork: fork, isCold: true)).to(equal(cold), description: "fork \(fork)")
+                            expect(GasCost.sloadCost(hardFork: fork, isCold: false)).to(equal(warm), description: "fork \(fork)")
+                        }
+                    }
+                }
+            }
+
             context("extCodeAccessCost") {
                 it("prices account access for every hard fork, cold and warm") {
                     let prices: [HardFork: (cold: UInt64, warm: UInt64)] = [

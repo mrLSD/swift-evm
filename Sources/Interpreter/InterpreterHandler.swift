@@ -15,6 +15,8 @@ public protocol InterpreterHandler {
     /// following delegation. Over `MemoryState`, read `codeHash(address:)` first and consult `basic(address:)`
     /// only when it is `KECCAK_EMPTY`, so a contract costs one backend read.
     func codeHash(address: H160) -> H256
+    /// Read the current persistent storage value; an unset slot returns zero, including in static calls.
+    func storage(address: H160, index: H256) -> H256
     /// Read the current transaction's transient storage; an unset slot returns zero, including in static calls.
     func tload(address: H160, index: H256) -> Result<U256, Machine.ExitError>
     /// Write the current transaction's transient storage; leave it unchanged on failure.
