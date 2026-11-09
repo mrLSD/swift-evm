@@ -139,6 +139,20 @@ final class InterpreterGasSpec: QuickSpec {
 
                     expect(gas.refunded).to(equal(-1))
                 }
+
+                it("traps when the counter would overflow Int64 (no silent wrap)") {
+                    var gas = Gas(limit: 1000)
+                    gas.recordRefund(refund: Int64.max)
+                    expect {
+                        gas.recordRefund(refund: 1)
+                    }.to(throwAssertion())
+
+                    gas = Gas(limit: 1000)
+                    gas.recordRefund(refund: Int64.min)
+                    expect {
+                        gas.recordRefund(refund: -1)
+                    }.to(throwAssertion())
+                }
             }
 
             context("setFinalRefund(isLondon:)") {
@@ -368,6 +382,48 @@ final class InterpreterGasSpec: QuickSpec {
 
                     let res = GasCost.veryLowCopy(size: size)
                     expect(res).to(equal(expected))
+                }
+            }
+
+            context("SSTORE cost and refunds") {
+                it("matches the storage transition table across all pricing eras") {
+                    // Columns: original, current, new; cost/refund for legacy, Istanbul, Berlin and London.
+                    let cases: [(UInt64, UInt64, UInt64, [(UInt64, Int64)])] = [
+                        (0, 0, 0, [(5000, 0), (800, 0), (100, 0), (100, 0)]),
+                        (0, 0, 1, [(20000, 0), (20000, 0), (20000, 0), (20000, 0)]),
+                        (0, 1, 1, [(5000, 0), (800, 0), (100, 0), (100, 0)]),
+                        (0, 1, 0, [(5000, 15000), (800, 19200), (100, 19900), (100, 19900)]),
+                        (0, 1, 2, [(5000, 0), (800, 0), (100, 0), (100, 0)]),
+                        (1, 1, 1, [(5000, 0), (800, 0), (100, 0), (100, 0)]),
+                        (1, 1, 0, [(5000, 15000), (5000, 15000), (2900, 15000), (2900, 4800)]),
+                        (1, 1, 2, [(5000, 0), (5000, 0), (2900, 0), (2900, 0)]),
+                        (1, 0, 0, [(5000, 0), (800, 0), (100, 0), (100, 0)]),
+                        (1, 0, 1, [(20000, 0), (800, -10800), (100, -12200), (100, -2000)]),
+                        (1, 0, 2, [(20000, 0), (800, -15000), (100, -15000), (100, -4800)]),
+                        (1, 2, 0, [(5000, 15000), (800, 15000), (100, 15000), (100, 4800)]),
+                        (1, 2, 1, [(5000, 0), (800, 4200), (100, 2800), (100, 2800)]),
+                        (1, 2, 2, [(5000, 0), (800, 0), (100, 0), (100, 0)]),
+                        (1, 2, 3, [(5000, 0), (800, 0), (100, 0), (100, 0)])
+                    ]
+                    let forks = HardFork.allCases
+                    let groups = [Array(forks.prefix(while: { $0 != .Istanbul })), [.Istanbul], [.Berlin],
+                                  Array(forks.drop(while: { $0 != .London }))]
+                    expect(groups.flatMap { $0 }).to(equal(forks))
+                    for (era, group) in groups.enumerated() {
+                        for fork in group {
+                            for (original, current, new, expected) in cases {
+                                for cold in [false, true] {
+                                    let cost = GasCost.sstoreCost(hardFork: fork, original: H256(from: U256(from: original)),
+                                                                 current: H256(from: U256(from: current)), new: H256(from: U256(from: new)), isCold: cold)
+                                    let refund = GasCost.sstoreRefund(hardFork: fork, original: H256(from: U256(from: original)),
+                                                                     current: H256(from: U256(from: current)), new: H256(from: U256(from: new)))
+                                    let detail = "fork \(fork), original \(original), current \(current), new \(new), cold \(cold)"
+                                    expect(cost).to(equal(expected[era].0 + (cold && era >= 2 ? 2100 : 0)), description: detail)
+                                    expect(refund).to(equal(expected[era].1), description: detail)
+                                }
+                            }
+                        }
+                    }
                 }
             }
 
