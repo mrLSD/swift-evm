@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.20] - 2026-11-09
+
+This release adds the `SSTORE` opcode, which writes the executing account's persistent storage through two new `InterpreterHandler` requirements, with hard-fork pricing, signed refund deltas and storage-slot warming shared with `SLOAD`. Custom `InterpreterHandler` conformers need a source change; see **Breaking Changes**.
+
+### Breaking Changes
+- **New `InterpreterHandler.originalStorage(address:index:) -> H256` requirement:** conformers must return the slot's value at the start of the transaction, unchanged by subsequent writes, or zero for an absent slot. `SSTORE` reads it from Istanbul onward to price writes and calculate refunds; returning the current value after a write does not satisfy the contract. The existing `MemoryState.originalStorage(address:index:)` lookup returns an optional, so an adapter must supply the correct transaction-original value for the nonoptional handler requirement; `Backend` is unchanged ([#115]).
+- **New `InterpreterHandler.setStorage(address:index:value:) -> Result<Void, Machine.ExitError>` requirement:** conformers must write the value to the current substate and leave storage unchanged on failure. An implementation over `MemoryState` uses the existing `setStorage(address:key:value:)`. A handler failure ends the machine with the supplied error after gas is charged, without consuming either operand or recording a refund ([#115]).
+
+### Added
+- **`SSTORE` opcode (0x55):** available from Frontier; takes the top stack word as a big-endian storage key and the word below it as the value and writes them through `InterpreterHandler.setStorage(address:index:value:)` for `context.targetAddress`. Stack underflow fails before static, gas or storage checks. A static write, including an unchanged value, fails with `WriteInStaticContext` before gas is charged, storage is read or the slot is warmed. From Istanbul, a remaining gas budget of 2300 or less fails with `OutOfGas` before reads or warming, even if the write itself would cost less. From Berlin, slot warmth is tracked in `ExecutionState` and shared with `SLOAD`, independently of account warmth; after the sentry check, a cold slot is warmed before the original and current values are read and the write cost is charged. If that charge fails, operands, storage and refunds are preserved, but the slot remains warm. A successful write consumes both operands and records its signed refund delta without changing memory. Previously no handler was registered and the opcode executed as `InvalidOpcode` ([#115]).
+- **Storage write pricing and refunds:** before Istanbul, including the project's `Constantinople` case, a zero-to-nonzero write costs 20000 gas and every other write costs 5000, with a 15000 refund for clearing a nonzero value. From Istanbul, pricing compares the transaction-original, current and new values: unchanged and dirty-slot writes cost 800 gas, a clean zero-to-nonzero write costs 20000 and a clean nonzero change costs 5000. From Berlin, the warm read price is 100, the clean nonzero reset price is 2900, and a cold slot adds 2100. From London, the clearing refund falls from 15000 to 4800. Refund calculation reverses earlier clearing refunds and credits restoring the original value; the frame's refund counter may be negative, and these deltas precede the existing transaction refund cap ([#115]).
+
+### Tests
+- **`SSTORE`:** two-write sequences on every hard fork with exact gas, signed refunds, original-value lookup and slot warming; full-width key and value bytes in big-endian order written only to the target account; stack underflow before static, gas or storage checks; static rejection even for an unchanged value at zero and sufficient gas; Istanbul sentry boundaries at 0, 2299, 2300 and 2301 gas for cold and warm slots; one gas below the write cost without writing or granting a clearing refund; a concrete handler failure after charging without changing storage, refunding, consuming operands or resuming execution; a negative frame refund when restoring a slot cleared by a parent, with inherited warmth; slot warming shared with `SLOAD` in both instruction orders; only two operands consumed from a full stack; repeated writes through `MemoryState` followed by `SLOAD`, preserving the transaction original and backend value; and tracing of both operands, the write cost and clearing refund. `TestHandler` records original reads and writes independently of current storage reads ([#115]).
+- **Gas accounting:** `GasCost.sstoreCost` and `sstoreRefund` check 15 original/current/new transitions, both cold and warm, on every hard fork across the legacy, Istanbul, Berlin and London pricing eras, including clearing, restoring, unchanged and dirty slots and negative refund deltas. `Gas.recordRefund` tests assert traps on signed-counter overflow and underflow ([#115]).
+
 ## [0.6.19] - 2026-11-08
 
 This release adds the `SLOAD` opcode, which reads the executing account's persistent storage through a new `InterpreterHandler.storage(address:index:)` requirement, with hard-fork pricing and storage-slot warming from Berlin. Custom `InterpreterHandler` conformers need a source change; see **Breaking Changes**.
@@ -865,7 +881,8 @@ This is the **initial public release** of `swift-evm` — a Swift-native Ethereu
 
 
 <!-- Versions -->
-[Unreleased]: https://github.com/mrLSD/swift-evm/compare/v0.6.19...HEAD
+[Unreleased]: https://github.com/mrLSD/swift-evm/compare/v0.6.20...HEAD
+[0.6.20]: https://github.com/mrLSD/swift-evm/compare/v0.6.19...v0.6.20
 [0.6.19]: https://github.com/mrLSD/swift-evm/compare/v0.6.18...v0.6.19
 [0.6.18]: https://github.com/mrLSD/swift-evm/compare/v0.6.17...v0.6.18
 [0.6.17]: https://github.com/mrLSD/swift-evm/compare/v0.6.16...v0.6.17
@@ -919,6 +936,7 @@ This is the **initial public release** of `swift-evm` — a Swift-native Ethereu
 [0.1.0]: https://github.com/mrLSD/swift-evm/releases/tag/v0.1.0
 
 <!-- PRs -->
+[#115]: https://github.com/mrLSD/swift-evm/pull/115
 [#113]: https://github.com/mrLSD/swift-evm/pull/113
 [#111]: https://github.com/mrLSD/swift-evm/pull/111
 [#109]: https://github.com/mrLSD/swift-evm/pull/109
