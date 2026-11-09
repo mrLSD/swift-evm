@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.19] - 2026-11-08
+
+This release adds the `SLOAD` opcode, which reads the executing account's persistent storage through a new `InterpreterHandler.storage(address:index:)` requirement, with hard-fork pricing and storage-slot warming from Berlin. Custom `InterpreterHandler` conformers need a source change; see **Breaking Changes**.
+
+### Breaking Changes
+- **New `InterpreterHandler` requirement:** conformers must implement `storage(address:index:) -> H256`, which returns the current persistent storage value for the given account and full-width key, or zero for an unset slot, including in static calls. An implementation over `MemoryState` delegates to the existing `storage(address:index:)`, which reads local and parent overlays before falling back to the backend; `Backend` is unchanged ([#113]).
+
+### Added
+- **`SLOAD` opcode (0x54):** available from Frontier; replaces the top stack word, used as a big-endian storage key, with the value returned by `InterpreterHandler.storage(address:index:)` for `context.targetAddress`. It costs 50 gas before Tangerine, 200 from Tangerine until Istanbul, 800 from Istanbul until Berlin, and from Berlin 2100 for a cold slot or 100 for a warm one. Slot warmth is tracked by the full account-and-key pair in `ExecutionState`, independently of account warmth, and inherited from parent states. From Berlin the slot is marked warm before gas is charged, including when the instruction fails with `OutOfGas`; insufficient gas preserves the key without reading storage. Stack underflow fails before gas, warming or handler access. Each successful read queries the current value without caching it, does not change memory or refunds and is available in static calls. Previously no handler was registered and the opcode executed as `InvalidOpcode` ([#113]).
+
+### Tests
+- **`SLOAD`:** exact cold and warm gas, full-width keys and values on every hard fork for zero, one, `UInt64.max`, each limb boundary, the highest bit, an asymmetric byte pattern and the maximum word; byte order and the target account distinguished from its caller; zero for an unset slot and static reads on every fork; stack underflow before gas, warming or storage reads; zero gas and one gas below each cold and warm cost, with the key and refunds preserved, no handler access and the slot warmed from Berlin even on failure; repeated reads charged as warm while observing a changed handler value; account warmth, other keys and other accounts kept independent; parent slot warmth inherited without inserting it into the child; the top word replaced on a full stack; `MemoryState` local and parent overlays, including zero, read before falling back to the backend; and tracing of the key, loaded value and cold gas cost. `TestHandler` serves persistent values and records `storage(address:index:)` requests ([#113]).
+- **Storage pricing and access journal:** `GasCost.sloadCost` checks both cold and warm prices on every hard fork across the Tangerine, Istanbul and Berlin boundaries. `ExecutionState` tests cover full account-and-key tracking independently of account warmth, skipped and repeated warming, recursive parent lookup and child records isolated from parents and siblings ([#113]).
+
 ## [0.6.18] - 2026-11-07
 
 This release adds the `TSTORE` opcode, which writes the executing account's transient storage through a new `InterpreterHandler.tstore(address:index:value:)` requirement. Custom `InterpreterHandler` conformers need a source change; see **Breaking Changes**.
@@ -851,7 +865,8 @@ This is the **initial public release** of `swift-evm` — a Swift-native Ethereu
 
 
 <!-- Versions -->
-[Unreleased]: https://github.com/mrLSD/swift-evm/compare/v0.6.18...HEAD
+[Unreleased]: https://github.com/mrLSD/swift-evm/compare/v0.6.19...HEAD
+[0.6.19]: https://github.com/mrLSD/swift-evm/compare/v0.6.18...v0.6.19
 [0.6.18]: https://github.com/mrLSD/swift-evm/compare/v0.6.17...v0.6.18
 [0.6.17]: https://github.com/mrLSD/swift-evm/compare/v0.6.16...v0.6.17
 [0.6.16]: https://github.com/mrLSD/swift-evm/compare/v0.6.15...v0.6.16
@@ -904,6 +919,7 @@ This is the **initial public release** of `swift-evm` — a Swift-native Ethereu
 [0.1.0]: https://github.com/mrLSD/swift-evm/releases/tag/v0.1.0
 
 <!-- PRs -->
+[#113]: https://github.com/mrLSD/swift-evm/pull/113
 [#111]: https://github.com/mrLSD/swift-evm/pull/111
 [#109]: https://github.com/mrLSD/swift-evm/pull/109
 [#107]: https://github.com/mrLSD/swift-evm/pull/107
