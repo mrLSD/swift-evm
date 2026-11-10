@@ -2,9 +2,6 @@
 
 ## Add support for Opcodes
 
-### Memory
-- [ ] MCOPY
-
 ### Other
 - [ ] STATICCALL
 - [ ] SELFDESTRUCT
