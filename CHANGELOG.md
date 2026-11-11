@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.21] - 2026-11-11
+
+This release adds the `MCOPY` opcode, which copies bytes between memory ranges with overlap-safe semantics. `Backend` and `InterpreterHandler` are unchanged.
+
+### Added
+- **`MCOPY` opcode (0x5E, EIP-5656):** active from Cancun; takes the destination offset, source offset and size from the top three stack words and copies `size` bytes within the machine's memory as if the source were read before any destination bytes were written, including overlapping ranges in either direction. It costs `VERYLOW` (3) gas plus 3 gas per copied 32-byte word, rounded up, and memory expansion to cover both ranges. Newly expanded source bytes read as zero, and even identical nonempty ranges expand memory and pay the expansion cost. A zero size ignores both full-width offsets and does not expand memory, but still costs 3 gas. Earlier forks fail with `HardForkNotActive` before the stack or gas is checked. Stack underflow fails before gas is charged; an unrepresentable size or nonempty offset fails with `OutOfGas` before any charge, while range overflow, unrepresentable memory gas and insufficient expansion gas fail after the copy cost is charged. Memory limits fail with `OutOfGas` after expansion gas is charged, and host allocation failure ends with `.Fatal(.ReadMemory)`. All failures preserve operands and memory; a successful copy consumes only the three operands and is available in static calls. Previously no handler was registered and the opcode executed as `InvalidOpcode` ([#117]).
+
+### Tests
+- **`MCOPY`:** snapshot-based expected bytes, exact copy and expansion gas and final memory size on every hard fork from Cancun for sources and destinations 0, 1, 31, 32, 63 and 96 and sizes 0, 1, 8, 31, 32, 33 and 65, covering both overlap directions, identical ranges and zero-filled expansion; `HardForkNotActive` on every earlier fork with zero to three operands before stack or gas checks; all stack underflows before charging; empty copies with offsets zero, `Int.max` and the maximum word at budgets of 2 and 3 gas; quadratic expansion for an identical range charged only once, observed by a following `MSIZE`; unpaid copy and expansion gas without changing bytes, consuming operands or resuming execution; unrepresentable operands, high-limb offsets, overflowing source and destination ranges and unrepresentable memory gas before allocation; rounded memory limits for both ranges, including an identical range; a static copy consuming only three operands from a full stack; allocation failures with empty and existing memory on supported allocator-test platforms; and tracing of destination, source, size, copied bytes and both gas charges ([#117]).
+
 ## [0.6.20] - 2026-11-09
 
 This release adds the `SSTORE` opcode, which writes the executing account's persistent storage through two new `InterpreterHandler` requirements, with hard-fork pricing, signed refund deltas and storage-slot warming shared with `SLOAD`. Custom `InterpreterHandler` conformers need a source change; see **Breaking Changes**.
@@ -881,7 +891,8 @@ This is the **initial public release** of `swift-evm` — a Swift-native Ethereu
 
 
 <!-- Versions -->
-[Unreleased]: https://github.com/mrLSD/swift-evm/compare/v0.6.20...HEAD
+[Unreleased]: https://github.com/mrLSD/swift-evm/compare/v0.6.21...HEAD
+[0.6.21]: https://github.com/mrLSD/swift-evm/compare/v0.6.20...v0.6.21
 [0.6.20]: https://github.com/mrLSD/swift-evm/compare/v0.6.19...v0.6.20
 [0.6.19]: https://github.com/mrLSD/swift-evm/compare/v0.6.18...v0.6.19
 [0.6.18]: https://github.com/mrLSD/swift-evm/compare/v0.6.17...v0.6.18
@@ -936,6 +947,7 @@ This is the **initial public release** of `swift-evm` — a Swift-native Ethereu
 [0.1.0]: https://github.com/mrLSD/swift-evm/releases/tag/v0.1.0
 
 <!-- PRs -->
+[#117]: https://github.com/mrLSD/swift-evm/pull/117
 [#115]: https://github.com/mrLSD/swift-evm/pull/115
 [#113]: https://github.com/mrLSD/swift-evm/pull/113
 [#111]: https://github.com/mrLSD/swift-evm/pull/111
