@@ -7,6 +7,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.21] - 2026-11-11
+
+This release adds the `MCOPY` opcode, which copies bytes between memory ranges with overlap-safe semantics. `Backend` and `InterpreterHandler` are unchanged.
+
+### Added
+- **`MCOPY` opcode (0x5E, EIP-5656):** active from Cancun; takes the destination offset, source offset and size from the top three stack words and copies `size` bytes within the machine's memory as if the source were read before any destination bytes were written, including overlapping ranges in either direction. It costs `VERYLOW` (3) gas plus 3 gas per copied 32-byte word, rounded up, and memory expansion to cover both ranges. Newly expanded source bytes read as zero, and even identical nonempty ranges expand memory and pay the expansion cost. A zero size ignores both full-width offsets and does not expand memory, but still costs 3 gas. Earlier forks fail with `HardForkNotActive` before the stack or gas is checked. Stack underflow fails before gas is charged; an unrepresentable size or nonempty offset fails with `OutOfGas` before any charge, while range overflow, unrepresentable memory gas and insufficient expansion gas fail after the copy cost is charged. Memory limits fail with `OutOfGas` after expansion gas is charged, and host allocation failure ends with `.Fatal(.ReadMemory)`. All failures preserve operands and memory; a successful copy consumes only the three operands and is available in static calls. Previously no handler was registered and the opcode executed as `InvalidOpcode` ([#117]).
+
+### Tests
+- **`MCOPY`:** snapshot-based expected bytes, exact copy and expansion gas and final memory size on every hard fork from Cancun for sources and destinations 0, 1, 31, 32, 63 and 96 and sizes 0, 1, 8, 31, 32, 33 and 65, covering both overlap directions, identical ranges and zero-filled expansion; `HardForkNotActive` on every earlier fork with zero to three operands before stack or gas checks; all stack underflows before charging; empty copies with offsets zero, `Int.max` and the maximum word at budgets of 2 and 3 gas; quadratic expansion for an identical range charged only once, observed by a following `MSIZE`; unpaid copy and expansion gas without changing bytes, consuming operands or resuming execution; unrepresentable operands, high-limb offsets, overflowing source and destination ranges and unrepresentable memory gas before allocation; rounded memory limits for both ranges, including an identical range; a static copy consuming only three operands from a full stack; allocation failures with empty and existing memory on supported allocator-test platforms; and tracing of destination, source, size, copied bytes and both gas charges ([#117]).
+
+## [0.6.20] - 2026-11-09
+
+This release adds the `SSTORE` opcode, which writes the executing account's persistent storage through two new `InterpreterHandler` requirements, with hard-fork pricing, signed refund deltas and storage-slot warming shared with `SLOAD`. Custom `InterpreterHandler` conformers need a source change; see **Breaking Changes**.
+
+### Breaking Changes
+- **New `InterpreterHandler.originalStorage(address:index:) -> H256` requirement:** conformers must return the slot's value at the start of the transaction, unchanged by subsequent writes, or zero for an absent slot. `SSTORE` reads it from Istanbul onward to price writes and calculate refunds; returning the current value after a write does not satisfy the contract. The existing `MemoryState.originalStorage(address:index:)` lookup returns an optional, so an adapter must supply the correct transaction-original value for the nonoptional handler requirement; `Backend` is unchanged ([#115]).
+- **New `InterpreterHandler.setStorage(address:index:value:) -> Result<Void, Machine.ExitError>` requirement:** conformers must write the value to the current substate and leave storage unchanged on failure. An implementation over `MemoryState` uses the existing `setStorage(address:key:value:)`. A handler failure ends the machine with the supplied error after gas is charged, without consuming either operand or recording a refund ([#115]).
+
+### Added
+- **`SSTORE` opcode (0x55):** available from Frontier; takes the top stack word as a big-endian storage key and the word below it as the value and writes them through `InterpreterHandler.setStorage(address:index:value:)` for `context.targetAddress`. Stack underflow fails before static, gas or storage checks. A static write, including an unchanged value, fails with `WriteInStaticContext` before gas is charged, storage is read or the slot is warmed. From Istanbul, a remaining gas budget of 2300 or less fails with `OutOfGas` before reads or warming, even if the write itself would cost less. From Berlin, slot warmth is tracked in `ExecutionState` and shared with `SLOAD`, independently of account warmth; after the sentry check, a cold slot is warmed before the original and current values are read and the write cost is charged. If that charge fails, operands, storage and refunds are preserved, but the slot remains warm. A successful write consumes both operands and records its signed refund delta without changing memory. Previously no handler was registered and the opcode executed as `InvalidOpcode` ([#115]).
+- **Storage write pricing and refunds:** before Istanbul, including the project's `Constantinople` case, a zero-to-nonzero write costs 20000 gas and every other write costs 5000, with a 15000 refund for clearing a nonzero value. From Istanbul, pricing compares the transaction-original, current and new values: unchanged and dirty-slot writes cost 800 gas, a clean zero-to-nonzero write costs 20000 and a clean nonzero change costs 5000. From Berlin, the warm read price is 100, the clean nonzero reset price is 2900, and a cold slot adds 2100. From London, the clearing refund falls from 15000 to 4800. Refund calculation reverses earlier clearing refunds and credits restoring the original value; the frame's refund counter may be negative, and these deltas precede the existing transaction refund cap ([#115]).
+
+### Tests
+- **`SSTORE`:** two-write sequences on every hard fork with exact gas, signed refunds, original-value lookup and slot warming; full-width key and value bytes in big-endian order written only to the target account; stack underflow before static, gas or storage checks; static rejection even for an unchanged value at zero and sufficient gas; Istanbul sentry boundaries at 0, 2299, 2300 and 2301 gas for cold and warm slots; one gas below the write cost without writing or granting a clearing refund; a concrete handler failure after charging without changing storage, refunding, consuming operands or resuming execution; a negative frame refund when restoring a slot cleared by a parent, with inherited warmth; slot warming shared with `SLOAD` in both instruction orders; only two operands consumed from a full stack; repeated writes through `MemoryState` followed by `SLOAD`, preserving the transaction original and backend value; and tracing of both operands, the write cost and clearing refund. `TestHandler` records original reads and writes independently of current storage reads ([#115]).
+- **Gas accounting:** `GasCost.sstoreCost` and `sstoreRefund` check 15 original/current/new transitions, both cold and warm, on every hard fork across the legacy, Istanbul, Berlin and London pricing eras, including clearing, restoring, unchanged and dirty slots and negative refund deltas. `Gas.recordRefund` tests assert traps on signed-counter overflow and underflow ([#115]).
+
+## [0.6.19] - 2026-11-08
+
+This release adds the `SLOAD` opcode, which reads the executing account's persistent storage through a new `InterpreterHandler.storage(address:index:)` requirement, with hard-fork pricing and storage-slot warming from Berlin. Custom `InterpreterHandler` conformers need a source change; see **Breaking Changes**.
+
+### Breaking Changes
+- **New `InterpreterHandler` requirement:** conformers must implement `storage(address:index:) -> H256`, which returns the current persistent storage value for the given account and full-width key, or zero for an unset slot, including in static calls. An implementation over `MemoryState` delegates to the existing `storage(address:index:)`, which reads local and parent overlays before falling back to the backend; `Backend` is unchanged ([#113]).
+
+### Added
+- **`SLOAD` opcode (0x54):** available from Frontier; replaces the top stack word, used as a big-endian storage key, with the value returned by `InterpreterHandler.storage(address:index:)` for `context.targetAddress`. It costs 50 gas before Tangerine, 200 from Tangerine until Istanbul, 800 from Istanbul until Berlin, and from Berlin 2100 for a cold slot or 100 for a warm one. Slot warmth is tracked by the full account-and-key pair in `ExecutionState`, independently of account warmth, and inherited from parent states. From Berlin the slot is marked warm before gas is charged, including when the instruction fails with `OutOfGas`; insufficient gas preserves the key without reading storage. Stack underflow fails before gas, warming or handler access. Each successful read queries the current value without caching it, does not change memory or refunds and is available in static calls. Previously no handler was registered and the opcode executed as `InvalidOpcode` ([#113]).
+
+### Tests
+- **`SLOAD`:** exact cold and warm gas, full-width keys and values on every hard fork for zero, one, `UInt64.max`, each limb boundary, the highest bit, an asymmetric byte pattern and the maximum word; byte order and the target account distinguished from its caller; zero for an unset slot and static reads on every fork; stack underflow before gas, warming or storage reads; zero gas and one gas below each cold and warm cost, with the key and refunds preserved, no handler access and the slot warmed from Berlin even on failure; repeated reads charged as warm while observing a changed handler value; account warmth, other keys and other accounts kept independent; parent slot warmth inherited without inserting it into the child; the top word replaced on a full stack; `MemoryState` local and parent overlays, including zero, read before falling back to the backend; and tracing of the key, loaded value and cold gas cost. `TestHandler` serves persistent values and records `storage(address:index:)` requests ([#113]).
+- **Storage pricing and access journal:** `GasCost.sloadCost` checks both cold and warm prices on every hard fork across the Tangerine, Istanbul and Berlin boundaries. `ExecutionState` tests cover full account-and-key tracking independently of account warmth, skipped and repeated warming, recursive parent lookup and child records isolated from parents and siblings ([#113]).
+
 ## [0.6.18] - 2026-11-07
 
 This release adds the `TSTORE` opcode, which writes the executing account's transient storage through a new `InterpreterHandler.tstore(address:index:value:)` requirement. Custom `InterpreterHandler` conformers need a source change; see **Breaking Changes**.
@@ -851,7 +891,10 @@ This is the **initial public release** of `swift-evm` — a Swift-native Ethereu
 
 
 <!-- Versions -->
-[Unreleased]: https://github.com/mrLSD/swift-evm/compare/v0.6.18...HEAD
+[Unreleased]: https://github.com/mrLSD/swift-evm/compare/v0.6.21...HEAD
+[0.6.21]: https://github.com/mrLSD/swift-evm/compare/v0.6.20...v0.6.21
+[0.6.20]: https://github.com/mrLSD/swift-evm/compare/v0.6.19...v0.6.20
+[0.6.19]: https://github.com/mrLSD/swift-evm/compare/v0.6.18...v0.6.19
 [0.6.18]: https://github.com/mrLSD/swift-evm/compare/v0.6.17...v0.6.18
 [0.6.17]: https://github.com/mrLSD/swift-evm/compare/v0.6.16...v0.6.17
 [0.6.16]: https://github.com/mrLSD/swift-evm/compare/v0.6.15...v0.6.16
@@ -904,6 +947,9 @@ This is the **initial public release** of `swift-evm` — a Swift-native Ethereu
 [0.1.0]: https://github.com/mrLSD/swift-evm/releases/tag/v0.1.0
 
 <!-- PRs -->
+[#117]: https://github.com/mrLSD/swift-evm/pull/117
+[#115]: https://github.com/mrLSD/swift-evm/pull/115
+[#113]: https://github.com/mrLSD/swift-evm/pull/113
 [#111]: https://github.com/mrLSD/swift-evm/pull/111
 [#109]: https://github.com/mrLSD/swift-evm/pull/109
 [#107]: https://github.com/mrLSD/swift-evm/pull/107
