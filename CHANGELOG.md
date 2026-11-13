@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-11-13
+
+This release starts the Executor's transition from a published no-op stub to a state owner for message calls over `MemoryState`. It removes the old public initializer and empty execution method and contains source-breaking API changes; see **Breaking Changes**. Call preparation and execution are not implemented in this release.
+
+### Breaking Changes
+- **`Executor.init(state: ExecutionState)` removed:** the replacement `init(state: MemoryState, hardFork: HardFork, memoryLimit: Int = Int.max)` is internal. `Executor` remains a public type, but external clients can no longer construct it through the old initializer; this release provides no replacement public executor entry point. The `ExecutionState` type itself is unchanged ([#119]).
+- **`Executor.execute()` removed:** the method previously returned without executing any instructions. Code that called the stub must remove that call; no running or transaction API replaces it in this release ([#119]).
+
+### Changed
+- **Executor state and configuration:** `Executor` retains the supplied `MemoryState` by identity through a constant reference, stores an explicit `HardFork` and a memory limit defaulting to `Int.max`, and defines the internal call-depth constant `callStackLimit = 1024`. The previous `ExecutionState` property and stored runtime-machine stack are removed. Initialization does not open a substate, read the backend, change gas or accounts, or create or run a machine. The caller must keep the selected fork consistent with the state's metadata, whose access journal exists from Berlin; this stage does not validate that agreement. The stored limits are the foundation for future call handling, rather than an implemented call-depth or memory check in Executor ([#119]).
+
+### Tests
+- **Executor initialization:** the exact supplied `MemoryState` is retained with no parent, accounts, gas, depth or backend-read changes; every supported hard fork is stored explicitly without substituting `HardFork.latest()`; explicit memory limits 0, 1 MiB and `Int.max` are preserved; the default is `Int.max` on every fork and matches `Memory().limit`; the call-depth constant is 1024; and executors over the same state share its identity while different states remain distinct. These checks replace the example that merely constructed the old stub and called its empty `execute()` ([#119]).
+
 ## [0.6.21] - 2026-11-11
 
 This release adds the `MCOPY` opcode, which copies bytes between memory ranges with overlap-safe semantics. `Backend` and `InterpreterHandler` are unchanged.
@@ -891,7 +905,8 @@ This is the **initial public release** of `swift-evm` — a Swift-native Ethereu
 
 
 <!-- Versions -->
-[Unreleased]: https://github.com/mrLSD/swift-evm/compare/v0.6.21...HEAD
+[Unreleased]: https://github.com/mrLSD/swift-evm/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/mrLSD/swift-evm/compare/v0.6.21...v0.7.0
 [0.6.21]: https://github.com/mrLSD/swift-evm/compare/v0.6.20...v0.6.21
 [0.6.20]: https://github.com/mrLSD/swift-evm/compare/v0.6.19...v0.6.20
 [0.6.19]: https://github.com/mrLSD/swift-evm/compare/v0.6.18...v0.6.19
@@ -947,6 +962,7 @@ This is the **initial public release** of `swift-evm` — a Swift-native Ethereu
 [0.1.0]: https://github.com/mrLSD/swift-evm/releases/tag/v0.1.0
 
 <!-- PRs -->
+[#119]: https://github.com/mrLSD/swift-evm/pull/119
 [#117]: https://github.com/mrLSD/swift-evm/pull/117
 [#115]: https://github.com/mrLSD/swift-evm/pull/115
 [#113]: https://github.com/mrLSD/swift-evm/pull/113
