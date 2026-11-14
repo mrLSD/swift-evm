@@ -15,6 +15,11 @@ class TestHandler: InterpreterHandler {
     var codeRequests: [H160] = []
     var codeHashes: [H160: H256] = [:]
     var codeHashRequests: [H160] = []
+    var storages: [H160: [H256: H256]] = [:]
+    var storageRequests: [(address: H160, index: H256)] = []
+    var originalStorages: [H160: [H256: H256]] = [:]
+    var originalStorageRequests: [(address: H160, index: H256)] = []
+    var setStorageRequests: [(address: H160, index: H256, value: H256)] = []
     var tstorages: [H160: [H256: U256]] = [:]
     var tloadRequests: [(address: H160, index: H256)] = []
     var tstoreRequests: [(address: H160, index: H256, value: U256)] = []
@@ -66,9 +71,25 @@ class TestHandler: InterpreterHandler {
         Self.testGasPrice
     }
 
+    func storage(address: H160, index: H256) -> H256 {
+        storageRequests.append((address, index))
+        return storages[address]?[index] ?? .ZERO
+    }
+
     func tload(address: H160, index: H256) -> Result<U256, Machine.ExitError> {
         tloadRequests.append((address, index))
         return .success(tstorages[address]?[index] ?? .ZERO)
+    }
+
+    func originalStorage(address: H160, index: H256) -> H256 {
+        originalStorageRequests.append((address, index))
+        return originalStorages[address]?[index] ?? .ZERO
+    }
+
+    func setStorage(address: H160, index: H256, value: H256) -> Result<Void, Machine.ExitError> {
+        setStorageRequests.append((address, index, value))
+        storages[address, default: [:]][index] = value
+        return .success(())
     }
 
     func tstore(address: H160, index: H256, value: U256) -> Result<Void, Machine.ExitError> {
