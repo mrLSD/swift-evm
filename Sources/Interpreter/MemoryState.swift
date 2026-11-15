@@ -92,6 +92,23 @@ public class MemoryState {
             gasometer.recordStipend(stipend: other.gasometer.remaining)
         }
 
+        /// Reserves the execution gas budget for a top-level call.
+        ///
+        /// Caps the requested limit at the remaining gas and deducts the reserved amount from the
+        /// parent's gasometer, preventing the same gas from being allocated to another call.
+        /// The returned budget can be used to initialize the child's gasometer. The EIP-150
+        /// 63/64 cap and the value-transfer stipend do not apply to this top-level reservation.
+        /// A zero request or an empty gasometer returns zero without changing the remaining gas.
+        ///
+        /// - Parameter targetGas: The requested gas limit for the call.
+        /// - Returns: The smaller of `targetGas` and the gas remaining before the reservation.
+        mutating func calcGasLimitAndRecord(targetGas: UInt64) -> UInt64 {
+            let gasLimit = min(targetGas, gasometer.remaining)
+            // `gasLimit <= remaining` by construction, so the charge cannot fail.
+            _ = gasometer.recordCost(cost: gasLimit)
+            return gasLimit
+        }
+
         /// Create a child `Metadata` with a fresh gasometer, propagated static flag, incremented depth, and reset
         /// accessed data when present.
         public func spitChild(gasLimit: UInt64, isStatic: Bool) -> Self {
