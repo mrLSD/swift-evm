@@ -93,6 +93,82 @@ final class MemoryStateMetadataSpec: QuickSpec {
                 }
             }
 
+            context("calcGasLimitAndRecord") {
+                it("reserves the smaller of the target and the remaining gas and charges it") {
+                    let cases: [(remaining: UInt64, targetGas: UInt64, reserved: UInt64, left: UInt64)] = [
+                        (0, 0, 0, 0),
+                        (0, 1, 0, 0),
+                        (100, 0, 0, 100),
+                        (100, 40, 40, 60),
+                        (100, 100, 100, 0),
+                        (100, 101, 100, 0),
+                        (UInt64.max, UInt64.max, UInt64.max, 0),
+                        (79_000, 100_000, 79_000, 0),
+                    ]
+                    for c in cases {
+                        var metadata = MemoryState.Metadata(gasometer: Gas(limit: c.remaining), hardFork: .Berlin)
+                        let reserved = metadata.calcGasLimitAndRecord(targetGas: c.targetGas)
+                        let detail = "remaining \(c.remaining), target \(c.targetGas)"
+
+                        expect(reserved).to(equal(c.reserved), description: detail)
+                        expect(metadata.gasometer.remaining).to(equal(c.left), description: detail)
+                    }
+                }
+
+                it("reserves each call from what the previous one left") {
+                    var metadata = MemoryState.Metadata(gasometer: Gas(limit: 100), hardFork: .Berlin)
+
+                    let first = metadata.calcGasLimitAndRecord(targetGas: 30)
+                    expect(first).to(equal(30))
+                    expect(metadata.gasometer.remaining).to(equal(70))
+
+                    let second = metadata.calcGasLimitAndRecord(targetGas: 90)
+                    expect(second).to(equal(70))
+                    expect(metadata.gasometer.remaining).to(equal(0))
+                }
+
+                it("changes nothing but the remaining gas") {
+                    for refund: Int64 in [50, -50] {
+                        var gas = Gas(limit: 1000)
+                        _ = gas.recordCost(cost: 400)
+                        _ = gas.memoryGas.resize(end: 0, length: 64)
+                        gas.recordRefund(refund: refund)
+                        var accessed = MemoryState.Accessed()
+                        accessed.setAccessAddress(addr1)
+                        var metadata = MemoryState.Metadata(gasometer: gas, isStatic: true, depth: 3, accessed: accessed)
+                        let before = metadata
+
+                        let reserved = metadata.calcGasLimitAndRecord(targetGas: 100)
+                        expect(reserved).to(equal(100))
+                        expect(metadata.gasometer.remaining).to(equal(500))
+                        expect(metadata.gasometer.limit).to(equal(1000))
+                        expect(metadata.gasometer.refunded).to(equal(refund))
+                        expect(metadata.gasometer.memoryGas.gasCost).to(equal(6))
+                        expect(metadata.gasometer.memoryGas).to(equal(before.gasometer.memoryGas))
+                        expect(metadata.isStatic).to(beTrue())
+                        expect(metadata.depth).to(equal(3))
+                        expect(metadata.accessedData()).to(equal(before.accessedData()))
+                        expect(metadata.accessedData()?.addresses).to(contain(addr1))
+                    }
+                }
+
+                it("does not depend on the hard fork or on the presence of the access journal") {
+                    for fork in HardFork.allCases {
+                        var metadata = MemoryState.Metadata(gasometer: Gas(limit: 100), hardFork: fork)
+                        let before = metadata
+
+                        let reserved = metadata.calcGasLimitAndRecord(targetGas: 40)
+                        expect(reserved).to(equal(40), description: "fork \(fork)")
+                        expect(metadata.gasometer.remaining).to(equal(60), description: "fork \(fork)")
+                        if let journal = before.accessedData() {
+                            expect(metadata.accessedData()).to(equal(journal), description: "fork \(fork)")
+                        } else {
+                            expect(metadata.accessedData()).to(beNil(), description: "fork \(fork)")
+                        }
+                    }
+                }
+            }
+
             context("Access dataw Management") {
                 it("manages authority (EIP-7702)") {
                     var metadata = MemoryState.Metadata(gasometer: Gas(limit: 1000), hardFork: .Berlin)
