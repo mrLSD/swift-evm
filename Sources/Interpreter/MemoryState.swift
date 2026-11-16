@@ -627,6 +627,33 @@ public class MemoryState {
 
     // MARK: - EIP-7702 Authority Logic
 
+    /// Either the account's own code or the target of its delegation designation.
+    enum AuthorityCode {
+        case Code([UInt8])
+        case Delegated(H160)
+    }
+
+    /// Reads an account's code once, reusing a cached delegation target when available.
+    /// Valid delegation designations are cached in the current substate; ordinary code is returned as is.
+    func authorityCode(_ authority: H160) -> AuthorityCode {
+        // 1. Try to read from recursive cache
+        if let target = getAuthorityTargetRecursive(authority: authority) {
+            return .Delegated(target)
+        }
+
+        // 2. If not found in cache, get the code for the authority address.
+        // This uses the 'code' method from the Backend implementation (local cache + backend).
+        let code = self.code(address: authority)
+
+        // 3. Check if the code represents a delegation designator (EIP-7702 logic).
+        guard let target = Authorization.getDelegatedAddress(code) else {
+            return .Code(code)
+        }
+        // Add the found target to the local substate metadata cache.
+        metadata.addAuthority(authority: authority, address: target)
+        return .Delegated(target)
+    }
+
     /// Get authority target from the current state. If it's `None`, look recursively in the parent state.
     public func getAuthorityTargetRecursive(authority: H160) -> H160? {
         if let target = metadata.accessed?.getAuthorityTarget(authority) {
@@ -652,19 +679,7 @@ public class MemoryState {
     /// - Parameter authority: The authority address.
     /// - Returns: The delegated target address, if found.
     public func getAuthorityTarget(authority: H160) -> H160? {
-        // 1. Try to read from recursive cache
-        if let targetAddress = getAuthorityTargetRecursive(authority: authority) {
-            return targetAddress
-        }
-
-        // 2. If not found in cache, get the code for the authority address.
-        // This uses the 'code' method from the Backend implementation (local cache + backend).
-        let authorityCode = code(address: authority)
-
-        // 3. Check if the code represents a delegation designator (EIP-7702 logic).
-        if let target = Authorization.getDelegatedAddress(authorityCode) {
-            // Add the found target to the local substate metadata cache.
-            metadata.addAuthority(authority: authority, address: target)
+        if case .Delegated(let target) = authorityCode(authority) {
             return target
         }
 

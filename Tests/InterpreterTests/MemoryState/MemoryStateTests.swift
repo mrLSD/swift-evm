@@ -138,6 +138,77 @@ final class MockBackend: Backend {
 final class MemoryStateSpec: QuickSpec {
     override class func spec() {
         describe("MemoryState") {
+            context("EIP-7702 authority code") {
+                let a = H160(from: [UInt8](repeating: 0x11, count: 20))
+                let b = H160(from: [UInt8](repeating: 0x22, count: 20))
+                let marker: [UInt8] = [0xef, 0x01, 0x00] + b.BYTES
+
+                it("returns ordinary and malformed designation bytes without caching") {
+                    let codes: [[UInt8]] = [[0x60, 0x01], [], Array(marker.dropLast()), marker + [0], [0xef, 0x01, 0x01] + b.BYTES]
+                    for code in codes {
+                        let backend = MockBackend()
+                        backend.codes[a] = code
+                        let state = MemoryState(gasLimit: 1000, backend: backend, hardFork: .Berlin)
+                        guard case .Code(let bytes) = state.authorityCode(a) else {
+                            fail("Expected own code for \(code)")
+                            continue
+                        }
+                        expect(bytes).to(equal(code))
+                        expect(backend.codeRequests).to(equal([a]))
+                        expect(state.getAuthorityTargetRecursive(authority: a)).to(beNil())
+                        expect(state.getAuthorityTarget(authority: a)).to(beNil())
+                    }
+                }
+
+                it("caches a delegate and reuses it in the same and child substates") {
+                    let backend = MockBackend()
+                    backend.codes[a] = marker
+                    let state = MemoryState(gasLimit: 1000, backend: backend, hardFork: .Berlin)
+                    for child in [false, false, true] {
+                        if child {
+                            state.enter(gasLimit: 100, isStatic: false)
+                        }
+                        guard case .Delegated(let target) = state.authorityCode(a) else {
+                            fail("Expected delegated code")
+                            continue
+                        }
+                        expect(target).to(equal(b))
+                        expect(backend.codeRequests).to(equal([a]))
+                        expect(state.getAuthorityTargetRecursive(authority: a)).to(equal(b))
+                    }
+                }
+
+                it("reads a designation again when the access journal is absent") {
+                    let backend = MockBackend()
+                    backend.codes[a] = marker
+                    let state = MemoryState(gasLimit: 1000, backend: backend, hardFork: .Frontier)
+                    for _ in 0 ..< 2 {
+                        guard case .Delegated(let target) = state.authorityCode(a) else {
+                            fail("Expected delegated code")
+                            continue
+                        }
+                        expect(target).to(equal(b))
+                        expect(state.metadata.accessedData()).to(beNil())
+                    }
+                    expect(backend.codeRequests).to(equal([a, a]))
+                }
+
+                it("prefers local code, including empty code, to the backend") {
+                    for code: [UInt8] in [[], [0x60, 0x03]] {
+                        let backend = MockBackend()
+                        backend.codes[a] = marker
+                        let state = MemoryState(gasLimit: 1000, backend: backend, hardFork: .Berlin)
+                        state.setCode(address: a, code: code)
+                        guard case .Code(let bytes) = state.authorityCode(a) else {
+                            fail("Expected local own code")
+                            continue
+                        }
+                        expect(bytes).to(equal(code))
+                        expect(backend.codeRequests).to(beEmpty())
+                    }
+                }
+            }
+
             context("Read-only backend access") {
                 it("does not journal reads of existing or absent accounts, even across committed substates") {
                     let backend = MockBackend()
