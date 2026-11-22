@@ -518,6 +518,17 @@ final class MemoryStateSpec: QuickSpec {
                     expect(backend.basic(address: backend.sender).balance).to(equal(U256(from: 3003)))
                 }
 
+                it("withdraws the entire balance") {
+                    for fork in HardFork.allCases {
+                        let backend = MockBackend()
+                        let state = MemoryState(gasLimit: 10000, backend: backend, hardFork: fork)
+
+                        let result = state.withdraw(address: backend.sender, value: U256(from: 3003))
+                        expect(result).to(beSuccess(), description: "\(fork)")
+                        expect(state.basic(address: backend.sender).balance).to(equal(.ZERO), description: "\(fork)")
+                    }
+                }
+
                 it("withdraw with OutOfFunds") {
                     let backend = MockBackend()
                     let state = MemoryState(gasLimit: 10000, backend: MockBackend(), hardFork: .Berlin)
@@ -569,23 +580,23 @@ final class MemoryStateSpec: QuickSpec {
                     expect(backend.basic(address: backend.sender).nonce).to(equal(UInt64(10)))
                 }
 
-                it("Increment nonce with overflow for current state") {
-                    let backend = MockBackend()
-                    let state = MemoryState(gasLimit: 10000, backend: MockBackend(), hardFork: .Berlin)
+                it("increments nonce to its maximum and rejects the next increment") {
+                    for fork in HardFork.allCases {
+                        let backend = MockBackend()
+                        let account = BasicAccount(balance: U256(from: 3003), nonce: UInt64.max - 1)
+                        backend.accounts[backend.address1] = account
+                        let state = MemoryState(gasLimit: 10000, backend: backend, hardFork: fork)
 
-                    let acc = state.getAccountAndTouch(backend.sender)
-                    expect(acc.basic.nonce).to(equal(UInt64(10)))
+                        let last = state.incNonce(address: backend.address1)
+                        expect(last).to(beSuccess(), description: "\(fork)")
+                        expect(state.basic(address: backend.address1).nonce).to(equal(UInt64.max), description: "\(fork)")
 
-                    // Force nonce to max value to test overflow
-                    state.accounts[backend.sender]?.basic.nonce = UInt64.max
-
-                    let res = state.incNonce(address: backend.sender)
-                    expect(res).to(beFailure { error in expect(error).to(equal(.MaxNonce)) })
-
-                    expect(state.basic(address: backend.sender).balance).to(equal(U256(from: 3003)))
-                    expect(backend.basic(address: backend.sender).balance).to(equal(U256(from: 3003)))
-                    expect(state.basic(address: backend.sender).nonce).to(equal(UInt64.max))
-                    expect(backend.basic(address: backend.sender).nonce).to(equal(UInt64(10)))
+                        let overflow = state.incNonce(address: backend.address1)
+                        expect(overflow).to(beFailure { error in expect(error).to(equal(.MaxNonce)) }, description: "\(fork)")
+                        expect(state.basic(address: backend.address1).nonce).to(equal(UInt64.max), description: "\(fork)")
+                        expect(state.basic(address: backend.address1).balance).to(equal(account.balance), description: "\(fork)")
+                        expect(backend.basic(address: backend.address1)).to(equal(account), description: "\(fork)")
+                    }
                 }
 
                 it("Account code for current state") {
@@ -914,6 +925,20 @@ final class MemoryStateSpec: QuickSpec {
                     let res2 = state.transfer(transfer: transfer2)
                     expect(res2).to(beSuccess())
                     expect(state.basic(address: backend.sender).balance).to(equal(U256(from: 3003)))
+                }
+
+                it("transfers the entire balance to a funded recipient") {
+                    for fork in HardFork.allCases {
+                        let backend = MockBackend()
+                        backend.accounts[backend.address1] = BasicAccount(balance: U256(from: 17), nonce: 0)
+                        let state = MemoryState(gasLimit: 10000, backend: backend, hardFork: fork)
+                        let transfer = Transfer(source: backend.sender, target: backend.address1, value: U256(from: 3003))
+
+                        let result = state.transfer(transfer: transfer)
+                        expect(result).to(beSuccess(), description: "\(fork)")
+                        expect(state.basic(address: backend.sender).balance).to(equal(.ZERO), description: "\(fork)")
+                        expect(state.basic(address: backend.address1).balance).to(equal(U256(from: 3020)), description: "\(fork)")
+                    }
                 }
 
                 it("Successful transfer") {
