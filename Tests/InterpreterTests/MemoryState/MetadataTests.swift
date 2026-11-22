@@ -62,34 +62,48 @@ final class MemoryStateMetadataSpec: QuickSpec {
                 it("swallowCommit merges gas, refunds and accessed data") {
                     var parentGas = Gas(limit: 5000)
                     _ = parentGas.recordCost(cost: 1000) // 4000 left
+                    parentGas.recordRefund(refund: 125)
                     var parent = MemoryState.Metadata(gasometer: parentGas, isStatic: false, depth: 0, accessed: MemoryState.Accessed())
+                    parent.accessAddress(addr2)
+                    parent.accessStorage(address: addr2, key: key1)
 
                     var childGas = Gas(limit: 1000)
                     _ = childGas.recordCost(cost: 200) // 800 left
-                    childGas.recordRefund(refund: 100)
+                    childGas.recordRefund(refund: -100)
                     var child = MemoryState.Metadata(gasometer: childGas, isStatic: false, depth: 1, accessed: MemoryState.Accessed())
                     child.accessAddress(addr1)
+                    child.accessStorage(address: addr1, key: key1)
 
                     parent.swallowCommit(from: child)
 
                     // Gas: parent_remaining (4000) + child_remaining (800) = 4800
                     expect(parent.gasometer.remaining).to(equal(4800))
-                    expect(parent.gasometer.refunded).to(equal(100))
-                    expect(parent.accessedData()?.addresses).to(contain(addr1))
+                    expect(parent.gasometer.refunded).to(equal(25))
+                    expect(parent.accessedData()?.addresses).to(equal([addr1, addr2]))
+                    expect(parent.accessedData()?.storage).to(equal([storage1, MemoryState.Storage(address: addr2, index: key1)]))
                 }
 
                 it("swallowRevert only merges gas stipend") {
                     var parentGas = Gas(limit: 2000)
                     _ = parentGas.recordCost(cost: 500) // 1500 left
+                    parentGas.recordRefund(refund: 25)
                     var parent = MemoryState.Metadata(gasometer: parentGas, isStatic: false, depth: 0, accessed: MemoryState.Accessed())
+                    parent.accessAddress(addr2)
+                    parent.accessStorage(address: addr2, key: key1)
 
-                    let childGas = Gas(limit: 500) // 500 left (no cost)
-                    let child = MemoryState.Metadata(gasometer: childGas, isStatic: false, depth: 1, accessed: MemoryState.Accessed())
+                    var childGas = Gas(limit: 500)
+                    _ = childGas.recordCost(cost: 100)
+                    childGas.recordRefund(refund: 100)
+                    var child = MemoryState.Metadata(gasometer: childGas, isStatic: false, depth: 1, accessed: MemoryState.Accessed())
+                    child.accessAddress(addr1)
+                    child.accessStorage(address: addr1, key: key1)
 
                     parent.swallowRevert(from: child)
 
-                    expect(parent.gasometer.remaining).to(equal(2000)) // 1500 + 500
-                    expect(parent.accessedData()?.addresses).to(beEmpty()) // Access list NOT merged
+                    expect(parent.gasometer.remaining).to(equal(1900))
+                    expect(parent.gasometer.refunded).to(equal(25))
+                    expect(parent.accessedData()?.addresses).to(equal([addr2]))
+                    expect(parent.accessedData()?.storage).to(equal([MemoryState.Storage(address: addr2, index: key1)]))
                 }
             }
 

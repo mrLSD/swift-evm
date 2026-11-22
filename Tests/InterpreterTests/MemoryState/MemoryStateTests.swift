@@ -1391,6 +1391,53 @@ final class MemoryStateSpec: QuickSpec {
                     expect(state.isCreated(addr2)).to(beTrue())
                 }
 
+                let exits: [(name: String, apply: @Sendable (MemoryState) -> Void, remaining: UInt64, refund: Int64, keepsChild: Bool)] = [
+                    ("exitCommit", { $0.exitCommit() }, 900, 35, true),
+                    ("exitRevert", { $0.exitRevert() }, 900, 10, false),
+                    ("exitDiscard", { $0.exitDiscard() }, 600, 10, false),
+                ]
+                for exit in exits {
+                    it("preserves the correct gas, refund, warm entries and deletions after \(exit.name)") {
+                        let journalForks = HardFork.allCases.drop(while: { $0 != .Berlin })
+                        for fork in HardFork.allCases {
+                            let detail = "fork \(fork)"
+                            var parentGas = Gas(limit: 1000)
+                            parentGas.recordRefund(refund: 10)
+                            let parent = MemoryState.Metadata(gasometer: parentGas, hardFork: fork)
+                            let state = MemoryState(metadata: parent, backend: MockBackend())
+                            state.metadata.accessAddress(addr1)
+                            state.metadata.accessStorage(address: addr1, key: key1)
+                            state.setDeleted(address: addr1)
+
+                            let reserved = state.metadata.calcGasLimitAndRecord(targetGas: 400)
+                            state.enter(gasLimit: reserved, isStatic: false)
+                            var childGas = state.metadata.gasometer
+                            _ = childGas.recordCost(cost: 100)
+                            childGas.recordRefund(refund: 25)
+                            state.metadata = MemoryState.Metadata(
+                                gasometer: childGas, isStatic: state.metadata.isStatic,
+                                depth: state.metadata.depth, accessed: state.metadata.accessedData()
+                            )
+                            state.metadata.accessAddress(addr2)
+                            state.metadata.accessStorage(address: addr1, key: key2)
+                            state.setDeleted(address: addr2)
+
+                            exit.apply(state)
+
+                            let hasJournal = journalForks.contains(fork)
+                            expect(state.parent).to(beNil(), description: detail)
+                            expect(state.metadata.gasometer.remaining).to(equal(exit.remaining), description: detail)
+                            expect(state.metadata.gasometer.refunded).to(equal(exit.refund), description: detail)
+                            expect(state.isCold(addr1)).to(equal(!hasJournal), description: detail)
+                            expect(state.isCold(addr2)).to(equal(!(hasJournal && exit.keepsChild)), description: detail)
+                            expect(state.isStorageCold(address: addr1, key: key1)).to(equal(!hasJournal), description: detail)
+                            expect(state.isStorageCold(address: addr1, key: key2)).to(equal(!(hasJournal && exit.keepsChild)), description: detail)
+                            expect(state.isDeleted(addr1)).to(beTrue(), description: detail)
+                            expect(state.isDeleted(addr2)).to(equal(exit.keepsChild), description: detail)
+                        }
+                    }
+                }
+
                 it("should merge accounts, storages, tstorages on exitCommit and clear storages for reset accounts") {
                     let backend = MockBackend()
                     let state = MemoryState(gasLimit: 10000, backend: backend, hardFork: .Berlin)
