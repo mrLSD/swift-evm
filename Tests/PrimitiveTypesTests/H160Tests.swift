@@ -5,6 +5,12 @@ import Quick
 final class H160Spec: QuickSpec {
     override class func spec() {
         describe("H160 type") {
+            it("is not zero when any one limb is set") {
+                expect(H160(l0: 1, l1: 0, l2: 0).isZero).to(beFalse())
+                expect(H160(l0: 0, l1: 1, l2: 0).isZero).to(beFalse())
+                expect(H160(l0: 0, l1: 0, l2: 1).isZero).to(beFalse())
+            }
+
             context("when init data wrong panics with message") {
                 func expectFailInit(array arr: [UInt8]) {
                     expect(captureStandardError {
