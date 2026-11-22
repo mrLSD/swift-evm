@@ -1,9 +1,23 @@
 import PrimitiveTypes
 
-/// EVM memory state struct. This struct is used to track the state of the execution context, accessed data and storages during execution.
+private final class CodeCache {
+    struct CodeEntry {
+        var code: [UInt8]?
+        var codeHash: H256?
+    }
+
+    var entries: [H160: CodeEntry] = [:]
+}
+
+/// Tracks the journaled state of one EVM transaction - the execution context, accessed data and storages during execution.
+///
+/// The backend must provide a stable snapshot for the lifetime of the root state. Apply transaction changes through
+/// the current `MemoryState` and create a new root for each new backend snapshot.
 public class MemoryState {
     /// Environment backend. This backend is used to retrieve account data and other information from the environment during execution.
     let backend: any Backend
+
+    private let codeCache: CodeCache
 
     /// State metadata. Represents the metadata of the execution context during all execution flow.
     var metadata: Metadata
@@ -265,12 +279,20 @@ public class MemoryState {
     public init(gasLimit: UInt64, backend: any Backend, hardFork: HardFork) {
         self.metadata = Metadata(gasometer: Gas(limit: gasLimit), hardFork: hardFork)
         self.backend = backend
+        self.codeCache = CodeCache()
     }
 
     /// Initialize `MemoryState` with predefined metadata, backend.
     public init(metadata: Metadata, backend: any Backend) {
         self.metadata = metadata
         self.backend = backend
+        self.codeCache = CodeCache()
+    }
+
+    private init(sharingBackendWith state: MemoryState) {
+        self.metadata = state.metadata
+        self.backend = state.backend
+        self.codeCache = state.codeCache
     }
 
     /// Get known account by address. This function is used to retrieve the state of an account by its address.
@@ -416,22 +438,19 @@ public class MemoryState {
 
     /// Check if the account at the given address is empty (EIP-161): zero balance, zero nonce and no code.
     ///
-    /// Local fields answer first; code set in this transaction is unknown to the backend. The backend is asked for
-    /// `basic` only when the account is unknown and whether it has code only when balance and nonce are zero. The
-    /// hash is never requested, so a backend without a stored hash hashes nothing; code is never loaded here.
+    /// Known nonempty code settles the check without reading account data. Otherwise, check balance and nonce
+    /// before asking the backend about code. This check never loads bytecode or requests its hash.
     ///
     /// - Parameter address: The address to check.
     /// - Returns: `true` if the account is empty, `false` otherwise.
     public func isEmpty(address: H160) -> Bool {
-        let known = knownAccount(address)
-        let basic = known?.basic ?? backend.basic(address: address)
-        guard basic.balance.isZero, basic.nonce == 0 else {
+        let account = knownAccount(address)
+        let hasCode = knownHasCode(address: address, account: account)
+        if hasCode == true {
             return false
         }
-        if let codeHash = known?.codeHash {
-            return codeHash == .KECCAK_EMPTY
-        }
-        return !backend.hasCode(address: address)
+        let basic = account?.basic ?? backend.basic(address: address)
+        return basic.balance.isZero && basic.nonce == 0 && !(hasCode ?? backend.hasCode(address: address))
     }
 
     /// Internal helper to swap the entire state data between two instances.
@@ -450,7 +469,7 @@ public class MemoryState {
     /// Enter a new `substate` by creating a child `MemoryState` with the current state as its parent.
     /// The current state data is "pushed" into a parent state, and 'self' becomes a fresh substate.
     public func enter(gasLimit: UInt64, isStatic: Bool) {
-        let oldState = MemoryState(metadata: metadata, backend: backend)
+        let oldState = MemoryState(sharingBackendWith: self)
 
         // Push current data to oldState
         swapState(with: oldState)
@@ -753,18 +772,36 @@ extension MemoryState: Backend {
     }
 
     public func code(address: H160) -> [UInt8] {
-        return knownAccount(address)?.code ?? backend.code(address: address)
+        if let code = knownAccount(address)?.code ?? codeCache.entries[address]?.code {
+            return code
+        }
+        let code = backend.code(address: address)
+        codeCache.entries[address, default: .init()].code = code
+        return code
     }
 
     public func codeHash(address: H160) -> H256 {
-        return knownAccount(address)?.codeHash ?? backend.codeHash(address: address)
+        if let codeHash = knownAccount(address)?.codeHash ?? codeCache.entries[address]?.codeHash {
+            return codeHash
+        }
+        let codeHash = backend.codeHash(address: address)
+        codeCache.entries[address, default: .init()].codeHash = codeHash
+        return codeHash
     }
 
     public func hasCode(address: H160) -> Bool {
-        if let codeHash = knownAccount(address)?.codeHash {
+        knownHasCode(address: address, account: knownAccount(address)) ?? backend.hasCode(address: address)
+    }
+
+    private func knownHasCode(address: H160, account: StateAccount?) -> Bool? {
+        if let codeHash = account?.codeHash {
             return codeHash != .KECCAK_EMPTY
         }
-        return backend.hasCode(address: address)
+        let cached = codeCache.entries[address]
+        if let code = cached?.code {
+            return !code.isEmpty
+        }
+        return cached?.codeHash.map { $0 != .KECCAK_EMPTY }
     }
 
     public func storage(address: H160, index: H256) -> H256 {

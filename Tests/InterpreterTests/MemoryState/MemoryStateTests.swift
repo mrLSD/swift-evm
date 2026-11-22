@@ -589,6 +589,17 @@ final class MemoryStateSpec: QuickSpec {
                     expect(backend.basic(address: backend.sender).balance).to(equal(U256(from: 3003)))
                 }
 
+                it("withdraws the entire balance") {
+                    for fork in HardFork.allCases {
+                        let backend = MockBackend()
+                        let state = MemoryState(gasLimit: 10000, backend: backend, hardFork: fork)
+
+                        let result = state.withdraw(address: backend.sender, value: U256(from: 3003))
+                        expect(result).to(beSuccess(), description: "\(fork)")
+                        expect(state.basic(address: backend.sender).balance).to(equal(.ZERO), description: "\(fork)")
+                    }
+                }
+
                 it("withdraw with OutOfFunds") {
                     let backend = MockBackend()
                     let state = MemoryState(gasLimit: 10000, backend: MockBackend(), hardFork: .Berlin)
@@ -640,23 +651,23 @@ final class MemoryStateSpec: QuickSpec {
                     expect(backend.basic(address: backend.sender).nonce).to(equal(UInt64(10)))
                 }
 
-                it("Increment nonce with overflow for current state") {
-                    let backend = MockBackend()
-                    let state = MemoryState(gasLimit: 10000, backend: MockBackend(), hardFork: .Berlin)
+                it("increments nonce to its maximum and rejects the next increment") {
+                    for fork in HardFork.allCases {
+                        let backend = MockBackend()
+                        let account = BasicAccount(balance: U256(from: 3003), nonce: UInt64.max - 1)
+                        backend.accounts[backend.address1] = account
+                        let state = MemoryState(gasLimit: 10000, backend: backend, hardFork: fork)
 
-                    let acc = state.getAccountAndTouch(backend.sender)
-                    expect(acc.basic.nonce).to(equal(UInt64(10)))
+                        let last = state.incNonce(address: backend.address1)
+                        expect(last).to(beSuccess(), description: "\(fork)")
+                        expect(state.basic(address: backend.address1).nonce).to(equal(UInt64.max), description: "\(fork)")
 
-                    // Force nonce to max value to test overflow
-                    state.accounts[backend.sender]?.basic.nonce = UInt64.max
-
-                    let res = state.incNonce(address: backend.sender)
-                    expect(res).to(beFailure { error in expect(error).to(equal(.MaxNonce)) })
-
-                    expect(state.basic(address: backend.sender).balance).to(equal(U256(from: 3003)))
-                    expect(backend.basic(address: backend.sender).balance).to(equal(U256(from: 3003)))
-                    expect(state.basic(address: backend.sender).nonce).to(equal(UInt64.max))
-                    expect(backend.basic(address: backend.sender).nonce).to(equal(UInt64(10)))
+                        let overflow = state.incNonce(address: backend.address1)
+                        expect(overflow).to(beFailure { error in expect(error).to(equal(.MaxNonce)) }, description: "\(fork)")
+                        expect(state.basic(address: backend.address1).nonce).to(equal(UInt64.max), description: "\(fork)")
+                        expect(state.basic(address: backend.address1).balance).to(equal(account.balance), description: "\(fork)")
+                        expect(backend.basic(address: backend.address1)).to(equal(account), description: "\(fork)")
+                    }
                 }
 
                 it("Account code for current state") {
@@ -987,6 +998,20 @@ final class MemoryStateSpec: QuickSpec {
                     expect(state.basic(address: backend.sender).balance).to(equal(U256(from: 3003)))
                 }
 
+                it("transfers the entire balance to a funded recipient") {
+                    for fork in HardFork.allCases {
+                        let backend = MockBackend()
+                        backend.accounts[backend.address1] = BasicAccount(balance: U256(from: 17), nonce: 0)
+                        let state = MemoryState(gasLimit: 10000, backend: backend, hardFork: fork)
+                        let transfer = Transfer(source: backend.sender, target: backend.address1, value: U256(from: 3003))
+
+                        let result = state.transfer(transfer: transfer)
+                        expect(result).to(beSuccess(), description: "\(fork)")
+                        expect(state.basic(address: backend.sender).balance).to(equal(.ZERO), description: "\(fork)")
+                        expect(state.basic(address: backend.address1).balance).to(equal(U256(from: 3020)), description: "\(fork)")
+                    }
+                }
+
                 it("Successful transfer") {
                     let backend = MockBackend()
                     let state = MemoryState(gasLimit: 10000, backend: backend, hardFork: .Berlin)
@@ -1008,22 +1033,122 @@ final class MemoryStateSpec: QuickSpec {
                 let abc = try! H256.fromString(hex: "4e03657aea45a94fc7d47ba826c8d667c0d1e6e33a64a036ec44f58fa12d6c45").get()
                 let stop = try! H256.fromString(hex: "bc36789e7a1e281436464229828f817d6612f7b477d66591ff96a9e064bcc98a").get()
 
+                it("loads each backend field on demand and caches empty results per address") {
+                    for fork in HardFork.allCases {
+                        let backend = MockBackend()
+                        let absent = H160.ZERO
+                        backend.codes[address] = [0x00]
+                        backend.codeHashes[address] = stop
+
+                        let state = MemoryState(gasLimit: 0, backend: backend, hardFork: fork)
+                        expect(state.codeHash(address: address)).to(equal(stop))
+                        expect(state.code(address: absent)).to(equal([]))
+                        expect(backend.codeRequests).to(equal([absent]))
+                        expect(backend.codeHashRequests).to(equal([address]))
+
+                        for _ in 0 ..< 2 {
+                            expect(state.code(address: address)).to(equal([0x00]))
+                            expect(state.codeHash(address: address)).to(equal(stop))
+                            expect(state.codeHash(address: absent)).to(equal(.KECCAK_EMPTY))
+                            expect(state.code(address: absent)).to(equal([]))
+                        }
+
+                        expect(backend.codeRequests).to(equal([absent, address]))
+                        expect(backend.codeHashRequests).to(equal([address, absent]))
+                        expect(backend.basicRequests).to(beEmpty())
+                        expect(backend.hasCodeRequests).to(beEmpty())
+                        expect(state.accounts).to(beEmpty())
+                        expect(state.exists(address: absent)).to(beFalse())
+                        expect(state.isCold(address)).to(beTrue())
+                        expect(state.isCold(absent)).to(beTrue())
+                    }
+                }
+
+                it("shares backend reads across frames while code overrides follow the journal") {
+                    for exit in 0 ... 2 {
+                        let backend = MockBackend()
+                        backend.codes[address] = [0x00]
+                        backend.codeHashes[address] = stop
+                        let state = MemoryState(gasLimit: 0, backend: backend, hardFork: .Berlin)
+                        state.enter(gasLimit: 0, isStatic: false)
+                        expect(state.code(address: address)).to(equal([0x00]))
+                        expect(state.parent?.codeHash(address: address)).to(equal(stop))
+
+                        state.enter(gasLimit: 0, isStatic: false)
+                        expect(state.parent?.code(address: address)).to(equal([0x00]))
+                        expect(state.codeHash(address: address)).to(equal(stop))
+
+                        state.metadata.accessAddress(address)
+                        state.setCode(address: address, code: [])
+                        expect(state.hasCode(address: address)).to(beFalse())
+                        expect(state.isEmpty(address: address)).to(beTrue())
+                        expect(state.code(address: address)).to(equal([]))
+                        expect(state.codeHash(address: address)).to(equal(.KECCAK_EMPTY))
+                        expect(state.parent?.code(address: address)).to(equal([0x00]))
+                        expect(state.parent?.codeHash(address: address)).to(equal(stop))
+
+                        switch exit {
+                        case 0: state.exitCommit()
+                        case 1: state.exitRevert()
+                        default: state.exitDiscard()
+                        }
+
+                        expect(state.code(address: address)).to(equal(exit == 0 ? [] : [0x00]))
+                        expect(state.codeHash(address: address)).to(equal(exit == 0 ? .KECCAK_EMPTY : stop))
+                        expect(state.hasCode(address: address)).to(equal(exit != 0))
+                        expect(state.isEmpty(address: address)).to(equal(exit == 0))
+                        expect(backend.hasCodeRequests).to(beEmpty())
+                        expect(state.isCold(address)).to(equal(exit != 0))
+
+                        state.exitRevert()
+                        state.enter(gasLimit: 0, isStatic: true)
+                        expect(state.code(address: address)).to(equal([0x00]))
+                        expect(state.codeHash(address: address)).to(equal(stop))
+                        expect(state.isCold(address)).to(beTrue())
+                        expect(backend.codeRequests).to(equal([address]))
+                        expect(backend.codeHashRequests).to(equal([address]))
+
+                        state.exitDiscard()
+                    }
+                }
+
+                it("reads a fresh backend snapshot for each root state") {
+                    let backend = MockBackend()
+                    do {
+                        let state = MemoryState(gasLimit: 0, backend: backend, hardFork: .Frontier)
+                        expect(state.code(address: address)).to(equal([]))
+                        expect(state.codeHash(address: address)).to(equal(.KECCAK_EMPTY))
+                    }
+
+                    backend.codes[address] = [0x00]
+                    backend.codeHashes[address] = stop
+
+                    let metadata = MemoryState.Metadata(gasometer: Gas(limit: 0), hardFork: .Frontier)
+                    let next = MemoryState(metadata: metadata, backend: backend)
+                    expect(next.code(address: address)).to(equal([0x00]))
+                    expect(next.codeHash(address: address)).to(equal(stop))
+                    expect(backend.codeRequests).to(equal([address, address]))
+                    expect(backend.codeHashRequests).to(equal([address, address]))
+                }
+
                 it("serves a contract's backend hash without loading code or journaling reads") {
                     let backend = MockBackend()
                     backend.accounts[address] = BasicAccount(balance: .ZERO, nonce: 1)
                     backend.codeHashes[address] = abc
                     backend.codes[address] = [0xfe]
+
                     let state = MemoryState(gasLimit: 10000, backend: backend, hardFork: .Prague)
                     state.enter(gasLimit: 1000, isStatic: true)
                     expect(state.codeHash(address: address)).to(equal(abc))
                     expect(backend.basicRequests).to(beEmpty())
                     expect(state.isEmpty(address: address)).to(beFalse())
-                    expect(backend.basicRequests).to(equal([address]))
+                    expect(backend.basicRequests).to(beEmpty())
                     expect(backend.codeHashRequests).to(equal([address]))
                     expect(backend.hasCodeRequests).to(beEmpty())
                     expect(backend.codeRequests).to(beEmpty())
                     expect(state.accounts).to(beEmpty())
                     expect(state.parent?.accounts).to(beEmpty())
+
                     state.exitCommit()
                     expect(state.accounts).to(beEmpty())
                 }
@@ -1031,18 +1156,21 @@ final class MemoryStateSpec: QuickSpec {
                 it("decides emptiness from balance and nonce before asking the backend whether it has code") {
                     for known in [false, true] {
                         for (balance, nonce, empty) in [
-                            (UInt64(0), UInt64(0), true), (1, 0, false), (0, 1, false), (UInt64.max, UInt64.max, false)
+                            (UInt64(0), UInt64(0), true), (1, 0, false), (0, 1, false), (UInt64.max, UInt64.max, false),
                         ] {
                             let backend = MockBackend()
                             backend.codeHashes[address] = .KECCAK_EMPTY
                             backend.storages[address] = [.ZERO: .MAX]
+
                             let state = MemoryState(gasLimit: 10000, backend: backend, hardFork: .Prague)
                             let basic = BasicAccount(balance: U256(from: balance), nonce: nonce)
+
                             if known {
                                 state.accounts[address] = StateAccount(basic: basic, code: nil, reset: false)
                             } else {
                                 backend.accounts[address] = basic
                             }
+
                             let detail = "known \(known), balance \(balance), nonce \(nonce)"
                             expect(state.isEmpty(address: address)).to(equal(empty), description: detail)
                             expect(backend.basicRequests).to(equal(known ? [] : [address]), description: detail)
@@ -1059,6 +1187,7 @@ final class MemoryStateSpec: QuickSpec {
                         let backend = MockBackend()
                         // The backend disagrees on purpose: only the code set locally may decide.
                         backend.codes[address] = code.isEmpty ? [0x00] : []
+
                         let state = MemoryState(gasLimit: 10000, backend: backend, hardFork: .Prague)
                         state.setCode(address: address, code: code)
                         let detail = "code \(code)"
@@ -1071,21 +1200,61 @@ final class MemoryStateSpec: QuickSpec {
                     }
                 }
 
-                it("reports code from the local hash and asks the backend only for accounts without local code") {
+                it("uses previously read bytecode or its hash to decide code presence and emptiness") {
+                    for (readHash, touched) in [(false, false), (false, true), (true, false), (true, true)] {
+                        for (code, basic, hasCode, empty) in [
+                            ([UInt8(0x00)], BasicAccount.default, true, false),
+                            ([], .default, false, true),
+                            ([], BasicAccount(balance: U256(from: 1), nonce: 0), false, false),
+                            ([], BasicAccount(balance: .ZERO, nonce: 1), false, false),
+                        ] {
+                            let backend = MockBackend()
+                            backend.accounts[address] = basic
+                            backend.codes[address] = code
+                            backend.codeHashes[address] = hasCode ? stop : .KECCAK_EMPTY
+                            let state = MemoryState(gasLimit: 0, backend: backend, hardFork: .Prague)
+
+                            if readHash {
+                                _ = state.codeHash(address: address)
+                            } else {
+                                _ = state.code(address: address)
+                            }
+
+                            if touched {
+                                state.touch(address: address)
+                                expect(backend.basicRequests).to(equal([address]))
+                            }
+
+                            expect(state.hasCode(address: address)).to(equal(hasCode))
+                            expect(state.isEmpty(address: address)).to(equal(empty))
+                            expect(backend.hasCodeRequests).to(beEmpty())
+                            expect(backend.basicRequests).to(equal(touched || !hasCode ? [address] : []))
+                            expect(backend.codeRequests).to(equal(readHash ? [] : [address]))
+                            expect(backend.codeHashRequests).to(equal(readHash ? [address] : []))
+                        }
+                    }
+                }
+
+                it("reports local code and falls back to the backend on a cache miss") {
                     let backend = MockBackend()
                     backend.codes[address] = [0x00]
+
                     let state = MemoryState(gasLimit: 10000, backend: backend, hardFork: .Prague)
                     expect(state.hasCode(address: address)).to(beTrue())
+
                     state.touch(address: address)
                     expect(state.hasCode(address: address)).to(beTrue())
                     expect(backend.hasCodeRequests).to(equal([address, address]))
 
                     state.setCode(address: address, code: [])
                     expect(state.hasCode(address: address)).to(beFalse())
+
                     state.setCode(address: address, code: [0x61, 0x62, 0x63])
                     expect(state.hasCode(address: address)).to(beTrue())
+
                     state.enter(gasLimit: 1000, isStatic: false)
                     expect(state.hasCode(address: address)).to(beTrue())
+
                     state.exitDiscard()
                     expect(backend.hasCodeRequests).to(equal([address, address]))
                     expect(backend.codeHashRequests).to(beEmpty())
@@ -1095,8 +1264,10 @@ final class MemoryStateSpec: QuickSpec {
                 it("hashes local code once and handles removal without stale backend hashes") {
                     let backend = MockBackend()
                     backend.codeHashes[address] = stop
+
                     let state = MemoryState(gasLimit: 10000, backend: backend, hardFork: .Prague)
                     state.setCode(address: address, code: [0x61, 0x62, 0x63])
+
                     expect(state.accounts[address]?.codeHash).to(equal(abc))
                     expect(state.codeHash(address: address)).to(equal(abc))
                     expect(state.isEmpty(address: address)).to(beFalse())
@@ -1116,20 +1287,24 @@ final class MemoryStateSpec: QuickSpec {
                     for exit in 0 ... 2 {
                         let backend = MockBackend()
                         backend.codeHashes[address] = .KECCAK_EMPTY
+
                         let state = MemoryState(gasLimit: 10000, backend: backend, hardFork: .Prague)
                         state.setCode(address: address, code: [0x61, 0x62, 0x63])
                         state.enter(gasLimit: 1000, isStatic: false)
+
                         expect(state.codeHash(address: address)).to(equal(abc))
                         expect(state.incNonce(address: address)).to(beSuccess())
                         expect(state.codeHash(address: address)).to(equal(abc))
 
                         state.setCode(address: address, code: [0x00])
                         expect(state.codeHash(address: address)).to(equal(stop))
+
                         switch exit {
                         case 0: state.exitCommit()
                         case 1: state.exitRevert()
                         default: state.exitDiscard()
                         }
+
                         expect(state.codeHash(address: address)).to(equal(exit == 0 ? stop : abc))
                         expect(backend.codeHashRequests).to(beEmpty())
                         expect(backend.codeRequests).to(beEmpty())
@@ -1140,6 +1315,7 @@ final class MemoryStateSpec: QuickSpec {
                     let backend = MockBackend()
                     let state = MemoryState(gasLimit: 10000, backend: backend, hardFork: .Prague)
                     expect(state.isEmpty(address: address)).to(beTrue())
+
                     state.enter(gasLimit: 1000, isStatic: false)
                     state.setCode(address: address, code: [0x00])
                     state.setCreated(address: address)
@@ -1147,10 +1323,11 @@ final class MemoryStateSpec: QuickSpec {
 
                     expect(state.codeHash(address: address)).to(equal(stop))
                     expect(state.isEmpty(address: address)).to(beFalse())
+
                     state.exitRevert()
                     expect(state.codeHash(address: address)).to(equal(.KECCAK_EMPTY))
                     expect(state.isEmpty(address: address)).to(beTrue())
-                    expect(backend.hasCodeRequests).to(equal([address, address]))
+                    expect(backend.hasCodeRequests).to(equal([address]))
                     expect(backend.codeHashRequests).to(equal([address]))
                     expect(backend.codeRequests).to(beEmpty())
                     expect(state.accounts).to(beEmpty())

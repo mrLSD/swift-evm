@@ -34,6 +34,12 @@ public protocol Backend {
     func code(address: H160) -> [UInt8]
     /// Get the account's own code hash: `keccak256` of `code(address:)`, or `KECCAK_EMPTY` for empty code and
     /// absent accounts. Serve it from stored or cached data; do not hash code on every call.
+    ///
+    /// - NOTE: For a missing account, always return `KECCAK_EMPTY`. Never return `H256.ZERO` to indicate absence.
+    ///   `MemoryState` caches the returned hash for the transaction. With only a zero hash cached,
+    ///   `MemoryState.hasCode` returns `true` and `MemoryState.isEmpty` returns `false` for the missing account.
+    ///   If the account later receives funds and still has no code, `EXTCODEHASH` returns the cached zero
+    ///   instead of the required `KECCAK_EMPTY`.
     func codeHash(address: H160) -> H256
     /// Whether the account has code, that is `codeHash(address:) != KECCAK_EMPTY`; `false` for absent accounts.
     /// Answer it from the account record or the code key without loading or hashing code.
