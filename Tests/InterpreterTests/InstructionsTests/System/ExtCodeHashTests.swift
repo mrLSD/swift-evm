@@ -230,11 +230,40 @@ final class InstructionExtCodeHashSpec: QuickSpec {
                 }
             }
 
+            it("reuses the raw empty hash and applies EIP-1052 to the current balance") {
+                let backend = MockBackend()
+                let state = MemoryState(gasLimit: 0, backend: backend, hardFork: .Berlin)
+                let handler = StateHandler(state: state)
+                let code = [UInt8](repeating: Opcode.EXTCODEHASH.rawValue, count: 3)
+                let m = Machine(data: [], code: code, gasLimit: 2800, memoryLimit: 0, context: TestMachine.defaultContext(), state: ExecutionState(), handler: handler, hardFork: .Berlin)
+
+                expect(m.stack.push(value: word)).to(beSuccess())
+                m.step()
+
+                state.enter(gasLimit: 0, isStatic: false)
+                state.deposit(address: address, value: U256(from: 1))
+                expect(m.stack.push(value: word)).to(beSuccess())
+
+                m.step()
+                state.exitRevert()
+                expect(m.stack.push(value: word)).to(beSuccess())
+
+                m.evalLoop()
+
+                expect(m.machineStatus).to(equal(.Exit(.Success(.Stop))))
+                expect(m.stack.data).to(equal([.ZERO, U256(from: H256.KECCAK_EMPTY), .ZERO]))
+                expect(m.gas.remaining).to(equal(0))
+                expect(backend.codeHashRequests).to(equal([address]))
+                expect(backend.codeRequests).to(beEmpty())
+                expect(handler.codeHashRequests).to(equal([address, address, address]))
+            }
+
             it("hashes the own delegation indicator in a static call without accessing its target") {
                 let backend = MockBackend()
                 let state = MemoryState(gasLimit: 10000, backend: backend, hardFork: .Prague)
                 let target = H160(from: [UInt8](repeating: 0x11, count: 20))
                 state.setCode(address: address, code: [0xef, 0x01, 0x00] + target.BYTES)
+
                 let handler = StateHandler(state: state)
                 let m = Machine(data: [], code: [Opcode.EXTCODEHASH.rawValue], gasLimit: 2600, context: TestMachine.defaultContext(), state: ExecutionState(), handler: handler)
                 expect(m.stack.push(value: word)).to(beSuccess())
