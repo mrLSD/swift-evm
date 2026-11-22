@@ -1364,6 +1364,124 @@ final class MemoryStateSpec: QuickSpec {
                 let val2 = H256(from: [UInt8](repeating: 0xbb, count: 32))
                 let val3 = H256(from: [UInt8](repeating: 0xcc, count: 32))
 
+                it("reads the grandparent's balance and account flags through an untouched parent") {
+                    for fork in HardFork.allCases {
+                        let backend = MockBackend()
+                        let state = MemoryState(gasLimit: 0, backend: backend, hardFork: fork)
+                        state.deposit(address: backend.sender, value: U256(from: 1000))
+                        state.setCreated(address: addr1)
+                        state.setDeleted(address: addr2)
+
+                        state.enter(gasLimit: 0, isStatic: false)
+                        state.enter(gasLimit: 0, isStatic: false)
+
+                        expect(state.basic(address: backend.sender).balance).to(equal(U256(from: 4003)))
+                        expect(backend.basicRequests).to(equal([backend.sender]))
+                        expect(state.isCreated(addr1)).to(beTrue())
+                        expect(state.isDeleted(addr1)).to(beFalse())
+                        expect(state.isDeleted(addr2)).to(beTrue())
+                        expect(state.isCreated(addr2)).to(beFalse())
+                    }
+                }
+
+                it("inherits the grandparent's warm address and exact storage slot from Berlin") {
+                    let preBerlin = HardFork.allCases.prefix(while: { $0 != .Berlin })
+                    for fork in HardFork.allCases {
+                        let state = MemoryState(gasLimit: 0, backend: MockBackend(), hardFork: fork)
+                        state.metadata.accessAddress(addr1)
+                        state.metadata.accessStorage(address: addr2, key: key1)
+
+                        state.enter(gasLimit: 0, isStatic: false)
+                        state.enter(gasLimit: 0, isStatic: false)
+
+                        expect(state.isCold(addr1)).to(equal(preBerlin.contains(fork)))
+                        expect(state.isCold(addr2)).to(beTrue())
+                        expect(state.isStorageCold(address: addr2, key: key1)).to(equal(preBerlin.contains(fork)))
+                        expect(state.isStorageCold(address: addr1, key: key1)).to(beTrue())
+                        expect(state.isStorageCold(address: addr2, key: key2)).to(beTrue())
+                    }
+                }
+
+                it("inherits a transient slot through an empty parent and after the parent writes a different key") {
+                    for fork in HardFork.allCases.drop(while: { $0 != .Cancun }) {
+                        let state = MemoryState(gasLimit: 0, backend: MockBackend(), hardFork: fork)
+                        state.setTStorage(address: addr1, key: key1, value: val1)
+                        state.enter(gasLimit: 0, isStatic: false)
+                        state.enter(gasLimit: 0, isStatic: false)
+
+                        expect(state.getTStorage(address: addr1, key: key1)).to(equal(val1))
+                        expect(state.getTStorage(address: addr1, key: key2)).to(equal(H256.ZERO))
+
+                        state.exitRevert()
+                        state.setTStorage(address: addr1, key: key2, value: val2)
+                        state.enter(gasLimit: 0, isStatic: false)
+
+                        expect(state.getTStorage(address: addr1, key: key1)).to(equal(val1), description: "\(fork)")
+                        expect(state.getTStorage(address: addr1, key: key2)).to(equal(val2), description: "\(fork)")
+                    }
+                }
+
+                it("uses the grandparent's cached delegation through an untouched parent") {
+                    for fork in HardFork.allCases.drop(while: { $0 != .Prague }) {
+                        let backend = MockBackend()
+                        let state = MemoryState(gasLimit: 0, backend: backend, hardFork: fork)
+                        state.metadata.addAuthority(authority: addr1, address: addr2)
+                        state.enter(gasLimit: 0, isStatic: false)
+                        state.enter(gasLimit: 0, isStatic: false)
+
+                        expect(state.getAuthorityTarget(authority: addr1)).to(equal(addr2))
+                        expect(backend.codeRequests).to(beEmpty())
+                    }
+                }
+
+                it("reads the nearest values and rolls back an inner commit when the outer frame reverts") {
+                    for fork in HardFork.allCases.drop(while: { $0 != .Prague }) {
+                        let backend = MockBackend()
+                        let state = MemoryState(gasLimit: 0, backend: backend, hardFork: fork)
+                        let authority = backend.coinBase
+                        state.deposit(address: addr1, value: U256(from: 10))
+                        state.setTStorage(address: addr1, key: key1, value: val1)
+                        state.metadata.addAuthority(authority: authority, address: addr1)
+
+                        state.enter(gasLimit: 0, isStatic: false)
+                        state.deposit(address: addr1, value: U256(from: 20))
+                        state.setTStorage(address: addr1, key: key1, value: val2)
+                        state.metadata.addAuthority(authority: authority, address: addr2)
+
+                        state.enter(gasLimit: 0, isStatic: false)
+                        expect(state.basic(address: addr1).balance).to(equal(U256(from: 30)))
+                        expect(state.getTStorage(address: addr1, key: key1)).to(equal(val2))
+                        expect(state.getAuthorityTarget(authority: authority)).to(equal(addr2))
+
+                        state.deposit(address: addr1, value: U256(from: 40))
+                        state.setTStorage(address: addr1, key: key1, value: .ZERO)
+                        state.metadata.addAuthority(authority: authority, address: backend.sender)
+                        state.metadata.accessAddress(addr1)
+                        state.metadata.accessStorage(address: addr2, key: key2)
+                        state.setCreated(address: addr1)
+                        state.setDeleted(address: addr2)
+                        state.exitCommit()
+
+                        expect(state.basic(address: addr1).balance).to(equal(U256(from: 70)))
+                        expect(state.getTStorage(address: addr1, key: key1)).to(equal(H256.ZERO))
+                        expect(state.getAuthorityTarget(authority: authority)).to(equal(backend.sender))
+                        expect(state.isCold(addr1)).to(beFalse())
+                        expect(state.isStorageCold(address: addr2, key: key2)).to(beFalse())
+                        expect(state.isCreated(addr1)).to(beTrue())
+                        expect(state.isDeleted(addr2)).to(beTrue())
+
+                        state.exitRevert()
+
+                        expect(state.basic(address: addr1).balance).to(equal(U256(from: 10)))
+                        expect(state.getTStorage(address: addr1, key: key1)).to(equal(val1))
+                        expect(state.getAuthorityTarget(authority: authority)).to(equal(addr1))
+                        expect(state.isCold(addr1)).to(beTrue())
+                        expect(state.isStorageCold(address: addr2, key: key2)).to(beTrue())
+                        expect(state.isCreated(addr1)).to(beFalse())
+                        expect(state.isDeleted(addr2)).to(beFalse())
+                    }
+                }
+
                 it("should swap state correctly on enter") {
                     let backend = MockBackend()
                     let state = MemoryState(gasLimit: 10000, backend: backend, hardFork: .Berlin)
