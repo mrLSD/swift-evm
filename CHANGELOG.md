@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.2] - 2026-11-27
+
+This release caches backend bytecode and code hashes for the lifetime of a transaction's root `MemoryState`, reuses those reads when checking code presence and account emptiness, and expands regression tests for account boundaries and nested substates. Public method signatures are unchanged, but hosts must observe the backend snapshot lifetime described in **Breaking Changes**. Call preparation and execution remain unimplemented.
+
+### Breaking Changes
+- **Backend snapshot lifetime:** the backend must provide a stable snapshot for the lifetime of a root `MemoryState`. Repeated bytecode and code-hash lookups now reuse the first backend response instead of reading it again, including after a substate reverts or is discarded. Apply transaction changes through the current `MemoryState` and create a new root for each new backend snapshot; mutating the backend behind a live root can leave cached code and hashes stale. Both public root initializers create an independent cache ([#123]).
+
+### Changed
+- **Transaction-scoped code cache:** `MemoryState.code(address:)` and `codeHash(address:)` load and cache their backend fields independently and on demand, including empty bytecode and `KECCAK_EMPTY`. Reading a hash does not load or hash bytecode, and reading bytecode does not request its hash. Parent and child substates share the backend cache across commit, revert and discard; local and ancestor code overrides take precedence and continue to follow the substate journal. Cache reads do not touch accounts, make an absent account exist or warm addresses ([#123]).
+- **Code presence and emptiness:** `hasCode(address:)` and `isEmpty(address:)` reuse local code hashes and previously cached bytecode or hashes before falling back to `Backend.hasCode(address:)`. Known nonempty code settles emptiness without a basic-account read; otherwise balance and nonce are checked before querying backend code presence. Neither check loads bytecode or requests a hash itself. The `Backend.codeHash(address:)` contract now explicitly warns that an absent account must return `KECCAK_EMPTY`, never `H256.ZERO`: cached hashes remain raw, and the `EXTCODEHASH` empty-account rule must still use the current balance and nonce ([#123]).
+
+### Tests
+- **Code caching and `EXTCODEHASH`:** independent lazy reads and cached empty results on every hard fork; backend reads shared across nested substates while local code overrides commit or roll back; fresh snapshots through both root initializers; code presence and emptiness from cached bytecode or hashes for touched and untouched accounts without redundant backend queries; and three `EXTCODEHASH` reads observing zero, `KECCAK_EMPTY` after a child receives funds, and zero again after revert, with only one backend hash read and no bytecode read ([#123]).
+- **Account and primitive boundaries:** withdrawing an entire balance and transferring it to an already funded recipient on every hard fork; incrementing a nonce from `UInt64.max - 1` to `UInt64.max`, then returning the concrete `MaxNonce` error while preserving balance and backend state; and `H160.isZero` and `H256.isZero` returning false when each individual limb is the only nonzero limb. These changes add or strengthen tests without changing production behavior ([#124]).
+- **Substate exits:** exact remaining gas, refunds, warm addresses, warm storage slots and deletion markers for commit, revert and discard on every hard fork. Commit returns unused child gas and merges its refund and journal entries; revert returns unused gas without child refunds or journal entries; discard returns neither child gas nor child changes. Metadata tests also check merging a negative child refund and preserving parent access records on revert. These tests exercise existing exit behavior rather than introduce new exit semantics ([#125]).
+- **Ancestor lookups:** balances and created/deleted flags through an untouched intermediate parent on every hard fork; inherited warm addresses and exact storage slots from Berlin; transient storage inherited through an empty parent and after an unrelated parent-slot write from Cancun; cached delegation inherited without backend code reads from Prague; and nearest-value lookup followed by an inner commit and outer revert, restoring balances, transient storage, delegation, warm records and account flags. These are regression tests for existing recursive lookup and rollback behavior ([#126]).
+
 ## [0.7.1] - 2026-11-16
 
 This release adds an internal gas-reservation helper for future top-level call preparation. It caps the requested execution budget at the remaining gas and deducts the reserved amount, preventing the same gas from being allocated twice. Public APIs are unchanged; call preparation and execution are not yet connected to this helper.
@@ -915,7 +932,8 @@ This is the **initial public release** of `swift-evm` — a Swift-native Ethereu
 
 
 <!-- Versions -->
-[Unreleased]: https://github.com/mrLSD/swift-evm/compare/v0.7.1...HEAD
+[Unreleased]: https://github.com/mrLSD/swift-evm/compare/v0.7.2...HEAD
+[0.7.2]: https://github.com/mrLSD/swift-evm/compare/v0.7.1...v0.7.2
 [0.7.1]: https://github.com/mrLSD/swift-evm/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/mrLSD/swift-evm/compare/v0.6.21...v0.7.0
 [0.6.21]: https://github.com/mrLSD/swift-evm/compare/v0.6.20...v0.6.21
@@ -973,6 +991,10 @@ This is the **initial public release** of `swift-evm` — a Swift-native Ethereu
 [0.1.0]: https://github.com/mrLSD/swift-evm/releases/tag/v0.1.0
 
 <!-- PRs -->
+[#126]: https://github.com/mrLSD/swift-evm/pull/126
+[#125]: https://github.com/mrLSD/swift-evm/pull/125
+[#124]: https://github.com/mrLSD/swift-evm/pull/124
+[#123]: https://github.com/mrLSD/swift-evm/pull/123
 [#121]: https://github.com/mrLSD/swift-evm/pull/121
 [#119]: https://github.com/mrLSD/swift-evm/pull/119
 [#117]: https://github.com/mrLSD/swift-evm/pull/117
