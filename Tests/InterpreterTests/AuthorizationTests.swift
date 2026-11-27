@@ -7,7 +7,8 @@ final class AuthorizationSpec: QuickSpec {
     override class func spec() {
         describe("Authorization (EIP-7702)") {
             let authorityAddr = H160(from: [UInt8](repeating: 0x11, count: 20))
-            let targetAddr = H160(from: [UInt8](repeating: 0x22, count: 20))
+            let targetAddr = H160(l0: 0x0102030405060708, l1: 0x090a0b0c0d0e0f10, l2: 0x11121314)
+            let targetBytes = Array(UInt8(1) ... UInt8(20))
             let nonce: UInt64 = 42
 
             let validPrefix: [UInt8] = [0xef, 0x01, 0x00]
@@ -61,10 +62,7 @@ final class AuthorizationSpec: QuickSpec {
 
             context("getDelegatedAddress") {
                 it("should extract the correct address from valid code") {
-                    var code = validPrefix
-                    code.append(contentsOf: targetAddr.BYTES)
-
-                    let extracted = Authorization.getDelegatedAddress(code)
+                    let extracted = Authorization.getDelegatedAddress(validPrefix + targetBytes)
                     expect(extracted).to(equal(targetAddr))
                 }
 
@@ -87,7 +85,7 @@ final class AuthorizationSpec: QuickSpec {
 
                     expect(generatedCode.count).to(equal(23))
                     expect(Array(generatedCode.prefix(3))).to(equal(validPrefix))
-                    expect(Array(generatedCode.suffix(20))).to(equal(targetAddr.BYTES))
+                    expect(Array(generatedCode.suffix(20))).to(equal(targetBytes))
                 }
             }
 

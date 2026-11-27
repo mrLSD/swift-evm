@@ -673,27 +673,41 @@ public class MemoryState {
         return .Delegated(target)
     }
 
-    /// Get authority target from the current state. If it's `None`, look recursively in the parent state.
+    /// Finds a cached delegation target that still matches the visible account code.
     public func getAuthorityTargetRecursive(authority: H160) -> H160? {
-        if let target = metadata.accessed?.getAuthorityTarget(authority) {
-            return target
+        var state: MemoryState? = self
+        var visibleCode: [UInt8]?
+        while let currentState = state {
+            // A touch can copy the same code into several substates. Only the nearest copy is visible.
+            if visibleCode == nil {
+                visibleCode = currentState.accounts[authority]?.code
+            }
+
+            if let target = currentState.metadata.accessed?.getAuthorityTarget(authority) {
+                if let visibleCode, Authorization.getDelegatedAddress(visibleCode) != target {
+                    return nil
+                }
+
+                return target
+            }
+
+            state = currentState.parent
         }
-        return parent?.getAuthorityTargetRecursive(authority: authority)
+
+        return nil
     }
 
-    /// EIP-7702: Check if the authority is cold.
+    /// Checks whether the authority's EIP-7702 delegation target is cold, without warming it.
     /// - Parameter address: The authority address to check.
-    /// - Returns: `true` or `false` if the target is found and checked, otherwise `nil`.
+    /// - Returns: `true` for a cold target, `false` for a warm target, or `nil` for an undelegated account.
     public func isAuthorityCold(address: H160) -> Bool? {
         return getAuthorityTarget(authority: address).map { isCold($0) }
     }
 
-    /// Get authority target (EIP-7702) delegated address.
+    /// Resolves an authority's EIP-7702 delegation target from its current code.
     ///
-    /// First, it attempts to retrieve the authority target from the cache recursively
-    /// through parent states. If not found in the cache, it retrieves the code for the
-    /// authority address and checks if it's a delegation designator. If true, it adds
-    /// the result to the cache and returns the delegated target address.
+    /// A cached target is reused unless the nearest local code no longer designates it.
+    /// On a miss, a target decoded from the visible code is saved in the current access journal, if present.
     ///
     /// - Parameter authority: The authority address.
     /// - Returns: The delegated target address, if found.
