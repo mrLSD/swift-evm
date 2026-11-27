@@ -33,7 +33,7 @@ public protocol BigUInt: CustomStringConvertible, Equatable, Sendable, Hashable 
     /// Create `BigUInt` from `big-endian` array
     static func fromBigEndian(from val: [UInt8]) -> Self
 
-    /// Create `BigUInt` from hex `String`. Returns Result type
+    /// Parses ASCII hex digits after an optional `0x` or `0X` byte prefix.
     static func fromString(hex value: String) -> Result<Self, HexStringError>
 
     /// Encode to hex string with lowercase characters.
@@ -163,38 +163,35 @@ public extension BigUInt {
         return byteArray
     }
 
-    /// Create `BigUInt` from hex `String`. Returns Result type
+    /// Parses ASCII hex digits after an optional `0x` or `0X` byte prefix.
+    /// Checks the UTF-8 byte limit before reporting the first invalid character pair.
     static func fromString(hex value: String) -> Result<Self, HexStringError> {
-        var hex = value.hasPrefix("0x") || value.hasPrefix("0X")
-            ? String(value.dropFirst(2))
-            : value
-
-        if hex.isEmpty {
+        let bytes = value.utf8
+        let hasPrefix = bytes.starts(with: "0x".utf8) || bytes.starts(with: "0X".utf8)
+        let digits = bytes.dropFirst(hasPrefix ? 2 : 0)
+        if digits.isEmpty {
             return .success(Self.ZERO)
         }
 
-        // Validate Length
-        if hex.count > Int(numberBytes) * 2 {
+        let length = digits.count
+        if length > Int(numberBytes) * 2 {
             return .failure(.InvalidStringLength)
         }
 
-        // Handle Odd Length
-        if hex.count % 2 != 0 {
-            hex = "0" + hex
-        }
-
         var byteArray: [UInt8] = []
-        byteArray.reserveCapacity(hex.count / 2)
-
-        var index = hex.startIndex
-        while index < hex.endIndex {
-            let nextIndex = hex.index(index, offsetBy: 2)
-            let byteString = String(hex[index ..< nextIndex])
-            guard let byte = hexDecodeByte(byteString) else {
-                return .failure(.InvalidHexCharacter(byteString))
+        byteArray.reserveCapacity((length + 1) / 2)
+        var high: UInt8? = length.isMultiple(of: 2) ? nil : 0
+        for byte in digits {
+            guard let nibble = hexDecodeNibble(byte) else {
+                return .failure(.InvalidHexCharacter(invalidHexPair(in: digits)))
             }
-            byteArray.append(byte)
-            index = nextIndex
+
+            if let first = high {
+                byteArray.append((first << 4) | nibble)
+                high = nil
+            } else {
+                high = nibble
+            }
         }
 
         return .success(Self.fromBigEndian(from: byteArray))

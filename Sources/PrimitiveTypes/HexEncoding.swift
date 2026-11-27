@@ -1,18 +1,36 @@
+/// Decodes one ASCII hex digit.
+func hexDecodeNibble(_ byte: UInt8) -> UInt8? {
+    switch byte {
+    case 48 ... 57: return byte - 48
+    case 65 ... 70: return byte - 55
+    case 97 ... 102: return byte - 87
+    default: return nil
+    }
+}
+
 /// Decodes exactly two ASCII hex digits; signs and whitespace are invalid.
 func hexDecodeByte(_ value: String) -> UInt8? {
     guard value.utf8.count == 2 else { return nil }
     var result: UInt8 = 0
     for byte in value.utf8 {
-        let digit: UInt8
-        switch byte {
-        case 48 ... 57: digit = byte - 48
-        case 65 ... 70: digit = byte - 55
-        case 97 ... 102: digit = byte - 87
-        default: return nil
-        }
+        guard let digit = hexDecodeNibble(byte) else { return nil }
         result = (result << 4) | digit
     }
     return result
+}
+
+/// Recovers the original character pair for an invalid ASCII hex byte.
+func invalidHexPair(in bytes: Substring.UTF8View) -> String {
+    let text = Substring(bytes)
+    let invalid = text.drop { $0.asciiValue.flatMap(hexDecodeNibble) != nil }
+    if invalid.count.isMultiple(of: 2) {
+        return String(invalid.prefix(2))
+    }
+
+    let high = text[..<invalid.startIndex].last ?? "0"
+    // A leading combining mark can join the padding zero into one character.
+    let pair = String(high) + invalid.prefix(2)
+    return String(pair.prefix(2))
 }
 
 /// ASCII bytes for lowercase hex digits `0..f`.

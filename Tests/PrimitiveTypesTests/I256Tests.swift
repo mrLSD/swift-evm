@@ -82,7 +82,9 @@ final class I256Spec: QuickSpec {
                     it("rejects signs, whitespace and non-ASCII hex digits") {
                         let cases: [(hex: String, invalid: String)] = [
                             ("+1", "+1"), ("-1", "-1"), ("-0", "-0"), ("00+a", "+a"), ("0x+1", "+1"), ("0X+F", "+F"),
-                            (" 1", " 1"), ("1 ", "1 "), ("\t1", "\t1"), ("1\n", "1\n"), ("Ａ1", "Ａ1"), ("é0", "é0")
+                            (" 1", " 1"), ("1 ", "1 "), ("\t1", "\t1"), ("1\n", "1\n"), ("Ａ1", "Ａ1"), ("é0", "é0"),
+                            ("\u{0301}", "0\u{0301}"), ("\u{200D}", "0\u{200D}"), ("\u{FE0F}", "0\u{FE0F}"),
+                            ("\u{0301}\u{0308}", "0\u{0301}\u{0308}")
                         ]
                         for (hex, invalid) in cases {
                             expect(I256.fromString(hex: hex)).to(beFailure { error in

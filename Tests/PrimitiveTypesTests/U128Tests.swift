@@ -43,8 +43,10 @@ final class U128Spec: QuickSpec {
                 context("String validation") {
                     it("rejects signs, whitespace and non-ASCII hex digits") {
                         let cases: [(hex: String, invalid: String)] = [
-                            ("+1", "+1"), ("-1", "-1"), ("-0", "-0"), ("00+a", "+a"), ("0x+1", "+1"), ("0X+F", "+F"),
-                            (" 1", " 1"), ("1 ", "1 "), ("\t1", "\t1"), ("1\n", "1\n"), ("Ａ1", "Ａ1"), ("é0", "é0")
+                            ("+1", "+1"), ("-1", "-1"), ("-0", "-0"), ("00+a", "+a"), ("0+ab", "0+"), ("0x+1", "+1"), ("0X+F", "+F"),
+                            (" 1", " 1"), ("1 ", "1 "), ("\t1", "\t1"), ("1\n", "1\n"), ("Ａ1", "Ａ1"), ("é0", "é0"),
+                            ("\u{0301}", "0\u{0301}"), ("\u{200D}", "0\u{200D}"), ("\u{FE0F}", "0\u{FE0F}"),
+                            ("\u{0301}\u{0308}", "0\u{0301}\u{0308}"), ("\u{0301}ab", "0\u{0301}a")
                         ]
                         for (hex, invalid) in cases {
                             expect(U128.fromString(hex: hex)).to(beFailure { error in
@@ -68,6 +70,28 @@ final class U128Spec: QuickSpec {
                         expect(res).to(beFailure { error in
                             expect(error).to(matchError(HexStringError.InvalidStringLength))
                         })
+                    }
+                    it("checks the UTF-8 length after removing the prefix") {
+                        let digits = String(repeating: "0", count: 30)
+                        for (suffix, invalid) in [("é", "0é"), ("\r\n", "0\r\n")] {
+                            expect(U128.fromString(hex: "0x" + digits + suffix)).to(beFailure { error in
+                                expect(error).to(equal(.InvalidHexCharacter(invalid)))
+                            })
+                            expect(U128.fromString(hex: "0x" + digits + "0" + suffix)).to(beFailure { error in
+                                expect(error).to(equal(.InvalidStringLength))
+                            })
+                        }
+                    }
+                    it("recognizes a byte prefix even when a combining mark follows it") {
+                        for prefix in ["0x", "0X"] {
+                            let withinLimit = prefix + "\u{0301}" + String(repeating: "0", count: 30)
+                            expect(U128.fromString(hex: withinLimit)).to(beFailure { error in
+                                expect(error).to(equal(.InvalidHexCharacter("0\u{0301}0")))
+                            })
+                            expect(U128.fromString(hex: withinLimit + "0")).to(beFailure { error in
+                                expect(error).to(equal(.InvalidStringLength))
+                            })
+                        }
                     }
                     it("String length compared to `mod 2`") {
                         let res = U128.fromString(hex: String(repeating: "A", count: 1))
