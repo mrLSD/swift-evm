@@ -6,6 +6,196 @@ import Quick
 final class ExecutorSpec: QuickSpec {
     override class func spec() {
         describe("Executor") {
+            context("authorityCode") {
+                let a = H160(from: [UInt8](repeating: 0x11, count: 20))
+                let b = H160(l0: 0x0011223344556677, l1: 0x8899aabbccddeeff, l2: 0x10325476)
+                let c = H160(from: [UInt8](repeating: 0x33, count: 20))
+                let marker: [UInt8] = [
+                    0xef, 0x01, 0x00,
+                    0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77,
+                    0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff,
+                    0x10, 0x32, 0x54, 0x76,
+                ]
+
+                it("returns the designation unchanged before Prague without caching or warming its target") {
+                    let forks = HardFork.allCases.prefix(while: { $0 != .Prague })
+                    expect(forks.last).to(equal(.Cancun))
+                    for fork in forks {
+                        let backend = MockBackend()
+                        backend.codes[a] = marker
+                        backend.codes[b] = [0x00]
+                        let state = MemoryState(gasLimit: 1000, backend: backend, hardFork: fork)
+                        let before = state.metadata
+                        let executor = Executor(state: state, hardFork: fork)
+
+                        expect(executor.authorityCode(codeAddress: a)).to(equal(marker))
+                        expect(backend.codeRequests).to(equal([a]))
+                        expect(state.metadata).to(equal(before))
+                        expect(state.accounts).to(beEmpty())
+                        expect(backend.basicRequests).to(beEmpty())
+                        expect(backend.existsRequests).to(beEmpty())
+                    }
+                }
+
+                it("resolves exactly one level from Prague and warms only the delegate") {
+                    let forks = HardFork.allCases.drop(while: { $0 != .Prague })
+                    expect(forks.first).to(equal(.Prague))
+                    let cases: [(code: [UInt8], targetCode: [UInt8], expected: [UInt8], requests: [H160], warm: [H160])] = [
+                        ([0x60, 0x01], [], [0x60, 0x01], [a], []),
+                        ([], [], [], [a], []),
+                        (marker, [0x60, 0x02], [0x60, 0x02], [a, b], [b]),
+                        (marker, [0xef, 0x01, 0x00] + c.BYTES, [0xef, 0x01, 0x00] + c.BYTES, [a, b], [b]),
+                        ([0xef, 0x01, 0x00] + a.BYTES, [], [0xef, 0x01, 0x00] + a.BYTES, [a], [a]),
+                        (marker, [], [], [a, b], [b]),
+                        (Array(marker.dropLast()), [], Array(marker.dropLast()), [a], []),
+                        (marker + [0], [], marker + [0], [a], []),
+                        ([0xef, 0x00, 0x00] + b.BYTES, [], [0xef, 0x00, 0x00] + b.BYTES, [a], []),
+                        ([0xef, 0x02, 0x00] + b.BYTES, [], [0xef, 0x02, 0x00] + b.BYTES, [a], []),
+                        ([0xef, 0x01, 0x01] + b.BYTES, [], [0xef, 0x01, 0x01] + b.BYTES, [a], []),
+                    ]
+                    for fork in forks {
+                        for (index, item) in cases.enumerated() {
+                            let backend = MockBackend()
+                            backend.codes[a] = item.code
+                            if !item.targetCode.isEmpty {
+                                backend.codes[b] = item.targetCode
+                            }
+                            let state = MemoryState(gasLimit: 1000, backend: backend, hardFork: fork)
+                            let before = state.metadata
+                            let executor = Executor(state: state, hardFork: fork)
+                            let detail = "fork \(fork), case \(index)"
+                            backend.onCodeRead = { [weak state] address in
+                                if address == b {
+                                    expect(state?.isCold(b)).to(beFalse(), description: detail)
+                                }
+                            }
+
+                            expect(executor.authorityCode(codeAddress: a)).to(equal(item.expected), description: detail)
+                            expect(backend.codeRequests).to(equal(item.requests), description: detail)
+                            expect(state.metadata.accessedData()?.addresses).to(equal(Set(item.warm)), description: detail)
+                            expect(state.metadata.gasometer).to(equal(before.gasometer))
+                            expect(state.metadata.depth).to(beNil())
+                            expect(state.accounts).to(beEmpty())
+                            expect(state.logs).to(beEmpty())
+                            expect(state.parent).to(beNil())
+                            expect(backend.basicRequests).to(beEmpty())
+                            expect(backend.existsRequests).to(beEmpty())
+                            expect(backend.codeHashRequests).to(beEmpty())
+                            expect(backend.hasCodeRequests).to(beEmpty())
+                        }
+                    }
+                }
+
+                it("uses local code and preserves an already warm delegate") {
+                    for fork in HardFork.allCases.drop(while: { $0 != .Prague }) {
+                        for localAddress in [a, b] {
+                            for localCode: [UInt8] in [[], [0x60, 0x07]] {
+                                let backend = MockBackend()
+                                backend.codes[a] = marker
+                                backend.codes[b] = [0xfe]
+                                let state = MemoryState(gasLimit: 1000, backend: backend, hardFork: fork)
+                                state.setCode(address: localAddress, code: localCode)
+                                state.metadata.accessAddress(b)
+                                backend.basicRequests = []
+                                let accounts = state.accounts
+                                let gas = state.metadata.gasometer
+                                let executor = Executor(state: state, hardFork: fork)
+
+                                expect(executor.authorityCode(codeAddress: a)).to(equal(localCode))
+                                expect(backend.codeRequests).to(equal(localAddress == a ? [] : [a]))
+                                expect(state.metadata.accessedData()?.addresses).to(equal(Set([b])))
+                                expect(state.accounts).to(equal(accounts))
+                                expect(state.metadata.gasometer).to(equal(gas))
+                                expect(backend.basicRequests).to(beEmpty())
+                                expect(backend.existsRequests).to(beEmpty())
+                                expect(backend.codeHashRequests).to(beEmpty())
+                                expect(backend.hasCodeRequests).to(beEmpty())
+                            }
+                        }
+                    }
+                }
+
+                context("after replacing a cached designation") {
+                    let newMarker: [UInt8] = [0xef, 0x01, 0x00] + c.BYTES
+                    let replacements: [(name: String, code: [UInt8], target: H160?, result: [UInt8])] = [
+                        ("another delegate", newMarker, c, [0x60, 0x0c]),
+                        ("ordinary code", [0x60, 0x0a], nil, [0x60, 0x0a]),
+                        ("empty code", [], nil, []),
+                    ]
+                    let exits: [(name: String, apply: @Sendable (MemoryState) -> Void, commits: Bool)] = [
+                        ("commit", { $0.exitCommit() }, true),
+                        ("revert", { $0.exitRevert() }, false),
+                        ("discard", { $0.exitDiscard() }, false),
+                    ]
+
+                    func expectResolution(_ executor: Executor, code: [UInt8], target: H160?) {
+                        let state = executor.state
+                        expect(executor.authorityCode(codeAddress: a)).to(equal(code))
+                        if let target {
+                            expect(state.getAuthorityTarget(authority: a)).to(equal(target))
+                            expect(state.metadata.accessedData()?.addresses).to(equal(Set([target])))
+                        } else {
+                            expect(state.getAuthorityTarget(authority: a)).to(beNil())
+                            expect(state.metadata.accessedData()?.addresses).to(beEmpty())
+                        }
+                    }
+
+                    for replacement in replacements {
+                        it("uses \(replacement.name) after a write in the root") {
+                            for fork in HardFork.allCases.drop(while: { $0 != .Prague }) {
+                                let backend = MockBackend()
+                                backend.codes = [a: marker, b: [0x60, 0x0b], c: [0x60, 0x0c]]
+                                let state = MemoryState(gasLimit: 1000, backend: backend, hardFork: fork)
+                                let executor = Executor(state: state, hardFork: fork)
+
+                                expect(state.getAuthorityTarget(authority: a)).to(equal(b))
+                                state.setCode(address: a, code: replacement.code)
+                                expectResolution(executor, code: replacement.result, target: replacement.target)
+                                expect(backend.codeRequests).to(equal(replacement.target == nil ? [a] : [a, c]))
+                                expect(backend.existsRequests).to(beEmpty())
+                            }
+                        }
+
+                        for exit in exits {
+                            it("isolates \(replacement.name) in the child and resolves the parent after \(exit.name)") {
+                                for fork in HardFork.allCases.drop(while: { $0 != .Prague }) {
+                                    let backend = MockBackend()
+                                    backend.codes = [a: marker, b: [0x60, 0x0b], c: [0x60, 0x0c]]
+                                    let state = MemoryState(gasLimit: 1000, backend: backend, hardFork: fork)
+                                    let executor = Executor(state: state, hardFork: fork)
+
+                                    expect(state.getAuthorityTarget(authority: a)).to(equal(b))
+                                    state.enter(gasLimit: 0, isStatic: false)
+                                    state.setCode(address: a, code: replacement.code)
+                                    expectResolution(executor, code: replacement.result, target: replacement.target)
+                                    expect(state.parent?.code(address: a)).to(equal(marker))
+                                    expect(state.parent?.getAuthorityTargetRecursive(authority: a)).to(equal(b))
+                                    expect(state.parent?.metadata.accessedData()?.addresses).to(beEmpty())
+                                    let childReads = replacement.target == nil ? [a] : [a, c]
+                                    expect(backend.codeRequests).to(equal(childReads))
+
+                                    exit.apply(state)
+                                    if exit.commits {
+                                        expect(state.code(address: a)).to(equal(replacement.code))
+                                        if let target = replacement.target {
+                                            expect(state.metadata.accessedData()?.addresses).to(equal(Set([target])))
+                                        }
+                                        expectResolution(executor, code: replacement.result, target: replacement.target)
+                                        expect(backend.codeRequests).to(equal(childReads))
+                                    } else {
+                                        expect(state.code(address: a)).to(equal(marker))
+                                        expect(state.metadata.accessedData()?.addresses).to(beEmpty())
+                                        expectResolution(executor, code: [0x60, 0x0b], target: b)
+                                        expect(backend.codeRequests).to(equal(childReads + [b]))
+                                    }
+                                    expect(backend.existsRequests).to(beEmpty())
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
             context("initialization") {
                 it("keeps the given state by identity and leaves it untouched") {
                     let backend = MockBackend()

@@ -646,44 +646,73 @@ public class MemoryState {
 
     // MARK: - EIP-7702 Authority Logic
 
-    /// Get authority target from the current state. If it's `None`, look recursively in the parent state.
-    public func getAuthorityTargetRecursive(authority: H160) -> H160? {
-        if let target = metadata.accessed?.getAuthorityTarget(authority) {
-            return target
-        }
-        return parent?.getAuthorityTargetRecursive(authority: authority)
+    /// Either the account's own code or the target of its delegation designation.
+    enum AuthorityCode {
+        case Code([UInt8])
+        case Delegated(H160)
     }
 
-    /// EIP-7702: Check if the authority is cold.
-    /// - Parameter address: The authority address to check.
-    /// - Returns: `true` or `false` if the target is found and checked, otherwise `nil`.
-    public func isAuthorityCold(address: H160) -> Bool? {
-        return getAuthorityTarget(authority: address).map { isCold($0) }
-    }
-
-    /// Get authority target (EIP-7702) delegated address.
-    ///
-    /// First, it attempts to retrieve the authority target from the cache recursively
-    /// through parent states. If not found in the cache, it retrieves the code for the
-    /// authority address and checks if it's a delegation designator. If true, it adds
-    /// the result to the cache and returns the delegated target address.
-    ///
-    /// - Parameter authority: The authority address.
-    /// - Returns: The delegated target address, if found.
-    public func getAuthorityTarget(authority: H160) -> H160? {
+    /// Reads an account's code once, reusing a cached delegation target when available.
+    /// Valid delegation designations are cached in the current substate; ordinary code is returned as is.
+    func authorityCode(_ authority: H160) -> AuthorityCode {
         // 1. Try to read from recursive cache
-        if let targetAddress = getAuthorityTargetRecursive(authority: authority) {
-            return targetAddress
+        if let target = getAuthorityTargetRecursive(authority: authority) {
+            return .Delegated(target)
         }
 
         // 2. If not found in cache, get the code for the authority address.
         // This uses the 'code' method from the Backend implementation (local cache + backend).
-        let authorityCode = code(address: authority)
+        let code = self.code(address: authority)
 
         // 3. Check if the code represents a delegation designator (EIP-7702 logic).
-        if let target = Authorization.getDelegatedAddress(authorityCode) {
-            // Add the found target to the local substate metadata cache.
-            metadata.addAuthority(authority: authority, address: target)
+        guard let target = Authorization.getDelegatedAddress(code) else {
+            return .Code(code)
+        }
+        // Add the found target to the local substate metadata cache.
+        metadata.addAuthority(authority: authority, address: target)
+        return .Delegated(target)
+    }
+
+    /// Finds a cached delegation target that still matches the visible account code.
+    public func getAuthorityTargetRecursive(authority: H160) -> H160? {
+        var state: MemoryState? = self
+        var visibleCode: [UInt8]?
+        while let currentState = state {
+            // A touch can copy the same code into several substates. Only the nearest copy is visible.
+            if visibleCode == nil {
+                visibleCode = currentState.accounts[authority]?.code
+            }
+
+            if let target = currentState.metadata.accessed?.getAuthorityTarget(authority) {
+                if let visibleCode, Authorization.getDelegatedAddress(visibleCode) != target {
+                    return nil
+                }
+
+                return target
+            }
+
+            state = currentState.parent
+        }
+
+        return nil
+    }
+
+    /// Checks whether the authority's EIP-7702 delegation target is cold, without warming it.
+    /// - Parameter address: The authority address to check.
+    /// - Returns: `true` for a cold target, `false` for a warm target, or `nil` for an undelegated account.
+    public func isAuthorityCold(address: H160) -> Bool? {
+        return getAuthorityTarget(authority: address).map { isCold($0) }
+    }
+
+    /// Resolves an authority's EIP-7702 delegation target from its current code.
+    ///
+    /// A cached target is reused unless the nearest local code no longer designates it.
+    /// On a miss, a target decoded from the visible code is saved in the current access journal, if present.
+    ///
+    /// - Parameter authority: The authority address.
+    /// - Returns: The delegated target address, if found.
+    public func getAuthorityTarget(authority: H160) -> H160? {
+        if case .Delegated(let target) = authorityCode(authority) {
             return target
         }
 
