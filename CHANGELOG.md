@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.3] - 2026-11-28
+
+This release adds an internal helper to select bytecode for top-level calls under EIP-7702 and fixes stale delegation targets after account code changes. Public API signatures are unchanged. Call execution remains unimplemented in `Executor`.
+
+### Added
+- **`Executor.authorityCode(codeAddress:)`** returns the account's own bytecode before Prague. From Prague onward, an exact 23-byte designation (`0xef0100` followed by a 20-byte address) causes the executor to warm the delegate in the current substate before reading its code. Resolution stops after one hop, even for self-delegation or a delegate whose code is another designation. Ordinary code, empty code and malformed designations pass through unchanged ([#128]).
+
+### Fixed
+- **Stale delegation targets after `setCode`.** `MemoryState.getAuthorityTargetRecursive(authority:)` now checks a cached target against the nearest visible code override. If the targets differ, `getAuthorityTarget(authority:)` resolves the replacement code, returning the new delegate or `nil` for ordinary or empty code. A child commit preserves the replacement. Reverting or discarding the child restores the parent's resolution ([#128]).
+
+### Tests
+- **Fork boundary and code selection.** Tests cover every supported fork, malformed designations, delegation chains, self-delegation and empty delegate code. They check the exact backend reads, that the delegate is warm before its code is read, and that code selection preserves gas. Encoding and decoding tests use an explicit 20-byte sequence to check address byte order ([#128]).
+- **Delegation cache and substate exits.** Tests cover repeated lookups with and without an access journal, inherited targets after a touch, and competing code writes in nested substates. Replacing a designation with another delegate, ordinary code or empty code is checked in the root and across child commit, revert and discard ([#128]).
+
 ## [0.7.2] - 2026-11-27
 
 This release caches backend bytecode and code hashes for the lifetime of a transaction's root `MemoryState`, reuses those reads when checking code presence and account emptiness, and expands regression tests for account boundaries and nested substates. Public method signatures are unchanged, but hosts must observe the backend snapshot lifetime described in **Breaking Changes**. Call preparation and execution remain unimplemented.
@@ -932,7 +946,8 @@ This is the **initial public release** of `swift-evm` — a Swift-native Ethereu
 
 
 <!-- Versions -->
-[Unreleased]: https://github.com/mrLSD/swift-evm/compare/v0.7.2...HEAD
+[Unreleased]: https://github.com/mrLSD/swift-evm/compare/v0.7.3...HEAD
+[0.7.3]: https://github.com/mrLSD/swift-evm/compare/v0.7.2...v0.7.3
 [0.7.2]: https://github.com/mrLSD/swift-evm/compare/v0.7.1...v0.7.2
 [0.7.1]: https://github.com/mrLSD/swift-evm/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/mrLSD/swift-evm/compare/v0.6.21...v0.7.0
@@ -991,6 +1006,7 @@ This is the **initial public release** of `swift-evm` — a Swift-native Ethereu
 [0.1.0]: https://github.com/mrLSD/swift-evm/releases/tag/v0.1.0
 
 <!-- PRs -->
+[#128]: https://github.com/mrLSD/swift-evm/pull/128
 [#126]: https://github.com/mrLSD/swift-evm/pull/126
 [#125]: https://github.com/mrLSD/swift-evm/pull/125
 [#124]: https://github.com/mrLSD/swift-evm/pull/124
